@@ -43,7 +43,11 @@
 <script>
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase.js";  // ✔ تم إصلاح المسار
+
+// ✔ المسار الصحيح
+import { db } from "../firebase";
+
+// ✔ المسار الصحيح للروتر
 import router from "../router";
 
 export default {
