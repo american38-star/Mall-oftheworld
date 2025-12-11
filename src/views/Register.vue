@@ -56,8 +56,11 @@ import {
   browserLocalPersistence,
 } from "firebase/auth";
 
-// 🔥🔥🔥 إصلاح المسار الصحيح لـ firebase.js
-import { db } from "../../firebase.js";
+// ✔✔ المسار الصحيح
+import { db } from "../firebase";
+
+// ✔✔ الطريق الصحيح للروتر
+import router from "../router";
 
 import {
   doc,
@@ -69,8 +72,6 @@ import {
   serverTimestamp,
   getDoc,
 } from "firebase/firestore";
-
-import router from "../../router";
 
 export default {
   name: "RegisterPage",
@@ -86,7 +87,6 @@ export default {
   },
 
   created() {
-    // قراءة كود الإحالة من رابط ?ref=xxxx
     const ref = this.$route.query.ref;
     if (ref) {
       this.inviteCode = String(ref).trim();
@@ -98,9 +98,6 @@ export default {
       this.showPassword = !this.showPassword;
     },
 
-    // ========================================================
-    // ================ إنشاء حساب جديد =======================
-    // ========================================================
     async registerUser() {
       if (!this.email || !this.password) {
         alert("يرجى تعبئة جميع الحقول");
@@ -113,7 +110,6 @@ export default {
         const auth = getAuth();
         await auth.setPersistence(browserLocalPersistence);
 
-        // إنشاء الحساب
         const userCredential = await createUserWithEmailAndPassword(
           auth,
           this.email.trim(),
@@ -126,17 +122,12 @@ export default {
         let level2 = null;
         let level3 = null;
 
-        // ===============================
-        // التحقق من كود الإحالة 3 مستويات
-        // ===============================
         if (this.inviteCode) {
           const enteredCode = String(this.inviteCode).trim();
 
-          // منع الإحالة الذاتية
           if (enteredCode === user.uid.substring(0, 6)) {
             alert("لا يمكنك استخدام كود الإحالة الخاص بك");
           } else {
-            // البحث عن صاحب الكود
             const q = query(
               collection(db, "users"),
               where("referralCode", "==", enteredCode)
@@ -147,13 +138,11 @@ export default {
               const inviterDoc = result.docs[0];
               inviterUID = inviterDoc.id;
 
-              // مستوى 2
               const inviterData = inviterDoc.data();
               if (inviterData.invitedBy) {
                 level2 = inviterData.invitedBy;
               }
 
-              // مستوى 3
               if (level2) {
                 const docLevel2 = await getDoc(doc(db, "users", level2));
                 if (docLevel2.exists()) {
@@ -167,25 +156,19 @@ export default {
           }
         }
 
-        // =====================================================
-        // إنشاء مستخدم جديد مع 3 مستويات إحالة
-        // =====================================================
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           email: this.email.trim(),
           referralCode: user.uid.substring(0, 6),
-
-          invitedBy: inviterUID || null, // المستوى الأول
+          invitedBy: inviterUID || null,
           level2: level2 || null,
           level3: level3 || null,
-
           balance: 0,
           vipLevel: 0,
           blocked: false,
           createdAt: serverTimestamp(),
         });
 
-        // الانتقال للصفحة الرئيسية
         router.push("/home");
       } catch (err) {
         console.error("Register error:", err);
