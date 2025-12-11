@@ -43,7 +43,7 @@
 <script>
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../../firebase.js";  // ✔ تم إصلاح المسار
 import router from "../router";
 
 export default {
@@ -180,7 +180,6 @@ export default {
   margin-top: 15px;
 }
 
-/* Loader */
 .loader {
   width: 20px;
   height: 20px;
