@@ -36,7 +36,7 @@
           >
             <div class="card-left">
               <div class="icon-wrap">
-                <img :src="vipImg" alt="vip" />
+                <div class="icon-placeholder">💎</div>
                 <div class="level-badge">VIP {{ plan.level }}</div>
               </div>
             </div>
@@ -94,17 +94,6 @@
 </template>
 
 <script>
-/*
-  VIP.vue — نسخة محسّنة
-  ملاحظات مهمة:
-   - تأكد أن ملف ../firebase يُصدّر `auth` و `db`.
-   - تأكد أن لديك مجموعة users/{uid}/vip/current (سيتم كتابتها عند الشراء).
-   - تأكد وجود مجموعات vip_rewards و vip_purchases في Firestore.
-*/
-
-/* ✔✔ الإصلاح الوحيد هنا فقط ✔✔ */
-import vipImg from "@/assets/images/vip-img.png";
-
 import { auth, db } from "../firebase";
 import {
   doc,
@@ -126,7 +115,6 @@ export default {
       userVip: null,
       remainingMs: 0,
       intervalId: null,
-      vipImg,
 
       // خطط VIP (يمكن تعديل القيم حسب متطلباتك)
       plans: [
@@ -581,9 +569,13 @@ export default {
   justify-content: center;
   align-items: center;
 }
-.icon-wrap img {
+.icon-placeholder {
   width: 86px;
   height: 86px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 40px;
   object-fit: contain;
   border-radius: 12px;
   background: linear-gradient(180deg, #fff, #f5fbff);
