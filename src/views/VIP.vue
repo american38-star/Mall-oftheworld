@@ -102,7 +102,9 @@
    - تأكد وجود مجموعات vip_rewards و vip_purchases في Firestore.
 */
 
-import vipImg from "../assets/images/vip-img.png";
+/* ✔✔ الإصلاح الوحيد هنا فقط ✔✔ */
+import vipImg from "@/assets/images/vip-img.png";
+
 import { auth, db } from "../firebase";
 import {
   doc,
@@ -141,7 +143,6 @@ export default {
         { level: 11, name: "VIP 11", price: 90000, tasks: 1, daily: 81818, total: 29863570, durationSeconds: 86400 },
       ],
 
-      // التوقيت العالمي الموحد للدورة يوميًا (UTC)
       globalCycleHourUTC: 6,
       globalCycleMinuteUTC: 30,
     };
@@ -160,7 +161,6 @@ export default {
   },
 
   created() {
-    // ننتظر مصادقة المستخدم (onAuthStateChanged) ثم نبدأ init عند وجوده
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         this.loading = false;
@@ -189,7 +189,6 @@ export default {
       }
     },
 
-    // حساب التاريخ التالي للدورة العالمية (من msRef أو الآن)
     getNextGlobalCycleFromMs(msRef) {
       const ref = msRef ? new Date(msRef) : new Date();
       const next = new Date(ref.getTime());
@@ -229,10 +228,8 @@ export default {
           lastRewardAt: data.lastRewardAt || null,
         };
 
-        // معالجة الدورات الفائتة إن وجدت
         await this.settleMissedCyclesIfAny(user.uid, vipDocRef);
 
-        // تحديث بيانات بعد المعالجة
         const vipSnap2 = await getDoc(vipDocRef);
         if (vipSnap2.exists()) {
           const d2 = vipSnap2.data();
@@ -247,7 +244,6 @@ export default {
           };
         }
 
-        // تشغيل المؤقت على الواجهة
         this.startTimer();
       } catch (err) {
         console.error("VIP init error:", err);
@@ -257,7 +253,6 @@ export default {
       }
     },
 
-    // معالجة الدورات الفائتة داخل transaction
     async settleMissedCyclesIfAny(uid, vipDocRef) {
       try {
         await runTransaction(db, async (tx) => {
@@ -271,24 +266,20 @@ export default {
           const nowMs = Date.now();
           const durationMs = (vipData.durationSeconds || 86400) * 1000;
 
-          if (nowMs <= vipEndMs) return; // لا شيء لفعلِه
+          if (nowMs <= vipEndMs) return;
 
-          // كم دورة منتهية منذ vipEnd (نحسب 1 + floor) لأنه على الأقل دورة واحدة انتهت
           const diffMs = nowMs - vipEndMs;
           const extraCycles = Math.floor(diffMs / durationMs) + 1;
           const totalReward = Number(vipData.daily || 0) * extraCycles;
 
-          // تحديث رصيد المستخدم
           const userRef = doc(db, "users", uid);
           const userSnap = await tx.get(userRef);
           const currentBal = userSnap.exists() ? Number(userSnap.data().balance || 0) : 0;
           tx.update(userRef, { balance: currentBal + totalReward });
 
-          // تقدّم vipEnd بعدد الدورات الفائتة
           const newVipEnd = Timestamp.fromMillis(vipEndMs + extraCycles * durationMs);
           tx.update(vipDocRef, { vipEnd: newVipEnd, lastRewardAt: serverTimestamp() });
 
-          // سجل تسوية missed cycles
           const logsRef = collection(db, "vip_rewards");
           const logDocRef = doc(logsRef);
           tx.set(logDocRef, {
@@ -314,13 +305,11 @@ export default {
       this.intervalId = setInterval(async () => {
         this.remainingMs -= 1000;
         if (this.remainingMs <= 0) {
-          // انتهت دورة: معالجة آمنة لإضافة daily وتقدم vipEnd
           await this.onCycleComplete();
         }
       }, 1000);
     },
 
-    // عند اكتمال دورة واحدة: إضافة daily وتقدّم vipEnd
     async onCycleComplete() {
       if (this.processing) return;
       this.processing = true;
@@ -345,16 +334,13 @@ export default {
           const nowMs = Date.now();
           if (nowMs < vipEndMs) return;
 
-          // أضف الـ daily لرصيد المستخدم
           const userSnap = await tx.get(userRef);
           const curBal = userSnap.exists() ? Number(userSnap.data().balance || 0) : 0;
           tx.update(userRef, { balance: curBal + daily });
 
-          // تقدّم vipEnd لدورة لاحقة (تحافظ على التزامن العالمي)
           const newVipEnd = Timestamp.fromMillis(vipEndMs + durationSeconds * 1000);
           tx.update(vipDocRef, { vipEnd: newVipEnd, lastRewardAt: serverTimestamp() });
 
-          // سجل عملية يومية
           const logsRef = collection(db, "vip_rewards");
           const logDocRef = doc(logsRef);
           tx.set(logDocRef, {
@@ -366,7 +352,6 @@ export default {
           });
         });
 
-        // إعادة تحميل الحالة بعد النجاح
         await this.init();
       } catch (e) {
         console.error("onCycleComplete error:", e);
@@ -375,7 +360,6 @@ export default {
       }
     },
 
-    // شراء خطة VIP
     async buyPlan(plan) {
       const user = auth.currentUser;
       if (!user) return alert("يرجى تسجيل الدخول أولًا.");
@@ -395,16 +379,13 @@ export default {
           const balance = Number(uSnap.data().balance || 0);
           if (balance < plan.price) throw new Error("رصيد غير كافٍ لشراء هذا المستوى.");
 
-          // خصم السعر وإضافة المكافأة الأولية (purchase bonus)
           const newBalance = balance - plan.price + plan.daily;
           tx.update(userRef, { balance: newBalance });
 
-          // حسب متطلباتك: نضع vipEnd عند الدورة العالمية التالية
           const nowMs = Date.now();
           const nextGlobalDate = this.getNextGlobalCycleFromMs(nowMs);
           const vipEndTs = Timestamp.fromDate(nextGlobalDate);
 
-          // اكتب وثيقة VIP الحالية
           tx.set(vipDocRef, {
             level: plan.level,
             price: plan.price,
@@ -416,7 +397,6 @@ export default {
             purchasedAt: serverTimestamp(),
           });
 
-          // سجل عملية الشراء
           const pDocRef = doc(purchasesRef);
           tx.set(pDocRef, {
             uid: user.uid,
@@ -428,7 +408,6 @@ export default {
             type: "purchase",
           });
 
-          // سجل المكافأة الأولى (purchase bonus)
           const rDocRef = doc(rewardsRef);
           tx.set(rDocRef, {
             uid: user.uid,
@@ -449,7 +428,6 @@ export default {
       }
     },
 
-    // إلغاء VIP (علامة إلغاء، لا تحذف السجل)
     async cancelVip() {
       if (!confirm("هل أنت متأكد أنك تريد إلغاء حالة VIP؟ (لن يتم رد الأموال)")) return;
       const user = auth.currentUser;
