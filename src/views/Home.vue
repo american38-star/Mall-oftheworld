@@ -13,10 +13,6 @@
         <div class="balance">الرصيد: <strong>{{ balance }} USDT</strong></div>
       </div>
 
-      <div class="lang-box">
-        <i class="fas fa-globe"></i>
-        عربي
-      </div>
     </div>
 
     <!-- شريط الأزرار -->
@@ -32,7 +28,12 @@
 
     <!-- القائمة الرئيسية -->
     <div class="grid-menu">
-      <div class="item" v-for="item in menu" :key="item.title" @click="go(item.route)">
+      <div
+        class="item"
+        v-for="item in menu"
+        :key="item.title"
+        @click="go(item.route)"
+      >
         <div class="icon-box">
           <i :class="item.icon"></i>
         </div>
@@ -97,11 +98,9 @@ export default {
 
         if (snap.exists()) {
           const data = snap.data();
-
           this.username = data.username || data.email || email;
           this.balance = data.balance ?? 0;
         } else {
-          // إذا ما لقى الوثيقة
           this.username = email;
           this.balance = 0;
         }
@@ -114,7 +113,7 @@ export default {
 
     go(route) {
       this.$router.push(route);
-    },
+    }
   }
 };
 </script>
