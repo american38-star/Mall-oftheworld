@@ -86,7 +86,7 @@ export default {
       userData: {
         email: "",
         uid: "",
-        createdAt: null,
+        createdAt: "",
         balance: 0,
         username: "",
       },
@@ -99,7 +99,7 @@ export default {
 
       let date;
 
-      // ✅ إصلاح التعامل مع Timestamp
+      // ✅ إصلاح التعامل مع Firestore Timestamp
       if (this.userData.createdAt.toDate) {
         date = this.userData.createdAt.toDate();
       } else {
@@ -165,7 +165,7 @@ export default {
 </script>
 
 <style scoped>
-/* ✨ نفس الستايل بدون أي تغيير */
+/* نفس الستايل تمامًا بدون أي تعديل */
 .profile-wrapper {
   padding: 20px;
   min-height: 100vh;
@@ -192,5 +192,80 @@ export default {
   border-radius: 50%;
   margin: 0 auto 12px;
   border: 4px solid #0d6efd;
+}
+
+.username {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  background: #eef4ff;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 12px;
+  gap: 10px;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  color: #0d6efd;
+}
+
+.label {
+  font-size: 14px;
+  color: #333;
+}
+
+.value {
+  font-weight: bold;
+  font-size: 14px;
+  color: #000;
+  margin-left: auto;
+}
+
+.scrollable {
+  max-width: 150px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.copy-btn {
+  background: #0d6efd;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+}
+
+.btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  font-size: 16px;
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+.edit-btn {
+  background: #0d6efd;
+  color: white;
+}
+
+.logout-btn {
+  background: #ff3b30;
+  color: white;
 }
 </style>
