@@ -192,6 +192,36 @@
       </div>
     </div>
 
+    <!-- Modal رفض مع سبق -->
+    <div v-if="showRejectModal" class="modal-backdrop" @click.self="closeRejectModal">
+      <div class="modal">
+        <h3>سبب الرفض</h3>
+        <p><strong>المبلغ:</strong> {{ rejectModalData.amount }} USDT</p>
+        <p><strong>المستخدم:</strong> {{ rejectModalData.email || rejectModalData.userEmail || '—' }}</p>
+        <p><strong>النوع:</strong> {{ rejectModalData.type === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
+        
+        <div class="input-box" style="margin-top: 15px;">
+          <label>سبب الرفض (مطلوب 1-500 حرف)</label>
+          <textarea 
+            v-model="rejectReason" 
+            placeholder="أدخل سبب الرفض..."
+            rows="4"
+            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;"
+          ></textarea>
+          <div v-if="rejectError" style="color: red; font-size: 12px; margin-top: 5px;">
+            {{ rejectError }}
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="btn red" type="button" @click="confirmReject" :disabled="processingId === rejectModalData.id">
+            تأكيد الرفض
+          </button>
+          <button class="btn ghost" type="button" @click="closeRejectModal">إلغاء</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal -->
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
@@ -207,9 +237,9 @@
         <p class="muted">تم الإنشاء: {{ formatDate(modalData.createdAt) }}</p>
         <div class="modal-actions">
           <button v-if="modalType === 'withdraw'" class="btn green" type="button" @click.stop="approveWithdraw(modalData)" :disabled="processingId === modalData.id">موافقة</button>
-          <button v-if="modalType === 'withdraw'" class="btn red" type="button" @click.stop="rejectWithdraw(modalData)" :disabled="processingId === modalData.id">رفض</button>
+          <button v-if="modalType === 'withdraw'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">رفض</button>
           <button v-if="modalType === 'recharge'" class="btn green" type="button" @click.stop="approveRecharge(modalData)" :disabled="processingId === modalData.id || modalData.status === 'approved'">موافقة</button>
-          <button v-if="modalType === 'recharge'" class="btn red" type="button" @click.stop="rejectRecharge(modalData)" :disabled="processingId === modalData.id || modalData.status === 'rejected'">رفض</button>
+          <button v-if="modalType === 'recharge'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'rejected'">رفض</button>
           <button class="btn ghost" type="button" @click="closeModal">إغلاق</button>
         </div>
       </div>
@@ -234,7 +264,8 @@ import {
   getDoc,
   onSnapshot,
   query,
-  orderBy
+  orderBy,
+  where
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -273,6 +304,13 @@ export default {
       ],
       currentUser: null,
       processingId: null,
+
+      // 🔥 جديد: بيانات لموذج الرفض
+      showRejectModal: false,
+      rejectModalData: {},
+      rejectReason: "",
+      rejectError: "",
+      rejectType: "", // 'recharge' أو 'withdraw'
     };
   },
   computed: {
@@ -397,6 +435,99 @@ export default {
     }
   },
   methods: {
+    // 🔥 جديد: فتح موذج الرفض
+    openRejectModal(data, type) {
+      this.rejectModalData = data;
+      this.rejectType = type;
+      this.rejectReason = "";
+      this.rejectError = "";
+      this.showRejectModal = true;
+      this.showModal = false; // إغلاق الموذج القديم
+    },
+
+    // 🔥 جديد: إغلاق موذج الرفض
+    closeRejectModal() {
+      this.showRejectModal = false;
+      this.rejectModalData = {};
+      this.rejectReason = "";
+      this.rejectError = "";
+    },
+
+    // 🔥 جديد: التحقق من سبب الرفض
+    validateRejectReason() {
+      if (!this.rejectReason || this.rejectReason.trim() === "") {
+        this.rejectError = "يجب إدخال سبب الرفض";
+        return false;
+      }
+      if (this.rejectReason.length < 1 || this.rejectReason.length > 500) {
+        this.rejectError = "سبب الرفض يجب أن يكون بين 1 و 500 حرف";
+        return false;
+      }
+      this.rejectError = "";
+      return true;
+    },
+
+    // 🔥 جديد: تأكيد الرفض
+    async confirmReject() {
+      if (!this.validateRejectReason()) return;
+
+      if (this.rejectType === 'recharge') {
+        await this.rejectRecharge(this.rejectModalData, this.rejectReason);
+      } else if (this.rejectType === 'withdraw') {
+        await this.rejectWithdraw(this.rejectModalData, this.rejectReason);
+      }
+    },
+
+    // 🔥 جديد: البحث عن معاملة في transactions
+    async findTransaction(userId, type, amount, createdAt) {
+      try {
+        const q = query(
+          collection(db, "transactions"),
+          where("userId", "==", userId),
+          where("type", "==", type),
+          where("amount", "==", amount),
+          orderBy("createdAt", "desc"),
+          limit(1)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          return snap.docs[0];
+        }
+      } catch (error) {
+        console.error("Error finding transaction:", error);
+      }
+      return null;
+    },
+
+    // 🔥 جديد: تحديث المعاملة في transactions
+    async updateTransactionStatus(userId, type, amount, status, reason = "", adminMessage = "") {
+      try {
+        // البحث عن المعاملة الأحدث للمستخدم
+        const q = query(
+          collection(db, "transactions"),
+          where("userId", "==", userId),
+          where("type", "==", type),
+          where("amount", "==", amount),
+          orderBy("createdAt", "desc")
+        );
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+          const transactionDoc = snap.docs[0];
+          await updateDoc(doc(db, "transactions", transactionDoc.id), {
+            status: status,
+            ...(reason && { reason: reason }),
+            ...(adminMessage && { adminMessage: adminMessage }),
+            updatedAt: serverTimestamp()
+          });
+          return transactionDoc.id;
+        }
+      } catch (error) {
+        console.error("Error updating transaction:", error);
+      }
+      return null;
+    },
+
     async logout() {
       try {
         const auth = getAuth();
@@ -553,6 +684,16 @@ export default {
       if (!confirm(`تأكيد الموافقة على ${req.amount} USDT؟`)) return;
       this.processingId = req.id;
       try {
+        // 1. 🔥 تحديث المعاملة في transactions
+        await this.updateTransactionStatus(
+          req.userId,
+          "withdraw",
+          req.amount,
+          "approved",
+          "",
+          "تمت الموافقة على طلب السحب"
+        );
+
         await addDoc(collection(db, "withdraw_logs"), {
           userId: req.userId || null,
           email: req.email || null,
@@ -582,15 +723,34 @@ export default {
       } finally {
         this.processingId = null;
         this.closeModal();
+        this.closeRejectModal();
       }
     },
-    async rejectWithdraw(req) {
+    async rejectWithdraw(req, reason = "") {
       if (!req || !req.id) return;
+      
+      // إذا لم يتم إرسال السبب، نفتح الموذج
+      if (!reason) {
+        this.openRejectModal(req, 'withdraw');
+        return;
+      }
+      
       const allowed = await this.ensureAdmin();
       if (!allowed) return alert("غير مصرح");
-      if (!confirm(`تأكيد رفض سحب ${req.amount}?`)) return;
+      if (!confirm(`تأكيد رفض سحب ${req.amount}؟`)) return;
       this.processingId = req.id;
       try {
+        // 1. 🔥 تحديث المعاملة في transactions مع سبب الرفض
+        await this.updateTransactionStatus(
+          req.userId,
+          "withdraw",
+          req.amount,
+          "rejected",
+          reason,
+          "تم رفض طلب السحب"
+        );
+
+        // 2. إعادة الرصيد إذا كان هناك oldBalance
         if (req.userId && typeof req.oldBalance === "number") {
           try {
             await updateDoc(doc(db, "users", req.userId), {
@@ -598,24 +758,28 @@ export default {
             });
           } catch { }
         }
+
         await addDoc(collection(db, "withdraw_logs"), {
           userId: req.userId || null,
           email: req.email || null,
           amount: req.amount || 0,
           type: "rejected",
+          reason: reason,
           createdAt: serverTimestamp(),
         });
+
         if (req.userId) {
           await addDoc(
             collection(db, "users", req.userId, "notifications"),
             {
               title: "تم رفض طلب السحب",
-              message: `تم رفض سحب ${req.amount} USDT.`,
+              message: `تم رفض سحب ${req.amount} USDT. السبب: ${reason}`,
               read: false,
               createdAt: serverTimestamp(),
             }
           );
         }
+
         const r = doc(db, "withdraw_requests", req.id);
         const ex = await getDoc(r);
         if (ex.exists()) await deleteDoc(r);
@@ -627,6 +791,7 @@ export default {
       } finally {
         this.processingId = null;
         this.closeModal();
+        this.closeRejectModal();
       }
     },
     async loadAllNotifications() {
@@ -834,6 +999,17 @@ export default {
       try {
         const pRef = doc(db, "payments", r.id);
         await updateDoc(pRef, { status: "approved", processedAt: serverTimestamp() });
+
+        // 🔥 تحديث المعاملة في transactions
+        await this.updateTransactionStatus(
+          r.userId,
+          "recharge",
+          r.amount,
+          "approved",
+          "",
+          "تمت الموافقة على طلب التعبئة"
+        );
+
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
           email: r.userEmail || null,
@@ -841,6 +1017,7 @@ export default {
           type: "approved",
           createdAt: serverTimestamp(),
         });
+
         if (r.userId) {
           await addDoc(collection(db, "users", r.userId, "notifications"), {
             title: "تمت الموافقة على طلب التعبئة",
@@ -848,6 +1025,7 @@ export default {
             read: false,
             createdAt: serverTimestamp(),
           });
+
           try {
             const userRef = doc(db, "users", r.userId);
             const uSnap = await getDoc(userRef);
@@ -861,6 +1039,7 @@ export default {
             console.warn("failed to update user balance after recharge approval:", err);
           }
         }
+
         alert("✔ تمت الموافقة على طلب التعبئة");
       } catch (e) {
         console.error("approveRecharge error:", e);
@@ -871,8 +1050,15 @@ export default {
       }
     },
 
-    async rejectRecharge(r) {
+    async rejectRecharge(r, reason = "") {
       if (!r || !r.id) return;
+      
+      // إذا لم يتم إرسال السبب، نفتح الموذج
+      if (!reason) {
+        this.openRejectModal(r, 'recharge');
+        return;
+      }
+      
       const allowed = await this.ensureAdmin();
       if (!allowed) return alert("غير مصرح لك");
       if (!confirm(`تأكيد رفض طلب التعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.userId || ''}?`)) return;
@@ -880,21 +1066,35 @@ export default {
       try {
         const pRef = doc(db, "payments", r.id);
         await updateDoc(pRef, { status: "rejected", processedAt: serverTimestamp() });
+
+        // 🔥 تحديث المعاملة في transactions مع سبب الرفض
+        await this.updateTransactionStatus(
+          r.userId,
+          "recharge",
+          r.amount,
+          "rejected",
+          reason,
+          "تم رفض طلب التعبئة"
+        );
+
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
           email: r.userEmail || null,
           amount: r.amount || 0,
           type: "rejected",
+          reason: reason,
           createdAt: serverTimestamp(),
         });
+
         if (r.userId) {
           await addDoc(collection(db, "users", r.userId, "notifications"), {
             title: "تم رفض طلب التعبئة",
-            message: `تم رفض طلب تعبئة ${r.amount} USDT. الرجاء التواصل مع الدعم.`,
+            message: `تم رفض طلب تعبئة ${r.amount} USDT. السبب: ${reason}`,
             read: false,
             createdAt: serverTimestamp(),
           });
         }
+
         alert("❌ تم رفض طلب التعبئة");
       } catch (e) {
         console.error("rejectRecharge error:", e);
@@ -902,8 +1102,10 @@ export default {
       } finally {
         this.processingId = null;
         this.closeModal();
+        this.closeRejectModal();
       }
     },
+    
     async deleteRecharge(r) {
       if (!r || !r.id) return;
       const allowed = await this.ensureAdmin();
