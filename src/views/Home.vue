@@ -144,7 +144,6 @@ export default {
         { title: "سحب", icon: "fas fa-wallet", route: "/withdraw" },
         { title: "المعاملات", icon: "fas fa-history", route: "/transactions" },
         { title: "برنامج", icon: "fas fa-download", route: "/program" },
-        { title: "الشركة", icon: "fas fa-building", route: "/company" },
         { title: "الأصدقاء", icon: "fas fa-users", route: "/team" },
         { title: "الوكالات", icon: "fas fa-id-card", route: "/agency" }
       ]
