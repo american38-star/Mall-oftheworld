@@ -101,7 +101,7 @@ export default {
           try {
             const q1 = query(
               collection(db, "transactions"),
-              where("userId", "==", user.uid),
+              where("userId", "==", user.uid), // نستخدم userId فقط
               orderBy("createdAt", "desc")
             );
             const snap1 = await getDocs(q1);
