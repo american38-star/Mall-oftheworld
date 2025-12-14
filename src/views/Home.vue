@@ -65,6 +65,7 @@ export default {
       menu: [
         { title: "تعبئة رصيد", icon: "fas fa-coins", route: "/recharge" },
         { title: "سحب", icon: "fas fa-wallet", route: "/withdraw" },
+        { title: "المعاملات", icon: "fas fa-history", route: "/transactions" }, // <== أضفت هذا
         { title: "برنامج", icon: "fas fa-download", route: "/program" },
         { title: "الشركة", icon: "fas fa-building", route: "/company" },
         { title: "الأصدقاء", icon: "fas fa-users", route: "/team" },
@@ -134,6 +135,59 @@ export default {
   align-items: center;
 }
 
+.top-left {
+  display: flex;
+  gap: 12px;
+}
+
+.icon {
+  font-size: 22px;
+  color: white;
+}
+
+.user-box {
+  text-align: left;
+}
+
+.welcome {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.balance {
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+/* شريط الأزرار السريعة */
+.quick-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.quick-btn {
+  flex: 1;
+  padding: 12px;
+  background: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-weight: bold;
+  color: #0d6efd;
+  cursor: pointer;
+}
+
+/* شريط الإعلان */
+.notice-bar {
+  background: #ff5722;
+  color: white;
+  padding: 10px;
+  border-radius: 12px;
+  text-align: center;
+  margin-top: 18px;
+  font-weight: bold;
+}
+
 /* القائمة الرئيسية */
 .grid-menu {
   display: grid;
@@ -149,6 +203,18 @@ export default {
   border-radius: 22px;
   text-align: center;
   font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.item:hover {
+  transform: scale(1.03);
+}
+
+.icon-box {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: #0d6efd;
 }
 
 /* البانر */
@@ -156,5 +222,6 @@ export default {
   width: 100%;
   border-radius: 20px;
   margin-top: 25px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 </style>
