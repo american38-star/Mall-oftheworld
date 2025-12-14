@@ -13,6 +13,7 @@ import Withdraw from "../views/Withdraw.vue";
 import Team from "../views/Team.vue";
 import Admin from "../views/Admin.vue";
 import Forbidden from "../views/Forbidden.vue";
+import Transactions from "../views/Transactions.vue"; // <== أضف هذا السطر
 
 // ===== Admin Emails =====
 const admins = [
@@ -46,6 +47,7 @@ const routes = [
   { path: "/recharge", component: Recharge, meta: { requiresAuth: true } },
   { path: "/withdraw", component: Withdraw, meta: { requiresAuth: true } },
   { path: "/team", component: Team, meta: { requiresAuth: true } },
+  { path: "/transactions", component: Transactions, meta: { requiresAuth: true } }, // <== أضف هذا السطر
 
   // Admin
   { path: "/admin", component: Admin, meta: { requiresAdmin: true } },
