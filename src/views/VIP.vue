@@ -84,7 +84,7 @@
         <div class="notes">
           <p>
             ملاحظة: عند الشراء يُخصم السعر ثم يُضاف ربح يومي أولي (purchase bonus).
-            العدّ التنازلي **موحّد عالميًا** ويبدأ عند التوقيت النظامي اليومي المحدد (06:30 UTC).
+            العدّ التنازلي **موحّد عالميًا** ويبدأ عند التوقيت النظامي اليومي المحدد (03:30 UTC).
             حينما تنتهي دورة VIP ستُمنح المكافأة لجميع المستخدمين في نفس الثانية.
           </p>
         </div>
@@ -116,22 +116,22 @@ export default {
       remainingMs: 0,
       intervalId: null,
 
-      // خطط VIP مع تقليل المدة إلى 21 ساعة (75600 ثانية بدلاً من 86400)
+      // خطط VIP (يمكن تعديل القيم حسب متطلباتك)
       plans: [
-        { level: 1, name: "VIP 1", price: 12, tasks: 1, daily: 3, total: 1095, durationSeconds: 75600 },
-        { level: 2, name: "VIP 2", price: 52, tasks: 1, daily: 13, total: 4745, durationSeconds: 75600 },
-        { level: 3, name: "VIP 3", price: 100, tasks: 1, daily: 26, total: 9490, durationSeconds: 75600 },
-        { level: 4, name: "VIP 4", price: 300, tasks: 1, daily: 82, total: 29930, durationSeconds: 75600 },
-        { level: 5, name: "VIP 5", price: 500, tasks: 1, daily: 145, total: 52925, durationSeconds: 75600 },
-        { level: 6, name: "VIP 6", price: 1500, tasks: 1, daily: 479, total: 174835, durationSeconds: 75600 },
-        { level: 7, name: "VIP 7", price: 3000, tasks: 1, daily: 1078, total: 393470, durationSeconds: 75600 },
-        { level: 8, name: "VIP 8", price: 5000, tasks: 1, daily: 2000, total: 730000, durationSeconds: 75600 },
-        { level: 9, name: "VIP 9", price: 10000, tasks: 1, daily: 4546, total: 1659290, durationSeconds: 75600 },
-        { level: 10, name: "VIP 10", price: 30000, tasks: 1, daily: 17699, total: 6460135, durationSeconds: 75600 },
-        { level: 11, name: "VIP 11", price: 90000, tasks: 1, daily: 81818, total: 29863570, durationSeconds: 75600 },
+        { level: 1, name: "VIP 1", price: 12, tasks: 1, daily: 3, total: 1095, durationSeconds: 86400 },
+        { level: 2, name: "VIP 2", price: 52, tasks: 1, daily: 13, total: 4745, durationSeconds: 86400 },
+        { level: 3, name: "VIP 3", price: 100, tasks: 1, daily: 26, total: 9490, durationSeconds: 86400 },
+        { level: 4, name: "VIP 4", price: 300, tasks: 1, daily: 82, total: 29930, durationSeconds: 86400 },
+        { level: 5, name: "VIP 5", price: 500, tasks: 1, daily: 145, total: 52925, durationSeconds: 86400 },
+        { level: 6, name: "VIP 6", price: 1500, tasks: 1, daily: 479, total: 174835, durationSeconds: 86400 },
+        { level: 7, name: "VIP 7", price: 3000, tasks: 1, daily: 1078, total: 393470, durationSeconds: 86400 },
+        { level: 8, name: "VIP 8", price: 5000, tasks: 1, daily: 2000, total: 730000, durationSeconds: 86400 },
+        { level: 9, name: "VIP 9", price: 10000, tasks: 1, daily: 4546, total: 1659290, durationSeconds: 86400 },
+        { level: 10, name: "VIP 10", price: 30000, tasks: 1, daily: 17699, total: 6460135, durationSeconds: 86400 },
+        { level: 11, name: "VIP 11", price: 90000, tasks: 1, daily: 81818, total: 29863570, durationSeconds: 86400 },
       ],
 
-      globalCycleHourUTC: 6,
+      globalCycleHourUTC: 3,
       globalCycleMinuteUTC: 30,
     };
   },
@@ -212,7 +212,7 @@ export default {
           daily: data.daily || 0,
           vipStart: data.vipStart || null,
           vipEnd: data.vipEnd || null,
-          durationSeconds: data.durationSeconds || 75600,
+          durationSeconds: data.durationSeconds || 86400,
           lastRewardAt: data.lastRewardAt || null,
         };
 
@@ -227,7 +227,7 @@ export default {
             daily: d2.daily || 0,
             vipStart: d2.vipStart || null,
             vipEnd: d2.vipEnd || null,
-            durationSeconds: d2.durationSeconds || 75600,
+            durationSeconds: d2.durationSeconds || 86400,
             lastRewardAt: d2.lastRewardAt || null,
           };
         }
@@ -252,7 +252,7 @@ export default {
 
           const vipEndMs = vipData.vipEnd.toMillis ? vipData.vipEnd.toMillis() : vipData.vipEnd;
           const nowMs = Date.now();
-          const durationMs = (vipData.durationSeconds || 75600) * 1000;
+          const durationMs = (vipData.durationSeconds || 86400) * 1000;
 
           if (nowMs <= vipEndMs) return;
 
@@ -317,7 +317,7 @@ export default {
 
           const vipData = vipSnap.data();
           const daily = Number(vipData.daily || 0);
-          const durationSeconds = Number(vipData.durationSeconds || 75600);
+          const durationSeconds = Number(vipData.durationSeconds || 86400);
           const vipEndMs = vipData.vipEnd.toMillis ? vipData.vipEnd.toMillis() : vipData.vipEnd;
           const nowMs = Date.now();
           if (nowMs < vipEndMs) return;
@@ -378,7 +378,7 @@ export default {
             level: plan.level,
             price: plan.price,
             daily: plan.daily,
-            durationSeconds: plan.durationSeconds || 75600,
+            durationSeconds: plan.durationSeconds || 86400,
             vipStart: Timestamp.fromMillis(nowMs),
             vipEnd: vipEndTs,
             lastRewardAt: serverTimestamp(),
