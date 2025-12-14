@@ -63,8 +63,7 @@ import {
   query,
   where,
   orderBy,
-  getDocs,
-  or
+  getDocs
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -97,10 +96,9 @@ export default {
           });
 
           // 🔥 البحث عن المعاملات بـ userId أو email
-          // الطريقة الأولى: البحث المستقل ثم دمج النتائج
           let allTransactions = [];
 
-          // 1. البحث بـ userId
+          // البحث باستخدام userId
           try {
             const q1 = query(
               collection(db, "transactions"),
@@ -118,7 +116,7 @@ export default {
             console.log("⚠️ لم يتم العثور على معاملات بـ userId:", error.message);
           }
 
-          // 2. البحث بـ email
+          // البحث باستخدام email
           try {
             const q2 = query(
               collection(db, "transactions"),
@@ -142,7 +140,7 @@ export default {
             console.log("⚠️ لم يتم العثور على معاملات بـ email:", error.message);
           }
 
-          // 3. إذا لم توجد معاملات، جرب جلب بعض المعاملات للتجربة
+          // إذا لم توجد معاملات، جلب بعض المعاملات للتجربة (في حالة لا يوجد معاملات للمستخدم)
           if (allTransactions.length === 0) {
             console.log("🔍 جرب جلب بعض المعاملات للتجربة");
             try {
@@ -156,7 +154,7 @@ export default {
                 ...doc.data()
               }));
               
-              // عرض أول 5 معاملات فقط (للتجربة)
+              // عرض أول 5 معاملات فقط للتجربة
               allTransactions = allDocs.slice(0, 5);
               console.log(`✅ جلب ${allTransactions.length} معاملة للتجربة`);
             } catch (error) {
@@ -205,7 +203,6 @@ export default {
         if (ts.toDate) {
           date = ts.toDate();
         } else if (ts.seconds) {
-          // إذا كان Timestamp بتنسيق Firebase {seconds, nanoseconds}
           date = new Date(ts.seconds * 1000);
         } else {
           date = new Date(ts);
