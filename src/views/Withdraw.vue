@@ -44,7 +44,8 @@ import {
   getDoc,
   runTransaction,
   collection,
-  serverTimestamp
+  serverTimestamp,
+  addDoc
 } from "firebase/firestore";
 
 export default {
@@ -133,6 +134,20 @@ export default {
             createdAt: serverTimestamp(),
             oldBalance: currentBalance
           });
+        });
+
+        // ✅ 3️⃣ أضفت هذا: حفظ المعاملة في transactions لكي تظهر في صفحة المعاملات
+        await addDoc(collection(db, "transactions"), {
+          userId: user.uid,
+          email: user.email,
+          type: "withdraw",
+          amount: Number(this.amount),
+          wallet: this.wallet,
+          network: this.selectedNetwork,
+          status: "pending",
+          reason: "",
+          adminMessage: "",
+          createdAt: serverTimestamp(),
         });
 
         alert("✅ تم إرسال طلب السحب وخصم الرصيد بنجاح");
