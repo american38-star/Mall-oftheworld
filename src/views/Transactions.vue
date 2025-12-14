@@ -95,10 +95,9 @@ export default {
             email: user.email
           });
 
-          // 🔥 البحث عن المعاملات بـ userId أو email
           let allTransactions = [];
 
-          // البحث باستخدام userId
+          // البحث باستخدام userId فقط (تجنب استخدام email)
           try {
             const q1 = query(
               collection(db, "transactions"),
@@ -116,31 +115,7 @@ export default {
             console.log("⚠️ لم يتم العثور على معاملات بـ userId:", error.message);
           }
 
-          // البحث باستخدام email
-          try {
-            const q2 = query(
-              collection(db, "transactions"),
-              where("email", "==", user.email),
-              orderBy("createdAt", "desc")
-            );
-            const snap2 = await getDocs(q2);
-            const transactionsByEmail = snap2.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            
-            // تجنب التكرار (إذا كانت نفس المعاملة موجودة في كلا البحثين)
-            transactionsByEmail.forEach(tx => {
-              if (!allTransactions.find(existing => existing.id === tx.id)) {
-                allTransactions.push(tx);
-              }
-            });
-            console.log(`✅ وجدت ${transactionsByEmail.length} معاملة بـ email`);
-          } catch (error) {
-            console.log("⚠️ لم يتم العثور على معاملات بـ email:", error.message);
-          }
-
-          // إذا لم توجد معاملات، جلب بعض المعاملات للتجربة (في حالة لا يوجد معاملات للمستخدم)
+          // إذا لم توجد معاملات، جلب بعض المعاملات للتجربة
           if (allTransactions.length === 0) {
             console.log("🔍 جرب جلب بعض المعاملات للتجربة");
             try {
