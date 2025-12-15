@@ -6,50 +6,68 @@
 
     <div v-else>
       <div v-if="transactions.length === 0" class="empty">
-        لا توجد معاملات
+        <p>لا توجد معاملات</p>
+        <p class="uid-info">UID الحالي: {{ currentUserId }}</p>
+        <button @click="createTestTransaction" class="test-btn">
+          إنشاء معاملة تجريبية
+        </button>
       </div>
 
-      <div
-        v-for="tx in transactions"
-        :key="tx.id"
-        class="tx-card"
-      >
-        <div class="row">
-          <span class="label">النوع</span>
-          <span class="value">{{ typeLabel(tx.type) }}</span>
-        </div>
-
-        <div class="row">
-          <span class="label">المبلغ</span>
-          <span class="value">{{ tx.amount }} USDT</span>
-        </div>
-
-        <div class="row">
-          <span class="label">الحالة</span>
-          <span :class="['status', tx.status]">
-            {{ statusLabel(tx.status) }}
-          </span>
-        </div>
-
-        <div class="row">
-          <span class="label">التاريخ</span>
-          <span class="value">{{ formatDate(tx.createdAt) }}</span>
-        </div>
-
+      <div v-else>
+        <p class="count-info">عدد المعاملات: {{ transactions.length }}</p>
+        
         <div
-          v-if="tx.status === 'rejected' && tx.reason"
-          class="reject-box"
+          v-for="tx in transactions"
+          :key="tx.id"
+          class="tx-card"
         >
-          <strong>سبب الرفض:</strong>
-          <div>{{ tx.reason }}</div>
-        </div>
+          <div class="row">
+            <span class="label">المعرف</span>
+            <span class="value">{{ tx.id }}</span>
+          </div>
 
-        <div
-          v-if="tx.adminMessage"
-          class="admin-box"
-        >
-          <strong>رسالة الإدارة:</strong>
-          <div>{{ tx.adminMessage }}</div>
+          <div class="row">
+            <span class="label">النوع</span>
+            <span class="value">{{ typeLabel(tx.type) }}</span>
+          </div>
+
+          <div class="row">
+            <span class="label">المبلغ</span>
+            <span class="value">{{ tx.amount }} USDT</span>
+          </div>
+
+          <div class="row">
+            <span class="label">الحالة</span>
+            <span :class="['status', tx.status]">
+              {{ statusLabel(tx.status) }}
+            </span>
+          </div>
+
+          <div class="row">
+            <span class="label">التاريخ</span>
+            <span class="value">{{ formatDate(tx.createdAt) }}</span>
+          </div>
+
+          <div v-if="tx.userId" class="row">
+            <span class="label">User ID</span>
+            <span class="value uid">{{ tx.userId }}</span>
+          </div>
+
+          <div
+            v-if="tx.status === 'rejected' && tx.reason"
+            class="reject-box"
+          >
+            <strong>سبب الرفض:</strong>
+            <div>{{ tx.reason }}</div>
+          </div>
+
+          <div
+            v-if="tx.adminMessage"
+            class="admin-box"
+          >
+            <strong>رسالة الإدارة:</strong>
+            <div>{{ tx.adminMessage }}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -63,7 +81,10 @@ import {
   query,
   where,
   orderBy,
-  getDocs
+  getDocs,
+  addDoc,
+  serverTimestamp,
+  onSnapshot
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -74,6 +95,8 @@ export default {
     return {
       loading: true,
       transactions: [],
+      currentUserId: "",
+      unsubscribe: null
     };
   },
 
@@ -81,93 +104,144 @@ export default {
     this.loadTransactions();
   },
 
+  beforeUnmount() {
+    // تنظيف الاشتراك عند الخروج من الصفحة
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  },
+
   methods: {
     async loadTransactions() {
+      // الاستماع لتغير حالة المصادقة
       onAuthStateChanged(auth, async (user) => {
         if (!user) {
+          console.log("❌ لا يوجد مستخدم مسجل دخول");
           this.loading = false;
+          this.currentUserId = "";
           return;
         }
 
-        try {
-          console.log("🔍 جاري تحميل معاملات المستخدم:", {
-            uid: user.uid,
-            email: user.email
-          });
+        this.currentUserId = user.uid;
+        console.log("✅ مستخدم مسجل دخول:", {
+          uid: user.uid,
+          email: user.email
+        });
 
-          let allTransactions = [];
-
-          // البحث باستخدام userId فقط (تجنب استخدام email)
-          try {
-            const q1 = query(
-              collection(db, "transactions"),
-              where("userId", "==", user.uid), // التأكد من استخدام userId هنا
-              orderBy("createdAt", "desc")
-            );
-            const snap1 = await getDocs(q1);
-            const transactionsByUserId = snap1.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            allTransactions = [...allTransactions, ...transactionsByUserId];
-            console.log(`✅ وجدت ${transactionsByUserId.length} معاملة بـ userId`);
-          } catch (error) {
-            console.log("⚠️ لم يتم العثور على معاملات بـ userId:", error.message);
-          }
-
-          // إذا لم توجد معاملات، جلب بعض المعاملات للتجربة
-          if (allTransactions.length === 0) {
-            console.log("🔍 جرب جلب بعض المعاملات للتجربة");
-            try {
-              const q3 = query(
-                collection(db, "transactions"),
-                orderBy("createdAt", "desc")
-              );
-              const snap3 = await getDocs(q3);
-              const allDocs = snap3.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-              
-              // عرض أول 5 معاملات فقط للتجربة
-              allTransactions = allDocs.slice(0, 5);
-              console.log(`✅ جلب ${allTransactions.length} معاملة للتجربة`);
-            } catch (error) {
-              console.log("❌ لا توجد معاملات في قاعدة البيانات:", error.message);
-            }
-          }
-
-          // فرز المعاملات حسب التاريخ (من الأحدث للأقدم)
-          allTransactions.sort((a, b) => {
-            const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-            const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-            return dateB - dateA;
-          });
-
-          this.transactions = allTransactions;
-          console.log(`🎉 إجمالي المعاملات المعروضة: ${this.transactions.length}`);
-
-        } catch (err) {
-          console.error("❌ خطأ في تحميل المعاملات:", err);
-          alert("حدث خطأ في تحميل المعاملات. تحقق من Console للمزيد من التفاصيل.");
+        // تنظيف الاشتراك السابق إذا كان موجوداً
+        if (this.unsubscribe) {
+          this.unsubscribe();
         }
 
-        this.loading = false;
+        try {
+          // إنشاء استعلام بسيط وصحيح
+          const q = query(
+            collection(db, "transactions"),
+            where("userId", "==", user.uid),
+            orderBy("createdAt", "desc")
+          );
+
+          // استخدام onSnapshot للاستماع للتحديثات الفورية
+          this.unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+              console.log("📥 تم استقبال بيانات من Firestore");
+              
+              if (snapshot.empty) {
+                console.log("📭 الاستعلام عاد فارغاً، لا توجد معاملات لهذا المستخدم");
+                this.transactions = [];
+              } else {
+                const transactionsData = [];
+                snapshot.forEach((doc) => {
+                  transactionsData.push({
+                    id: doc.id,
+                    ...doc.data()
+                  });
+                });
+                
+                console.log(`✅ تم تحميل ${transactionsData.length} معاملة`);
+                console.log("📋 تفاصيل المعاملات:", transactionsData);
+                
+                this.transactions = transactionsData;
+              }
+              
+              this.loading = false;
+            },
+            (error) => {
+              console.error("❌ خطأ في الاستماع للمعاملات:", error);
+              console.error("تفاصيل الخطأ:", error.code, error.message);
+              
+              // إذا كان الخطأ بسبب مشكلة في القواعد أو الاستعلام
+              if (error.code === 'permission-denied') {
+                alert("خطأ في الصلاحيات! تحقق من قواعد Firebase.");
+              } else if (error.code === 'failed-precondition') {
+                console.log("⚠️ تحتاج إلى إنشاء فهرس في Firebase Console");
+                alert("تحتاج إلى إنشاء فهرس في Firebase Console. تحقق من رسائل الخطأ في Console.");
+              }
+              
+              this.loading = false;
+            }
+          );
+
+        } catch (error) {
+          console.error("❌ خطأ في تحميل المعاملات:", error);
+          console.error("Stack trace:", error.stack);
+          this.loading = false;
+        }
       });
     },
 
+    // دالة لإنشاء معاملة تجريبية
+    async createTestTransaction() {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          alert("يجب تسجيل الدخول أولاً");
+          return;
+        }
+
+        const transactionData = {
+          userId: user.uid,
+          type: "deposit",
+          amount: 100 + Math.floor(Math.random() * 900), // مبلغ عشوائي
+          status: "pending",
+          createdAt: serverTimestamp(),
+          reason: "",
+          adminMessage: "تم إنشاؤها للاختبار"
+        };
+
+        console.log("📝 جاري إنشاء معاملة تجريبية:", transactionData);
+
+        const docRef = await addDoc(collection(db, "transactions"), transactionData);
+        
+        console.log("✅ تم إنشاء معاملة جديدة:", docRef.id);
+        alert(`تم إنشاء معاملة تجريبية بنجاح! الرقم: ${docRef.id}`);
+        
+        // سيتم تحديث القائمة تلقائياً عبر onSnapshot
+
+      } catch (error) {
+        console.error("❌ خطأ في إنشاء المعاملة:", error);
+        alert("خطأ: " + error.message);
+      }
+    },
+
     typeLabel(type) {
-      if (type === "recharge") return "تعبئة رصيد";
-      if (type === "withdraw") return "سحب رصيد";
-      if (type === "vip") return "VIP";
-      return type;
+      const types = {
+        recharge: "تعبئة رصيد",
+        withdraw: "سحب رصيد",
+        deposit: "إيداع",
+        vip: "VIP"
+      };
+      return types[type] || type;
     },
 
     statusLabel(status) {
-      if (status === "pending") return "قيد الانتظار";
-      if (status === "approved") return "موافق";
-      if (status === "rejected") return "مرفوض";
-      return status;
+      const statuses = {
+        pending: "قيد الانتظار",
+        approved: "موافق",
+        rejected: "مرفوض"
+      };
+      return statuses[status] || status;
     },
 
     formatDate(ts) {
@@ -211,6 +285,7 @@ export default {
   text-align: center;
   color: white;
   margin-bottom: 16px;
+  font-size: 24px;
 }
 
 .loading,
@@ -218,33 +293,73 @@ export default {
   text-align: center;
   color: white;
   margin-top: 40px;
+  font-size: 18px;
 }
 
 .empty {
   background: rgba(255, 255, 255, 0.1);
-  padding: 20px;
-  border-radius: 12px;
-  margin-top: 20px;
+  padding: 30px;
+  border-radius: 16px;
+  margin-top: 30px;
+}
+
+.uid-info {
+  font-size: 12px;
+  opacity: 0.8;
+  margin: 10px 0;
+  direction: ltr;
+  word-break: break-all;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.count-info {
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.test-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.test-btn:hover {
+  background: #45a049;
 }
 
 .tx-card {
   background: #ffffffee;
-  padding: 14px;
+  padding: 18px;
   border-radius: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   color: #000;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.row:last-child {
+  border-bottom: none;
 }
 
 .label {
-  font-size: 13px;
-  color: #555;
+  font-size: 14px;
+  color: #666;
 }
 
 .value {
@@ -252,41 +367,56 @@ export default {
   color: #333;
 }
 
+.value.uid {
+  font-size: 11px;
+  color: #888;
+  direction: ltr;
+  word-break: break-all;
+  max-width: 60%;
+  text-align: left;
+}
+
 .status {
   font-weight: bold;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
 }
 
 .status.pending {
   color: #ff9800;
   background-color: #fff3e0;
+  border: 1px solid #ff9800;
 }
 
 .status.approved {
   color: #2e7d32;
   background-color: #e8f5e9;
+  border: 1px solid #2e7d32;
 }
 
 .status.rejected {
   color: #d32f2f;
   background-color: #ffebee;
+  border: 1px solid #d32f2f;
 }
 
 .reject-box {
   background: #ffe5e5;
-  padding: 8px;
+  padding: 12px;
   border-radius: 10px;
-  margin-top: 8px;
+  margin-top: 10px;
   color: #b00020;
   font-size: 13px;
+  border-right: 4px solid #b00020;
 }
 
 .admin-box {
   background: #e3f2fd;
-  padding: 8px;
+  padding: 12px;
   border-radius: 10px;
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 13px;
+  border-right: 4px solid #2196F3;
 }
 </style>
