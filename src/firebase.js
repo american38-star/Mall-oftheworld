@@ -60,5 +60,24 @@ export const db = getFirestore(app);     // Firestore قاعدة البيانا�
 export const storage = getStorage(app);  // تخزين الملفات
 export const functions = getFunctions(app); // Functions Cloud
 
+// إضافة التصدير لخاصية `userId` الجديد في المعاملات
+export const getTransactionsByUserId = async (userId) => {
+  try {
+    const q = query(
+      collection(db, "transactions"),
+      where("userId", "==", userId),
+      orderBy("createdAt", "desc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("❌ خطأ في جلب المعاملات:", error);
+    return [];
+  }
+};
+
 export { analytics };
 export { sendPasswordResetEmail };
