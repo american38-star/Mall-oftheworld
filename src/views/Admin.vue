@@ -479,13 +479,13 @@ export default {
       }
     },
 
-    // 🔥 جديد: البحث عن معاملة في transactions بالبريد والمبلغ
-    async findTransactionByEmailAndAmount(email, amount, type) {
+    // 🔥 🔴 **دالة مكسورة - استبدلها:**
+    async findTransactionByUserIdAndAmount(userId, amount, type) {
       try {
-        // البحث بالبريد أولاً (أكثر دقة)
+        // البحث بـ userId أولاً
         let q = query(
           collection(db, "transactions"),
-          where("email", "==", email),
+          where("userId", "==", userId),
           where("type", "==", type),
           where("amount", "==", amount),
           orderBy("createdAt", "desc")
@@ -493,7 +493,7 @@ export default {
         
         let snap = await getDocs(q);
         
-        // إذا لم نجد بالبريد، نبحث بالـ amount فقط (للحالات القديمة)
+        // إذا لم نجد، نبحث بالـ amount فقط
         if (snap.empty) {
           q = query(
             collection(db, "transactions"),
@@ -502,6 +502,16 @@ export default {
             orderBy("createdAt", "desc")
           );
           snap = await getDocs(q);
+          
+          // تصفية حسب userId يدوياً
+          if (!snap.empty) {
+            for (const docSnap of snap.docs) {
+              const data = docSnap.data();
+              if (data.userId === userId) {
+                return docSnap;
+              }
+            }
+          }
         }
         
         if (!snap.empty) {
@@ -513,11 +523,11 @@ export default {
       return null;
     },
 
-    // 🔥 جديد: تحديث المعاملة في transactions
-    async updateTransactionStatus(email, type, amount, status, reason = "", adminMessage = "") {
+    // 🔥 🔴 **دالة مكسورة - استبدلها:**
+    async updateTransactionStatus(userId, amount, type, status, reason = "", adminMessage = "") {
       try {
         // 1. البحث عن المعاملة
-        const transactionDoc = await this.findTransactionByEmailAndAmount(email, amount, type);
+        const transactionDoc = await this.findTransactionByUserIdAndAmount(userId, amount, type);
         
         if (transactionDoc) {
           // 2. تحديث المعاملة
@@ -530,11 +540,15 @@ export default {
           console.log(`✅ تم تحديث المعاملة ${transactionDoc.id} إلى ${status}`);
           return transactionDoc.id;
         } else {
-          console.warn(`⚠️ لم يتم العثور على معاملة للمستخدم ${email} بمبلغ ${amount} ونوع ${type}`);
-          // 3. إذا لم نجدها، ننشئ معاملة جديدة (للمعاملات القديمة)
+          console.warn(`⚠️ لم يتم العثور على معاملة للمستخدم ${userId} بمبلغ ${amount} ونوع ${type}`);
+          
+          // 3. إنشاء معاملة جديدة مباشرة (الحل السريع)
+          const userDoc = await getDoc(doc(db, "users", userId));
+          const userEmail = userDoc.exists() ? userDoc.data().email : "";
+          
           await addDoc(collection(db, "transactions"), {
-            userId: this.rejectModalData.userId || "",
-            email: email,
+            userId: userId,
+            email: userEmail,
             type: type,
             amount: amount,
             status: status,
@@ -543,7 +557,7 @@ export default {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           });
-          console.log(`✅ تم إنشاء معاملة جديدة للمستخدم ${email}`);
+          console.log(`✅ تم إنشاء معاملة جديدة للمستخدم ${userId}`);
           return "new";
         }
       } catch (error) {
@@ -701,6 +715,8 @@ export default {
         return false;
       }
     },
+    
+    // 🔥 🔴 **دالة approveWithdraw المكسورة - إصلاحها:**
     async approveWithdraw(req) {
       if (!req || !req.id) return;
       const allowed = await this.ensureAdmin();
@@ -708,15 +724,19 @@ export default {
       if (!confirm(`تأكيد الموافقة على ${req.amount} USDT؟`)) return;
       this.processingId = req.id;
       try {
-        // 1. 🔥 تحديث المعاملة في transactions
-        await this.updateTransactionStatus(
-          req.email,
-          "withdraw",
-          req.amount,
-          "approved",
-          "",
-          "تمت الموافقة على طلب السحب"
-        );
+        // 1. 🔥 تحديث المعاملة في transactions باستخدام userId وليس email
+        if (req.userId) {
+          await this.updateTransactionStatus(
+            req.userId,
+            req.amount,
+            "withdraw",
+            "approved",
+            "",
+            "تمت الموافقة على طلب السحب"
+          );
+        } else {
+          console.warn("⚠️ لا يوجد userId في طلب السحب");
+        }
 
         await addDoc(collection(db, "withdraw_logs"), {
           userId: req.userId || null,
@@ -725,6 +745,7 @@ export default {
           type: "approved",
           createdAt: serverTimestamp(),
         });
+        
         if (req.userId) {
           await addDoc(
             collection(db, "users", req.userId, "notifications"),
@@ -736,6 +757,7 @@ export default {
             }
           );
         }
+        
         const r = doc(db, "withdraw_requests", req.id);
         const ex = await getDoc(r);
         if (ex.exists()) await deleteDoc(r);
@@ -743,6 +765,7 @@ export default {
         await this.loadWithdrawRequests();
         await this.loadWithdrawLogs();
       } catch (e) {
+        console.error("خطأ في الموافقة:", e);
         alert("خطأ في الموافقة");
       } finally {
         this.processingId = null;
@@ -750,6 +773,8 @@ export default {
         this.closeRejectModal();
       }
     },
+    
+    // 🔥 🔴 **دالة rejectWithdraw المكسورة - إصلاحها:**
     async rejectWithdraw(req, reason = "") {
       if (!req || !req.id) return;
       
@@ -764,15 +789,17 @@ export default {
       if (!confirm(`تأكيد رفض سحب ${req.amount}؟`)) return;
       this.processingId = req.id;
       try {
-        // 1. 🔥 تحديث المعاملة في transactions مع سبب الرفض
-        await this.updateTransactionStatus(
-          req.email,
-          "withdraw",
-          req.amount,
-          "rejected",
-          reason,
-          "تم رفض طلب السحب"
-        );
+        // 1. 🔥 تحديث المعاملة في transactions باستخدام userId
+        if (req.userId) {
+          await this.updateTransactionStatus(
+            req.userId,
+            req.amount,
+            "withdraw",
+            "rejected",
+            reason,
+            "تم رفض طلب السحب"
+          );
+        }
 
         // 2. إعادة الرصيد إذا كان هناك oldBalance
         if (req.userId && typeof req.oldBalance === "number") {
@@ -811,6 +838,7 @@ export default {
         await this.loadWithdrawRequests();
         await this.loadWithdrawLogs();
       } catch (e) {
+        console.error("خطأ في رفض الطلب:", e);
         alert("خطأ في رفض الطلب");
       } finally {
         this.processingId = null;
@@ -818,6 +846,7 @@ export default {
         this.closeRejectModal();
       }
     },
+    
     async loadAllNotifications() {
       try {
         this.loadingNotifs = true;
@@ -1014,6 +1043,7 @@ export default {
       }
     },
 
+    // 🔥 🔴 **دالة approveRecharge المكسورة - إصلاحها:**
     async approveRecharge(r) {
       if (!r || !r.id) return;
       const allowed = await this.ensureAdmin();
@@ -1024,15 +1054,17 @@ export default {
         const pRef = doc(db, "payments", r.id);
         await updateDoc(pRef, { status: "approved", processedAt: serverTimestamp() });
 
-        // 🔥 تحديث المعاملة في transactions
-        await this.updateTransactionStatus(
-          r.userEmail,
-          "recharge",
-          r.amount,
-          "approved",
-          "",
-          "تمت الموافقة على طلب التعبئة"
-        );
+        // 🔥 تحديث المعاملة في transactions باستخدام userId وليس email
+        if (r.userId) {
+          await this.updateTransactionStatus(
+            r.userId,
+            r.amount,
+            "recharge",
+            "approved",
+            "",
+            "تمت الموافقة على طلب التعبئة"
+          );
+        }
 
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
@@ -1074,6 +1106,7 @@ export default {
       }
     },
 
+    // 🔥 🔴 **دالة rejectRecharge المكسورة - إصلاحها:**
     async rejectRecharge(r, reason = "") {
       if (!r || !r.id) return;
       
@@ -1091,15 +1124,17 @@ export default {
         const pRef = doc(db, "payments", r.id);
         await updateDoc(pRef, { status: "rejected", processedAt: serverTimestamp() });
 
-        // 🔥 تحديث المعاملة في transactions مع سبب الرفض
-        await this.updateTransactionStatus(
-          r.userEmail,
-          "recharge",
-          r.amount,
-          "rejected",
-          reason,
-          "تم رفض طلب التعبئة"
-        );
+        // 🔥 تحديث المعاملة في transactions باستخدام userId
+        if (r.userId) {
+          await this.updateTransactionStatus(
+            r.userId,
+            r.amount,
+            "recharge",
+            "rejected",
+            reason,
+            "تم رفض طلب التعبئة"
+          );
+        }
 
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
