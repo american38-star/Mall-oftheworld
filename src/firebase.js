@@ -9,7 +9,15 @@ import {
   sendPasswordResetEmail
 } from "firebase/auth";
 
-import { getFirestore } from "firebase/firestore";
+import { 
+  getFirestore, 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  getDocs 
+} from "firebase/firestore";
+
 import { getStorage } from "firebase/storage";
 
 import {
