@@ -140,13 +140,13 @@ export default {
         await addDoc(collection(db, "transactions"), {
           userId: user.uid,
           email: user.email,
-          type: "withdraw",
+          type: "withdraw",  // نوع المعاملة
           amount: Number(this.amount),
           wallet: this.wallet,
           network: this.selectedNetwork,
-          status: "pending",
-          reason: "",
-          adminMessage: "",
+          status: "pending", // المعاملة قيد الانتظار
+          reason: "",  // لا حاجة للسبب الآن لأن المعاملة قيد الانتظار
+          adminMessage: "",  // لا حاجة لرسالة الإدارة الآن
           createdAt: serverTimestamp(),
         });
 
