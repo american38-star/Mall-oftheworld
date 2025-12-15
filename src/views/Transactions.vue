@@ -23,7 +23,8 @@
       <div v-if="transactions.length === 0" class="empty">
         <p>لا توجد معاملات</p>
         <p class="uid-info">UID الحالي: {{ currentUserId }}</p>
-        <button @click="createTestTransaction" class="test-btn">
+        <!-- إخفاء الزر بناءً على قيمة showTestButton -->
+        <button v-if="showTestButton" @click="createTestTransaction" class="test-btn">
           ➕ إنشاء معاملة تجريبية
         </button>
       </div>
@@ -111,7 +112,8 @@ export default {
       transactions: [],
       indexError: false,
       currentUserId: "",
-      useIndex: true // محاولة استخدام الفهرس أولاً
+      useIndex: true, // محاولة استخدام الفهرس أولاً
+      showTestButton: false // إخفاء زر إنشاء المعاملة التجريبية
     };
   },
 
