@@ -2,6 +2,12 @@
   <div class="transactions-wrapper">
     <h2 class="title">المعاملات</h2>
 
+    <!-- إشعار للمستخدم -->
+    <div v-if="successMessage" class="success-notification">
+      ✅ {{ successMessage }}
+      <button @click="successMessage = ''" class="close-notification">✕</button>
+    </div>
+
     <div v-if="loading" class="loading">جاري التحميل...</div>
 
     <div v-else-if="indexError" class="error-box">
@@ -23,10 +29,6 @@
       <div v-if="transactions.length === 0" class="empty">
         <p>لا توجد معاملات</p>
         <p class="uid-info">UID الحالي: {{ currentUserId }}</p>
-        <!-- إخفاء الزر بناءً على قيمة showTestButton -->
-        <button v-if="showTestButton" @click="createTestTransaction" class="test-btn">
-          ➕ إنشاء معاملة تجريبية
-        </button>
       </div>
 
       <div v-else>
@@ -37,9 +39,9 @@
           :key="tx.id"
           class="tx-card"
         >
-          <div class="row">
-            <span class="label">المعرف</span>
-            <span class="value">{{ tx.id.substring(0, 8) }}...</span>
+          <!-- ✅ هنا أضفت رمز الموافقة عند حالة "approved" -->
+          <div v-if="tx.status === 'approved'" class="approved-badge">
+            ✅ تمت الموافقة على طلبك
           </div>
 
           <div class="row">
@@ -64,9 +66,11 @@
             <span class="value">{{ formatDate(tx.createdAt) }}</span>
           </div>
 
-          <div v-if="tx.userId" class="row">
-            <span class="label">User ID</span>
-            <span class="value uid">{{ tx.userId.substring(0, 10) }}...</span>
+          <!-- ✅ رسالة تأكيد للموافقة -->
+          <div v-if="tx.status === 'approved' && tx.adminMessage" class="approved-message">
+            <strong>🎉 تمت الموافقة!</strong>
+            <div>{{ tx.adminMessage }}</div>
+            <small>تم إضافة المبلغ إلى رصيدك</small>
           </div>
 
           <div
@@ -78,7 +82,7 @@
           </div>
 
           <div
-            v-if="tx.adminMessage"
+            v-if="tx.status === 'pending' && tx.adminMessage"
             class="admin-box"
           >
             <strong>رسالة الإدارة:</strong>
@@ -98,8 +102,8 @@ import {
   where,
   orderBy,
   getDocs,
-  addDoc,
-  serverTimestamp
+  doc,
+  getDoc
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -112,13 +116,14 @@ export default {
       transactions: [],
       indexError: false,
       currentUserId: "",
-      useIndex: true, // محاولة استخدام الفهرس أولاً
-      showTestButton: false // إخفاء زر إنشاء المعاملة التجريبية
+      useIndex: true,
+      successMessage: "" // رسالة نجاح
     };
   },
 
   created() {
     this.loadTransactions();
+    this.checkForApprovedTransactions();
   },
 
   methods: {
@@ -154,7 +159,7 @@ export default {
               return;
               
             } catch (indexError) {
-              console.log("⚠️ خطأ في الفهرس، جرب الطريقة البديلة:", indexError.message);
+              console.log("⚠️ خطأ في الفهرس:", indexError.message);
               this.indexError = true;
               this.useIndex = false;
               // استمر للطريقة البديلة
@@ -174,11 +179,11 @@ export default {
               ...doc.data()
             }));
             
-            // ترتيب يدوي حسب التاريخ (بدون فهرس)
+            // ترتيب يدوي حسب التاريخ
             transactions.sort((a, b) => {
               const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
               const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-              return dateB - dateA; // من الأحدث للأقدم
+              return dateB - dateA;
             });
             
             this.transactions = transactions;
@@ -198,48 +203,42 @@ export default {
       });
     },
 
-    // دالة للتحميل بدون فهرس (عند النقر على الزر)
+    // ✅ التحقق إذا كانت هناك معاملات تمت الموافقة عليها حديثاً
+    async checkForApprovedTransactions() {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      try {
+        const q = query(
+          collection(db, "transactions"),
+          where("userId", "==", user.uid),
+          where("status", "==", "approved"),
+          orderBy("createdAt", "desc")
+        );
+        
+        const snapshot = await getDocs(q);
+        const approvedCount = snapshot.size;
+        
+        if (approvedCount > 0) {
+          const latest = snapshot.docs[0].data();
+          this.successMessage = `✅ تمت الموافقة على طلبك! المبلغ: ${latest.amount} USDT`;
+          
+          // تختفي الرسالة بعد 10 ثواني
+          setTimeout(() => {
+            this.successMessage = "";
+          }, 10000);
+        }
+      } catch (error) {
+        console.log("⚠️ لا يمكن التحقق من المعاملات الموافق عليها:", error.message);
+      }
+    },
+
+    // دالة للتحميل بدون فهرس
     async loadTransactionsWithoutIndex() {
       this.loading = true;
       this.indexError = false;
       this.useIndex = false;
       await this.loadTransactions();
-    },
-
-    // دالة لإنشاء معاملة تجريبية
-    async createTestTransaction() {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          alert("يجب تسجيل الدخول أولاً");
-          return;
-        }
-
-        const transactionData = {
-          userId: user.uid,
-          type: "deposit",
-          amount: Math.floor(Math.random() * 500) + 100, // مبلغ عشوائي 100-600
-          status: "pending",
-          createdAt: serverTimestamp(),
-          reason: "",
-          adminMessage: "تم إنشاؤها للاختبار"
-        };
-
-        console.log("📝 جاري إنشاء معاملة تجريبية:", transactionData);
-
-        const docRef = await addDoc(collection(db, "transactions"), transactionData);
-        
-        console.log("✅ تم إنشاء معاملة جديدة:", docRef.id);
-        alert(`تم إنشاء معاملة تجريبية بنجاح!\nالمبلغ: ${transactionData.amount} USDT`);
-        
-        // إعادة تحميل القائمة
-        this.loading = true;
-        await this.loadTransactions();
-        
-      } catch (error) {
-        console.error("❌ خطأ في إنشاء المعاملة:", error);
-        alert("خطأ: " + error.message);
-      }
     },
 
     typeLabel(type) {
@@ -255,7 +254,7 @@ export default {
     statusLabel(status) {
       const statuses = {
         pending: "قيد الانتظار",
-        approved: "موافق",
+        approved: "✅ موافق",
         rejected: "مرفوض"
       };
       return statuses[status] || status;
@@ -303,6 +302,33 @@ export default {
   color: white;
   margin-bottom: 16px;
   font-size: 24px;
+}
+
+.success-notification {
+  background: #d4edda;
+  color: #155724;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #c3e6cb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: slideIn 0.5s ease;
+}
+
+.close-notification {
+  background: none;
+  border: none;
+  color: #155724;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 5px;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .loading {
@@ -367,21 +393,6 @@ export default {
   border-radius: 8px;
 }
 
-.test-btn {
-  background: #4CAF50;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-top: 15px;
-  font-size: 14px;
-}
-
-.test-btn:hover {
-  background: #45a049;
-}
-
 .count-info {
   color: white;
   text-align: center;
@@ -396,6 +407,40 @@ export default {
   margin-bottom: 14px;
   color: #000;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.approved-badge {
+  background: #d4edda;
+  color: #155724;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-align: center;
+  border: 2px solid #28a745;
+}
+
+.approved-message {
+  background: #e8f5e9;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 12px;
+  color: #2e7d32;
+  border-right: 4px solid #4CAF50;
+}
+
+.approved-message strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.approved-message small {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  opacity: 0.8;
 }
 
 .row {
@@ -414,12 +459,6 @@ export default {
   color: #333;
 }
 
-.value.uid {
-  font-size: 11px;
-  color: #888;
-  direction: ltr;
-}
-
 .status {
   font-weight: bold;
   padding: 2px 8px;
@@ -434,6 +473,7 @@ export default {
 .status.approved {
   color: #2e7d32;
   background-color: #e8f5e9;
+  border: 1px solid #4CAF50;
 }
 
 .status.rejected {
@@ -448,6 +488,7 @@ export default {
   margin-top: 8px;
   color: #b00020;
   font-size: 13px;
+  border-right: 4px solid #dc3545;
 }
 
 .admin-box {
@@ -456,5 +497,6 @@ export default {
   border-radius: 10px;
   margin-top: 8px;
   font-size: 13px;
+  border-right: 4px solid #2196F3;
 }
 </style>
