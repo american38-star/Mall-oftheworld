@@ -7,15 +7,9 @@
       <span class="lang-code">{{ currentLang }}</span>
     </div>
 
-    <!-- زر بابلوين (فقاعة) لعرض السنة الجديدة -->
+    <!-- زر بابلوين (سانتا) لعرض السنة الجديدة -->
     <div class="bubble-chat-btn" @click="toggleNewYearMessage">
-      <div class="bubble-chat-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" 
-                fill="#3b82f6" stroke="#3b82f6" stroke-width="1.5"/>
-          <path d="M7 9H17M7 13H14" stroke="white" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </div>
+      <div class="bubble-chat-icon">🎅🏻</div>
       <div class="bubble-notification">🎉</div>
     </div>
 
@@ -300,30 +294,31 @@ body {
   right: 15px;
 }
 
-/* زر بابلوين */
+/* زر بابلوين (سانتا) */
 .bubble-chat-btn {
   position: fixed;
   top: 90px;
   right: 70px;
   width: 48px;
   height: 48px;
-  background: #3b82f6;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   z-index: 9999;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
   transition: all 0.3s ease;
 }
 
 .bubble-chat-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
 }
 
 .bubble-chat-icon {
+  font-size: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -333,7 +328,7 @@ body {
   position: absolute;
   top: -5px;
   right: -5px;
-  background: #ef4444;
+  background: #22c55e;
   color: white;
   width: 20px;
   height: 20px;
@@ -387,7 +382,7 @@ body {
 }
 
 .bubble-chat-header {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
   color: white;
   padding: 16px;
   display: flex;
@@ -410,7 +405,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: #3b82f6;
+  color: #dc2626;
 }
 
 .bubble-sender {
@@ -493,7 +488,7 @@ body {
 .bubble-action-btn {
   width: 100%;
   padding: 12px;
-  background: #3b82f6;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
   color: white;
   border: none;
   border-radius: 12px;
@@ -503,7 +498,7 @@ body {
 }
 
 .bubble-action-btn:hover {
-  background: #2563eb;
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
 }
 
 /* زر انستغرام */
