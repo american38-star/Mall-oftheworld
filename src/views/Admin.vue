@@ -22,8 +22,12 @@
       <button :class="['tab', activeTab === 'notifications' ? 'active' : '']" @click="switchTab('notifications')">
         الإشعارات
       </button>
-      <button :class="['tab', activeTab === 'logs' ? 'active' : '']" @click="switchTab('logs')">
+      <button :class="['tab', activeTab === 'withdrawLogs' ? 'active' : '']" @click="switchTab('withdrawLogs')">
         سجل السحوبات
+      </button>
+      <!-- 🔥 علامة التبويب الجديدة لسجل التعبئة -->
+      <button :class="['tab', activeTab === 'rechargeLogs' ? 'active' : '']" @click="switchTab('rechargeLogs')">
+        سجل التعبئة
       </button>
     </div>
 
@@ -168,25 +172,65 @@
       </div>
     </div>
 
-    <!-- السجلات -->
-    <div v-if="activeTab === 'logs'" class="panel">
+    <!-- سجل السحوبات -->
+    <div v-if="activeTab === 'withdrawLogs'" class="panel">
       <div class="panel-header">
         <h2>سجل السحوبات</h2>
         <div class="controls">
-          <input v-model="logFilter" placeholder="بحث بالسعر أو البريد..." />
+          <input v-model="withdrawLogFilter" placeholder="بحث بالسعر أو البريد..." />
           <button @click="loadWithdrawLogs" type="button">تحديث</button>
         </div>
       </div>
 
-      <div v-if="loadingLogs" class="loading">⏳ جاري تحميل السجلات...</div>
+      <div v-if="loadingWithdrawLogs" class="loading">⏳ جاري تحميل السجلات...</div>
       <div v-else>
         <div v-if="withdrawLogs.length === 0" class="empty">لا توجد سجلات.</div>
         <div class="cards">
-          <div class="card log-card" v-for="l in filteredLogs" :key="l.id">
+          <div class="card log-card" v-for="l in filteredWithdrawLogs" :key="l.id">
             <p><strong>البريد:</strong> {{ l.email }}</p>
             <p><strong>المبلغ:</strong> {{ l.amount }} USDT</p>
             <p><strong>النوع:</strong> {{ l.type }}</p>
             <p class="muted">الوقت: {{ formatDate(l.createdAt) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔥 سجل التعبئة الجديد -->
+    <div v-if="activeTab === 'rechargeLogs'" class="panel">
+      <div class="panel-header">
+        <h2>سجل تعبئة الرصيد</h2>
+        <div class="controls">
+          <input v-model="rechargeLogFilter" placeholder="بحث بالبريد أو المبلغ..." />
+          <select v-model="rechargeLogSort">
+            <option value="newest">الأحدث أولاً</option>
+            <option value="oldest">الأقدم أولاً</option>
+            <option value="amount_desc">الأعلى مبلغ</option>
+            <option value="amount_asc">الأقل مبلغ</option>
+          </select>
+          <button @click="loadRechargeLogs" type="button">تحديث</button>
+        </div>
+      </div>
+
+      <div v-if="loadingRechargeLogs" class="loading">⏳ جاري تحميل سجلات التعبئة...</div>
+      <div v-else>
+        <div v-if="rechargeLogs.length === 0" class="empty">لا توجد سجلات تعبئة.</div>
+        <div class="cards">
+          <div class="card log-card" v-for="log in filteredRechargeLogs" :key="log.id">
+            <p><strong>البريد:</strong> {{ log.email || log.userEmail || '—' }}</p>
+            <p><strong>المبلغ:</strong> {{ log.amount }} USDT</p>
+            <p><strong>الحالة:</strong> 
+              <span :class="{
+                'status-approved': log.type === 'approved' || log.status === 'approved',
+                'status-rejected': log.type === 'rejected' || log.status === 'rejected',
+                'status-pending': log.type === 'pending' || log.status === 'pending'
+              }">
+                {{ log.type === 'approved' ? 'موافق' : log.type === 'rejected' ? 'مرفوض' : log.type || log.status || '—' }}
+              </span>
+            </p>
+            <p v-if="log.reason"><strong>سبب الرفض:</strong> {{ log.reason }}</p>
+            <p v-if="log.adminMessage"><strong>رسالة الأدمن:</strong> {{ log.adminMessage }}</p>
+            <p class="muted">التاريخ: {{ formatDate(log.createdAt) }}</p>
           </div>
         </div>
       </div>
@@ -322,8 +366,15 @@ export default {
       loadingNotifs: false,
       notifFilter: "",
       withdrawLogs: [],
-      loadingLogs: false,
-      logFilter: "",
+      loadingWithdrawLogs: false,
+      withdrawLogFilter: "",
+      
+      // 🔥 البيانات الجديدة لسجل التعبئة
+      rechargeLogs: [],
+      loadingRechargeLogs: false,
+      rechargeLogFilter: "",
+      rechargeLogSort: "newest",
+      
       showModal: false,
       modalData: {},
       modalType: "withdraw",
@@ -336,14 +387,14 @@ export default {
       currentUser: null,
       processingId: null,
 
-      // 🔥 بيانات لموذج الرفض
+      // بيانات لموذج الرفض
       showRejectModal: false,
       rejectModalData: {},
       rejectReason: "",
       rejectError: "",
       rejectType: "", // 'recharge' أو 'withdraw'
 
-      // 🔥 جديد: بيانات لموذج الموافقة مع رسالة
+      // بيانات لموذج الموافقة مع رسالة
       showApproveModal: false,
       approveModalData: {},
       approveMessage: "",
@@ -428,14 +479,43 @@ export default {
           (n.email || "").toLowerCase().includes(f)
       );
     },
-    filteredLogs() {
-      if (!this.logFilter) return this.withdrawLogs;
-      const f = this.logFilter.toLowerCase();
+    filteredWithdrawLogs() {
+      if (!this.withdrawLogFilter) return this.withdrawLogs;
+      const f = this.withdrawLogFilter.toLowerCase();
       return this.withdrawLogs.filter(
         (l) =>
           String(l.amount || "").includes(f) ||
           (l.email || "").toLowerCase().includes(f)
       );
+    },
+    // 🔥 computed جديد لتصفية سجلات التعبئة
+    filteredRechargeLogs() {
+      let list = [...this.rechargeLogs];
+      
+      // التصفية حسب البحث
+      if (this.rechargeLogFilter) {
+        const f = this.rechargeLogFilter.toLowerCase();
+        list = list.filter(
+          (log) =>
+            (log.email || "").toLowerCase().includes(f) ||
+            (log.userEmail || "").toLowerCase().includes(f) ||
+            String(log.amount || "").includes(f) ||
+            (log.type || "").toLowerCase().includes(f) ||
+            (log.status || "").toLowerCase().includes(f)
+        );
+      }
+      
+      // الترتيب
+      if (this.rechargeLogSort === "newest")
+        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      else if (this.rechargeLogSort === "oldest")
+        list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      else if (this.rechargeLogSort === "amount_desc")
+        list.sort((a, b) => (b.amount || 0) - (a.amount || 0));
+      else if (this.rechargeLogSort === "amount_asc")
+        list.sort((a, b) => (a.amount || 0) - (b.amount || 0));
+      
+      return list;
     },
   },
   created() {
@@ -473,7 +553,7 @@ export default {
     }
   },
   methods: {
-    // 🔥 جديد: فتح موذج الموافقة
+    // فتح موذج الموافقة
     openApproveModal(data, type) {
       this.approveModalData = data;
       this.approveType = type;
@@ -483,7 +563,7 @@ export default {
       this.showModal = false; // إغلاق الموذج القديم
     },
 
-    // 🔥 جديد: إغلاق موذج الموافقة
+    // إغلاق موذج الموافقة
     closeApproveModal() {
       this.showApproveModal = false;
       this.approveModalData = {};
@@ -491,7 +571,7 @@ export default {
       this.approveError = "";
     },
 
-    // 🔥 جديد: التحقق من رسالة الموافقة
+    // التحقق من رسالة الموافقة
     validateApproveMessage() {
       if (this.approveMessage.length > 500) {
         this.approveError = "الرسالة يجب أن تكون أقل من 500 حرف";
@@ -501,7 +581,7 @@ export default {
       return true;
     },
 
-    // 🔥 جديد: تأكيد الموافقة
+    // تأكيد الموافقة
     async confirmApprove() {
       if (!this.validateApproveMessage()) return;
 
@@ -564,16 +644,21 @@ export default {
         alert("خطأ أثناء تسجيل الخروج");
       }
     },
+    
     switchTab(tab) {
       this.activeTab = tab;
       if (tab === "withdraws") this.loadWithdrawRequests();
       else if (tab === "users") this.loadUsers();
       else if (tab === "notifications") this.loadAllNotifications();
-      else if (tab === "logs") this.loadWithdrawLogs();
+      else if (tab === "withdrawLogs") this.loadWithdrawLogs();
       else if (tab === "recharges") {
         this.reloadRechargeRequests();
       }
+      else if (tab === "rechargeLogs") { // 🔥 تحميل سجلات التعبئة عند النقر على التبويب
+        this.loadRechargeLogs();
+      }
     },
+    
     async loadUsers() {
       try {
         this.loadingUsers = true;
@@ -594,11 +679,13 @@ export default {
         this.loadingUsers = false;
       }
     },
+    
     promptRecharge(user) {
       const a = prompt("أدخل مبلغ التعبئة:");
       if (!a || isNaN(a)) return;
       this.rechargeUser(user.id, Number(a));
     },
+    
     async rechargeUser(userId, amount) {
       try {
         const r = doc(db, "users", userId);
@@ -611,11 +698,13 @@ export default {
         alert("خطأ أثناء تعبئة الرصيد");
       }
     },
+    
     promptDeduct(user) {
       const a = prompt("أدخل مبلغ الخصم:");
       if (!a || isNaN(a)) return;
       this.deductUser(user.id, Number(a));
     },
+    
     async deductUser(userId, amount) {
       try {
         const r = doc(db, "users", userId);
@@ -628,6 +717,7 @@ export default {
         alert("خطأ أثناء خصم الرصيد");
       }
     },
+    
     async sendResetPassword(email) {
       try {
         const auth = getAuth();
@@ -637,6 +727,7 @@ export default {
         alert("خطأ أثناء إرسال الرابط");
       }
     },
+    
     async toggleBlockUser(user) {
       try {
         await updateDoc(doc(db, "users", user.id), {
@@ -648,10 +739,12 @@ export default {
         alert("خطأ أثناء تحديث الحالة");
       }
     },
+    
     async viewUserNotifications(user) {
       await this.loadNotificationsForUser(user.id);
       this.activeTab = "notifications";
     },
+    
     async loadWithdrawRequests() {
       try {
         this.loadingWithdraws = true;
@@ -680,16 +773,19 @@ export default {
         this.loadingWithdraws = false;
       }
     },
+    
     viewWithdrawDetails(req) {
       this.modalData = req || {};
       this.modalType = "withdraw";
       this.showModal = true;
     },
+    
     closeModal() {
       this.showModal = false;
       this.modalData = {};
       this.modalType = "withdraw";
     },
+    
     async ensureAdmin() {
       try {
         const auth = getAuth();
@@ -751,7 +847,7 @@ export default {
       }
     },
 
-    // 🔥 جديد: دالة للموافقة على السحب مع رسالة
+    // دالة للموافقة على السحب مع رسالة
     async approveWithdrawWithMessage(req, message = "") {
       if (!req || !req.id) return;
       const allowed = await this.ensureAdmin();
@@ -817,7 +913,7 @@ export default {
       }
     },
     
-    // 🔥 جديد: دالة للموافقة على التعبئة مع رسالة
+    // دالة للموافقة على التعبئة مع رسالة
     async approveRechargeWithMessage(r, message = "") {
       if (!r || !r.id) return;
       const allowed = await this.ensureAdmin();
@@ -987,6 +1083,7 @@ export default {
         this.loadingNotifs = false;
       }
     },
+    
     async loadNotificationsForUser(id) {
       try {
         this.loadingNotifs = true;
@@ -1004,9 +1101,10 @@ export default {
         this.loadingNotifs = false;
       }
     },
+    
     async loadWithdrawLogs() {
       try {
-        this.loadingLogs = true;
+        this.loadingWithdrawLogs = true;
         const snap = await getDocs(collection(db, "withdraw_logs"));
         this.withdrawLogs = snap.docs.map((d) => ({
           id: d.id,
@@ -1015,9 +1113,83 @@ export default {
       } catch (e) {
         this.withdrawLogs = [];
       } finally {
-        this.loadingLogs = false;
+        this.loadingWithdrawLogs = false;
       }
     },
+    
+    // 🔥 دالة جديدة لتحميل سجلات التعبئة
+    async loadRechargeLogs() {
+      try {
+        this.loadingRechargeLogs = true;
+        
+        // محاولة جلب البيانات من collection recharge_logs أولاً
+        try {
+          const rechargeLogsSnap = await getDocs(query(
+            collection(db, "recharge_logs"),
+            orderBy("createdAt", "desc")
+          ));
+          
+          this.rechargeLogs = rechargeLogsSnap.docs.map((d) => {
+            const data = d.data() || {};
+            return {
+              id: d.id,
+              type: data.type || '',
+              amount: data.amount || 0,
+              email: data.email || data.userEmail || '',
+              userEmail: data.userEmail || data.email || '',
+              reason: data.reason || '',
+              adminMessage: data.adminMessage || '',
+              createdAt: data.createdAt,
+            };
+          });
+          
+          // إذا وجدنا سجلات في recharge_logs، نوقف هنا
+          if (this.rechargeLogs.length > 0) {
+            console.log(`✅ تم تحميل ${this.rechargeLogs.length} سجل تعبئة من recharge_logs`);
+            return;
+          }
+        } catch (err) {
+          console.log("⚠ لا يوجد collection recharge_logs، جارٍ البحث في transactions...");
+        }
+        
+        // إذا لم توجد سجلات في recharge_logs، نبحث في transactions
+        try {
+          const transactionsSnap = await getDocs(query(
+            collection(db, "transactions"),
+            where("type", "==", "recharge"),
+            orderBy("createdAt", "desc")
+          ));
+          
+          this.rechargeLogs = transactionsSnap.docs.map((d) => {
+            const data = d.data() || {};
+            return {
+              id: d.id,
+              type: data.status || '',
+              status: data.status || '',
+              amount: data.amount || 0,
+              email: data.email || '',
+              userEmail: data.email || '',
+              reason: data.reason || '',
+              adminMessage: data.adminMessage || '',
+              createdAt: data.createdAt,
+            };
+          });
+          
+          console.log(`✅ تم تحميل ${this.rechargeLogs.length} سجل تعبئة من transactions`);
+          
+        } catch (err) {
+          console.error("❌ خطأ في تحميل سجلات التعبئة:", err);
+          this.rechargeLogs = [];
+        }
+        
+      } catch (e) {
+        console.error("خطأ عام في تحميل سجلات التعبئة:", e);
+        this.rechargeLogs = [];
+      } finally {
+        this.loadingRechargeLogs = false;
+      }
+    },
+    
     formatDate(ts) {
       if (!ts) return "-";
       try {
@@ -1027,6 +1199,7 @@ export default {
         return String(ts);
       }
     },
+    
     attachRechargeListener() {
       try {
         if (this.rechargeUnsubscribe) {
@@ -1069,6 +1242,7 @@ export default {
         this.loadingRecharges = false;
       }
     },
+    
     async reloadRechargeRequests() {
       this.loadingRecharges = true;
       try {
@@ -1098,11 +1272,13 @@ export default {
         this.loadingRecharges = false;
       }
     },
+    
     viewRechargeDetails(r) {
       this.modalData = r || {};
       this.modalType = "recharge";
       this.showModal = true;
     },
+    
     async markAllRechargeNotificationsRead() {
       alert("تم وضع إشعارات التعبئة كمقروءة (محلياً).");
     },
@@ -1374,12 +1550,14 @@ export default {
         this.processingId = null;
       }
     },
+    
     detachRechargeListener() {
       if (this.rechargeUnsubscribe) {
         try { this.rechargeUnsubscribe(); } catch (e) {}
         this.rechargeUnsubscribe = null;
       }
     },
+    
     async markAllRechargeNotificationsReadServerSide() {
       alert("ميزة وضع الإشعارات كمقروءة تحتاج تنفيذ على حسب تصميم قاعدة البيانات.");
     },
@@ -1633,6 +1811,22 @@ export default {
   gap: 8px;
   margin-top: 10px;
   justify-content: flex-end;
+}
+
+/* 🔥 أنماط جديدة لحالات السجلات */
+.status-approved {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.status-rejected {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.status-pending {
+  color: #ffc107;
+  font-weight: bold;
 }
 
 /* تحسينات للعرض على الشاشات الصغيرة */
