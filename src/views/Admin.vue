@@ -54,8 +54,8 @@
             <p><strong>المحفظة:</strong> {{ req.wallet || '—' }}</p>
             <p class="muted">تم الإنشاء: {{ formatDate(req.createdAt) }}</p>
             <div class="card-actions">
-              <button class="btn green" type="button" @click.stop="approveWithdraw(req)" :disabled="processingId === req.id">موافقة</button>
-              <button class="btn red" type="button" @click.stop="rejectWithdraw(req)" :disabled="processingId === req.id">رفض</button>
+              <button class="btn green" type="button" @click.stop="openApproveModal(req, 'withdraw')" :disabled="processingId === req.id">موافقة</button>
+              <button class="btn red" type="button" @click.stop="openRejectModal(req, 'withdraw')" :disabled="processingId === req.id">رفض</button>
               <button class="btn ghost" type="button" @click.stop="viewWithdrawDetails(req)">تفاصيل</button>
             </div>
           </div>
@@ -95,8 +95,8 @@
             <p v-if="r.txid"><strong>TxID:</strong> {{ r.txid }}</p>
             <p class="muted">تم الإنشاء: {{ formatDate(r.createdAt) }}</p>
             <div class="card-actions">
-              <button class="btn green" type="button" @click.stop="approveRecharge(r)" :disabled="processingId === r.id || r.status === 'approved'">موافقة</button>
-              <button class="btn red" type="button" @click.stop="rejectRecharge(r)" :disabled="processingId === r.id || r.status === 'rejected'">رفض</button>
+              <button class="btn green" type="button" @click.stop="openApproveModal(r, 'recharge')" :disabled="processingId === r.id || r.status === 'approved'">موافقة</button>
+              <button class="btn red" type="button" @click.stop="openRejectModal(r, 'recharge')" :disabled="processingId === r.id || r.status === 'rejected'">رفض</button>
               <button class="btn black" type="button" @click.stop="deleteRecharge(r)" :disabled="processingId === r.id">حذف</button>
               <button class="btn ghost" type="button" @click.stop="viewRechargeDetails(r)">تفاصيل</button>
             </div>
@@ -222,7 +222,37 @@
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal موافقة مع رسالة -->
+    <div v-if="showApproveModal" class="modal-backdrop" @click.self="closeApproveModal">
+      <div class="modal">
+        <h3>رسالة الموافقة</h3>
+        <p><strong>المبلغ:</strong> {{ approveModalData.amount }} USDT</p>
+        <p><strong>المستخدم:</strong> {{ approveModalData.email || approveModalData.userEmail || '—' }}</p>
+        <p><strong>النوع:</strong> {{ approveModalData.type === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
+        
+        <div class="input-box" style="margin-top: 15px;">
+          <label>رسالة للمستخدم (اختياري - 0-500 حرف)</label>
+          <textarea 
+            v-model="approveMessage" 
+            placeholder="أدخل رسالة تهنئة أو تعليمات للمستخدم..."
+            rows="4"
+            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;"
+          ></textarea>
+          <div v-if="approveError" style="color: red; font-size: 12px; margin-top: 5px;">
+            {{ approveError }}
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="btn green" type="button" @click="confirmApprove" :disabled="processingId === approveModalData.id">
+            تأكيد الموافقة
+          </button>
+          <button class="btn ghost" type="button" @click="closeApproveModal">إلغاء</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal تفاصيل -->
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
         <h3>تفاصيل الطلب</h3>
@@ -236,9 +266,9 @@
         <p v-if="modalType === 'recharge' && modalData.txid"><strong>TxID:</strong> {{ modalData.txid }}</p>
         <p class="muted">تم الإنشاء: {{ formatDate(modalData.createdAt) }}</p>
         <div class="modal-actions">
-          <button v-if="modalType === 'withdraw'" class="btn green" type="button" @click.stop="approveWithdraw(modalData)" :disabled="processingId === modalData.id">موافقة</button>
+          <button v-if="modalType === 'withdraw'" class="btn green" type="button" @click.stop="openApproveModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">موافقة</button>
           <button v-if="modalType === 'withdraw'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">رفض</button>
-          <button v-if="modalType === 'recharge'" class="btn green" type="button" @click.stop="approveRecharge(modalData)" :disabled="processingId === modalData.id || modalData.status === 'approved'">موافقة</button>
+          <button v-if="modalType === 'recharge'" class="btn green" type="button" @click.stop="openApproveModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'approved'">موافقة</button>
           <button v-if="modalType === 'recharge'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'rejected'">رفض</button>
           <button class="btn ghost" type="button" @click="closeModal">إغلاق</button>
         </div>
@@ -306,12 +336,19 @@ export default {
       currentUser: null,
       processingId: null,
 
-      // 🔥 جديد: بيانات لموذج الرفض
+      // 🔥 بيانات لموذج الرفض
       showRejectModal: false,
       rejectModalData: {},
       rejectReason: "",
       rejectError: "",
       rejectType: "", // 'recharge' أو 'withdraw'
+
+      // 🔥 جديد: بيانات لموذج الموافقة مع رسالة
+      showApproveModal: false,
+      approveModalData: {},
+      approveMessage: "",
+      approveError: "",
+      approveType: "", // 'recharge' أو 'withdraw'
     };
   },
   computed: {
@@ -436,7 +473,46 @@ export default {
     }
   },
   methods: {
-    // 🔥 جديد: فتح موذج الرفض
+    // 🔥 جديد: فتح موذج الموافقة
+    openApproveModal(data, type) {
+      this.approveModalData = data;
+      this.approveType = type;
+      this.approveMessage = "";
+      this.approveError = "";
+      this.showApproveModal = true;
+      this.showModal = false; // إغلاق الموذج القديم
+    },
+
+    // 🔥 جديد: إغلاق موذج الموافقة
+    closeApproveModal() {
+      this.showApproveModal = false;
+      this.approveModalData = {};
+      this.approveMessage = "";
+      this.approveError = "";
+    },
+
+    // 🔥 جديد: التحقق من رسالة الموافقة
+    validateApproveMessage() {
+      if (this.approveMessage.length > 500) {
+        this.approveError = "الرسالة يجب أن تكون أقل من 500 حرف";
+        return false;
+      }
+      this.approveError = "";
+      return true;
+    },
+
+    // 🔥 جديد: تأكيد الموافقة
+    async confirmApprove() {
+      if (!this.validateApproveMessage()) return;
+
+      if (this.approveType === 'recharge') {
+        await this.approveRechargeWithMessage(this.approveModalData, this.approveMessage);
+      } else if (this.approveType === 'withdraw') {
+        await this.approveWithdrawWithMessage(this.approveModalData, this.approveMessage);
+      }
+    },
+
+    // فتح موذج الرفض
     openRejectModal(data, type) {
       this.rejectModalData = data;
       this.rejectType = type;
@@ -446,7 +522,7 @@ export default {
       this.showModal = false; // إغلاق الموذج القديم
     },
 
-    // 🔥 جديد: إغلاق موذج الرفض
+    // إغلاق موذج الرفض
     closeRejectModal() {
       this.showRejectModal = false;
       this.rejectModalData = {};
@@ -454,7 +530,7 @@ export default {
       this.rejectError = "";
     },
 
-    // 🔥 جديد: التحقق من سبب الرفض
+    // التحقق من سبب الرفض
     validateRejectReason() {
       if (!this.rejectReason || this.rejectReason.trim() === "") {
         this.rejectError = "يجب إدخال سبب الرفض";
@@ -468,7 +544,7 @@ export default {
       return true;
     },
 
-    // 🔥 جديد: تأكيد الرفض
+    // تأكيد الرفض
     async confirmReject() {
       if (!this.validateRejectReason()) return;
 
@@ -675,15 +751,15 @@ export default {
       }
     },
 
-    // ✅ دالة للموافقة على السحب
-    async approveWithdraw(req) {
+    // 🔥 جديد: دالة للموافقة على السحب مع رسالة
+    async approveWithdrawWithMessage(req, message = "") {
       if (!req || !req.id) return;
       const allowed = await this.ensureAdmin();
       if (!allowed) return alert("غير مصرح لك");
       if (!confirm(`تأكيد الموافقة على ${req.amount} USDT؟`)) return;
       this.processingId = req.id;
       try {
-        // 1. تحديث أو إنشاء المعاملة في transactions
+        // 1. تحديث أو إنشاء المعاملة في transactions مع الرسالة
         if (req.userId) {
           await this.createTransactionForUser(
             req.userId,
@@ -692,7 +768,7 @@ export default {
             req.amount,
             "approved",
             "",
-            "تمت الموافقة على طلب السحب"
+            message || "تمت الموافقة على طلب السحب"
           );
         }
 
@@ -702,16 +778,21 @@ export default {
           email: req.email || null,
           amount: req.amount || 0,
           type: "approved",
+          adminMessage: message || "",
           createdAt: serverTimestamp(),
         });
         
-        // 3. إرسال إشعار للمستخدم
+        // 3. إرسال إشعار للمستخدم مع الرسالة
         if (req.userId) {
+          const notificationMessage = message 
+            ? `تم تحويل ${req.amount} USDT. ${message}`
+            : `تم تحويل ${req.amount} USDT.`;
+            
           await addDoc(
             collection(db, "users", req.userId, "notifications"),
             {
               title: "تمت الموافقة على السحب",
-              message: `تم تحويل ${req.amount} USDT.`,
+              message: notificationMessage,
               read: false,
               createdAt: serverTimestamp(),
             }
@@ -732,10 +813,88 @@ export default {
       } finally {
         this.processingId = null;
         this.closeModal();
-        this.closeRejectModal();
+        this.closeApproveModal();
       }
     },
     
+    // 🔥 جديد: دالة للموافقة على التعبئة مع رسالة
+    async approveRechargeWithMessage(r, message = "") {
+      if (!r || !r.id) return;
+      const allowed = await this.ensureAdmin();
+      if (!allowed) return alert("غير مصرح لك");
+      if (!confirm(`تأكيد الموافقة على تعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.userId || ''}?`)) return;
+      this.processingId = r.id;
+      try {
+        // 1. تحديث حالة الطلب في payments
+        const pRef = doc(db, "payments", r.id);
+        await updateDoc(pRef, { 
+          status: "approved", 
+          processedAt: serverTimestamp(),
+          adminMessage: message || ""
+        });
+
+        // 2. إنشاء معاملة في transactions مع الرسالة
+        if (r.userId) {
+          await this.createTransactionForUser(
+            r.userId,
+            r.userEmail,
+            "recharge",
+            r.amount,
+            "approved",
+            "",
+            message || "تمت الموافقة على طلب التعبئة"
+          );
+        }
+
+        // 3. إضافة سجل مع الرسالة
+        await addDoc(collection(db, "recharge_logs"), {
+          userId: r.userId || null,
+          email: r.userEmail || null,
+          amount: r.amount || 0,
+          type: "approved",
+          adminMessage: message || "",
+          createdAt: serverTimestamp(),
+        });
+
+        // 4. إرسال إشعار للمستخدم مع الرسالة
+        if (r.userId) {
+          const notificationMessage = message 
+            ? `تمت إضافة ${r.amount} USDT إلى حسابك. ${message}`
+            : `تمت إضافة ${r.amount} USDT إلى حسابك. شكراً لك.`;
+            
+          await addDoc(collection(db, "users", r.userId, "notifications"), {
+            title: "تمت الموافقة على طلب التعبئة",
+            message: notificationMessage,
+            read: false,
+            createdAt: serverTimestamp(),
+          });
+
+          // 5. تحديث رصيد المستخدم
+          try {
+            const userRef = doc(db, "users", r.userId);
+            const uSnap = await getDoc(userRef);
+            const cur = uSnap.exists() ? Number(uSnap.data().balance || 0) : 0;
+            await updateDoc(userRef, { balance: cur + Number(r.amount || 0) });
+
+            // 6. حساب أرباح الإحالة
+            await this.calculateAndAddReferralEarnings(r.userId, r.amount, r.id);
+
+          } catch (err) {
+            console.warn("failed to update user balance after recharge approval:", err);
+          }
+        }
+
+        alert("✔ تمت الموافقة على طلب التعبئة وتم إضافة أرباح الإحالة");
+      } catch (e) {
+        console.error("approveRecharge error:", e);
+        alert("خطأ أثناء الموافقة على الطلب");
+      } finally {
+        this.processingId = null;
+        this.closeModal();
+        this.closeApproveModal();
+      }
+    },
+
     // ✅ دالة لرفض السحب مع سبب
     async rejectWithdraw(req, reason = "") {
       if (!req || !req.id) return;
@@ -1126,74 +1285,6 @@ export default {
       } catch (error) {
         console.error("❌ خطأ في حساب أرباح الإحالة:", error);
         throw error;
-      }
-    },
-
-    // ✅ دالة للموافقة على التعبئة
-    async approveRecharge(r) {
-      if (!r || !r.id) return;
-      const allowed = await this.ensureAdmin();
-      if (!allowed) return alert("غير مصرح لك");
-      if (!confirm(`تأكيد الموافقة على تعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.userId || ''}?`)) return;
-      this.processingId = r.id;
-      try {
-        // 1. تحديث حالة الطلب في payments
-        const pRef = doc(db, "payments", r.id);
-        await updateDoc(pRef, { status: "approved", processedAt: serverTimestamp() });
-
-        // 2. إنشاء معاملة في transactions
-        if (r.userId) {
-          await this.createTransactionForUser(
-            r.userId,
-            r.userEmail,
-            "recharge",
-            r.amount,
-            "approved",
-            "",
-            "تمت الموافقة على طلب التعبئة"
-          );
-        }
-
-        // 3. إضافة سجل
-        await addDoc(collection(db, "recharge_logs"), {
-          userId: r.userId || null,
-          email: r.userEmail || null,
-          amount: r.amount || 0,
-          type: "approved",
-          createdAt: serverTimestamp(),
-        });
-
-        // 4. إرسال إشعار للمستخدم
-        if (r.userId) {
-          await addDoc(collection(db, "users", r.userId, "notifications"), {
-            title: "تمت الموافقة على طلب التعبئة",
-            message: `تمت إضافة ${r.amount} USDT إلى حسابك. شكراً لك.`,
-            read: false,
-            createdAt: serverTimestamp(),
-          });
-
-          // 5. تحديث رصيد المستخدم
-          try {
-            const userRef = doc(db, "users", r.userId);
-            const uSnap = await getDoc(userRef);
-            const cur = uSnap.exists() ? Number(uSnap.data().balance || 0) : 0;
-            await updateDoc(userRef, { balance: cur + Number(r.amount || 0) });
-
-            // 6. ⭐⭐⭐⭐⭐⭐ **السطر الجديد: حساب أرباح الإحالة**
-            await this.calculateAndAddReferralEarnings(r.userId, r.amount, r.id);
-
-          } catch (err) {
-            console.warn("failed to update user balance after recharge approval:", err);
-          }
-        }
-
-        alert("✔ تمت الموافقة على طلب التعبئة وتم إضافة أرباح الإحالة");
-      } catch (e) {
-        console.error("approveRecharge error:", e);
-        alert("خطأ أثناء الموافقة على الطلب");
-      } finally {
-        this.processingId = null;
-        this.closeModal();
       }
     },
 
