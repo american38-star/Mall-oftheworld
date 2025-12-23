@@ -1,26 +1,32 @@
 <template>
-  <div class="tasks-page">
+  <div class="games-page">
 
     <!-- العنوان -->
-    <h2 class="title">المهمات اليومية</h2>
-    <p class="sub">يتم إعادة ضبط العد التنازلي يوميًا الساعة 00:00 وتوزيع أرباح VIP تلقائيًا</p>
+    <h2 class="title">🎮 الألعاب</h2>
+    <p class="sub">العب واربح USDT بنظام آمن</p>
 
-    <!-- المؤقت -->
-    <div class="timer-box">
-      <div class="timer-title">إعادة التعيين اليومي</div>
-      <div class="timer-value">{{ timerText }}</div>
+    <!-- لعبة 1 -->
+    <div class="game-card">
+      <h3>📦 الصندوق الآمن</h3>
+      <p>اربح بين 1% و 3% ربح ثابت</p>
+      <input v-model.number="boxAmount" type="number" placeholder="المبلغ USDT" />
+      <button @click="playSafeBox">العب</button>
+    </div>
 
-      <div class="stats-row">
-        <div class="stat">
-          <div class="label">المهام المتبقية</div>
-          <div class="value">{{ tasksRemaining }}</div>
-        </div>
+    <!-- لعبة 2 -->
+    <div class="game-card">
+      <h3>🎲 الحظ المحدود</h3>
+      <p>فرصة ربح 2x (نسبة فوز 40%)</p>
+      <input v-model.number="luckAmount" type="number" placeholder="المبلغ USDT" />
+      <button @click="playLuck">جرب حظك</button>
+    </div>
 
-        <div class="stat">
-          <div class="label">جميع المهام</div>
-          <div class="value">{{ tasksTotal }}</div>
-        </div>
-      </div>
+    <!-- لعبة 3 -->
+    <div class="game-card">
+      <h3>📈 الاستثمار الذكي</h3>
+      <p>ربح يومي 1.5% (قفل 24 ساعة)</p>
+      <input v-model.number="investAmount" type="number" placeholder="المبلغ USDT" />
+      <button @click="startInvestment">استثمر</button>
     </div>
 
   </div>
@@ -36,115 +42,94 @@ import {
 } from "firebase/firestore";
 
 export default {
-  name: "Tasks",
+  name: "Games",
 
   data() {
     return {
-      // العد التنازلي اليومي المشترك لجميع الحسابات
-      timerMs: 0,
-      timerInterval: null,
-
-      // مهام ثابتة الآن (0)
-      tasksTotal: 0,
-      tasksRemaining: 0,
+      boxAmount: 0,
+      luckAmount: 0,
+      investAmount: 0,
     };
   },
 
-  computed: {
-    timerText() {
-      if (this.timerMs <= 0) return "00:00:00";
-
-      const sec = Math.floor(this.timerMs / 1000);
-      const h = String(Math.floor(sec / 3600)).padStart(2, "0");
-      const m = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
-      const s = String(sec % 60).padStart(2, "0");
-      return `${h}:${m}:${s}`;
-    },
-  },
-
-  async created() {
-    this.startDailyTimer();
-  },
-
-  beforeUnmount() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
-  },
-
   methods: {
-    // المؤقت اليومي الموحد
-    startDailyTimer() {
-      const now = new Date();
-      const nextReset = new Date();
-      nextReset.setHours(24, 0, 0, 0); // الساعة 00:00
+    // 🟢 لعبة الصندوق الآمن
+    async playSafeBox() {
+      const user = auth.currentUser;
+      if (!user || this.boxAmount <= 0) return alert("مبلغ غير صالح");
 
-      this.timerMs = nextReset - now;
+      const percent = Math.random() * (0.03 - 0.01) + 0.01; // 1% - 3%
+      const profit = this.boxAmount * percent;
 
-      if (this.timerInterval) clearInterval(this.timerInterval);
-
-      this.timerInterval = setInterval(async () => {
-        this.timerMs -= 1000;
-
-        // عند انتهاء المؤقت
-        if (this.timerMs <= 0) {
-          this.timerMs = 0;
-
-          // توزيع أرباح VIP
-          await this.giveVipDailyReward();
-
-          // إعادة تشغيل المؤقت لليوم التالي
-          this.startDailyTimer();
-        }
-      }, 1000);
+      await this.updateBalance(user.uid, this.boxAmount, profit);
+      alert(`✔ ربحت ${profit.toFixed(2)} USDT`);
     },
 
-    // إضافة ربح VIP عند انتهاء الوقت
-    async giveVipDailyReward() {
+    // 🟡 لعبة الحظ
+    async playLuck() {
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user || this.luckAmount <= 0) return alert("مبلغ غير صالح");
 
-      try {
-        const vipRef = doc(db, "users", user.uid, "vip", "current");
-        const vipSnap = await getDoc(vipRef);
+      const win = Math.random() < 0.4; // 40% فوز
+      const profit = win ? this.luckAmount : -this.luckAmount;
 
-        // إذا لا يوجد VIP
-        if (!vipSnap.exists()) return;
+      await this.updateBalance(user.uid, this.luckAmount, profit);
+      alert(win ? "🎉 ربحت!" : "❌ خسرت");
+    },
 
-        const vip = vipSnap.data();
-        const daily = Number(vip.daily || 0);
+    // 🔵 الاستثمار الذكي
+    async startInvestment() {
+      const user = auth.currentUser;
+      if (!user || this.investAmount <= 0) return alert("مبلغ غير صالح");
 
-        if (daily <= 0) return;
+      const userRef = doc(db, "users", user.uid);
 
-        // إضافة الربح
-        const userRef = doc(db, "users", user.uid);
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(userRef);
+        const balance = Number(snap.data().balance || 0);
 
-        await runTransaction(db, async (tx) => {
-          const uSnap = await tx.get(userRef);
-          const currentBalance = uSnap.exists()
-            ? Number(uSnap.data().balance || 0)
-            : 0;
+        if (balance < this.investAmount) {
+          throw "رصيد غير كافي";
+        }
 
-          // إضافة الربح اليومي
-          tx.update(userRef, {
-            balance: currentBalance + daily,
-          });
-
-          // تحديث آخر وقت مكافأة
-          tx.update(vipRef, {
-            lastRewardAt: serverTimestamp(),
-          });
+        tx.update(userRef, {
+          balance: balance - this.investAmount,
         });
 
-        console.log("✔ تمت إضافة ربح VIP اليومي تلقائيًا");
-      } catch (err) {
-        console.error("Daily VIP Reward Error:", err);
-      }
+        tx.set(doc(db, "users", user.uid, "investments", Date.now().toString()), {
+          amount: this.investAmount,
+          profit: this.investAmount * 0.015,
+          unlockAt: Date.now() + 86400000,
+          createdAt: serverTimestamp(),
+        });
+      });
+
+      alert("✔ تم بدء الاستثمار");
+    },
+
+    // 🔒 تحديث الرصيد الآمن
+    async updateBalance(uid, amount, profit) {
+      const userRef = doc(db, "users", uid);
+
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(userRef);
+        const balance = Number(snap.data().balance || 0);
+
+        if (balance < amount) {
+          throw "رصيد غير كافي";
+        }
+
+        tx.update(userRef, {
+          balance: balance + profit,
+        });
+      });
     },
   },
 };
 </script>
 
 <style scoped>
-.tasks-page {
+.games-page {
   direction: rtl;
   padding: 16px;
   min-height: 100vh;
@@ -155,63 +140,38 @@ export default {
 .title {
   text-align: center;
   font-size: 22px;
-  margin-bottom: 6px;
   font-weight: bold;
 }
 
 .sub {
   text-align: center;
-  color: #e8f0ff;
   margin-bottom: 20px;
 }
 
-/* صندوق المؤقت */
-.timer-box {
+.game-card {
   background: #ffffffcc;
   color: black;
   padding: 16px;
-  border-radius: 20px;
+  border-radius: 16px;
+  margin-bottom: 16px;
   text-align: center;
-  margin-bottom: 20px;
 }
 
-.timer-title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 8px;
+.game-card input {
+  width: 100%;
+  padding: 8px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid #ccc;
 }
 
-.timer-value {
-  background: black;
-  color: white;
-  font-size: 22px;
-  font-weight: bold;
-  padding: 8px 0;
-  border-radius: 12px;
-  margin-bottom: 15px;
-}
-
-/* الاحصائيات */
-.stats-row {
-  display: flex;
-  justify-content: space-between;
-}
-
-.stat {
-  width: 48%;
-  background: #e6f0ff;
-  border-radius: 12px;
+.game-card button {
+  width: 100%;
   padding: 10px;
-}
-
-.label {
-  color: #444;
-  font-size: 14px;
-}
-
-.value {
-  font-size: 20px;
+  border-radius: 10px;
+  border: none;
+  background: #0d6efd;
+  color: white;
   font-weight: bold;
-  margin-top: 4px;
 }
 </style>
