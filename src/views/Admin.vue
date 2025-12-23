@@ -135,6 +135,8 @@
             <div class="card-actions">
               <button class="btn green" type="button" @click="promptRecharge(u)">تعبئة رصيد</button>
               <button class="btn red" type="button" @click="promptDeduct(u)">سحب رصيد</button>
+              <!-- 🔥 إضافة زر التفاصيل الجديد -->
+              <button class="btn details-btn" type="button" @click="viewUserDetails(u)">تفاصيل</button>
               <button class="btn blue" type="button" @click="sendResetPassword(u.email)">إعادة تعيين كلمة السر</button>
               <button class="btn black" type="button" @click="toggleBlockUser(u)">
                 {{ u.blocked ? 'إلغاء الحظر' : 'حظر' }}
@@ -296,7 +298,7 @@
       </div>
     </div>
 
-    <!-- Modal تفاصيل -->
+    <!-- Modal تفاصيل السحب/التعبئة -->
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
         <h3>تفاصيل الطلب</h3>
@@ -315,6 +317,35 @@
           <button v-if="modalType === 'recharge'" class="btn green" type="button" @click.stop="openApproveModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'approved'">موافقة</button>
           <button v-if="modalType === 'recharge'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'rejected'">رفض</button>
           <button class="btn ghost" type="button" @click="closeModal">إغلاق</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔥 Modal جديد لتفاصيل المستخدم (الإحالات والشحن الكلي) -->
+    <div v-if="showUserDetailsModal" class="modal-backdrop" @click.self="closeUserDetailsModal">
+      <div class="modal">
+        <h3>تفاصيل المستخدم</h3>
+        <p><strong>البريد:</strong> {{ userDetails.email || '—' }}</p>
+        <p><strong>عدد الإحالات:</strong> {{ userDetails.referralCount || 0 }}</p>
+        <p><strong>مبلغ الشحن الكلي في الفريق:</strong> {{ userDetails.teamRechargeTotal || 0 }} USDT</p>
+        
+        <!-- قائمة المستخدمين المحالين -->
+        <div v-if="userDetails.referredUsers && userDetails.referredUsers.length > 0" class="referred-users">
+          <h4>المستخدمين المحالين:</h4>
+          <div class="users-list">
+            <div class="user-item" v-for="refUser in userDetails.referredUsers" :key="refUser.id">
+              <p><strong>البريد:</strong> {{ refUser.email || '—' }}</p>
+              <p><strong>تاريخ التسجيل:</strong> {{ formatDate(refUser.createdAt) }}</p>
+              <p><strong>إجمالي الشحن:</strong> {{ refUser.totalRecharge || 0 }} USDT</p>
+            </div>
+          </div>
+        </div>
+        <div v-else>
+          <p class="empty-text">لا توجد إحالات لهذا المستخدم</p>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="btn ghost" type="button" @click="closeUserDetailsModal">إغلاق</button>
         </div>
       </div>
     </div>
@@ -400,6 +431,15 @@ export default {
       approveMessage: "",
       approveError: "",
       approveType: "", // 'recharge' أو 'withdraw'
+
+      // 🔥 بيانات جديدة لتفاصيل المستخدم
+      showUserDetailsModal: false,
+      userDetails: {
+        email: "",
+        referralCount: 0,
+        teamRechargeTotal: 0,
+        referredUsers: []
+      },
     };
   },
   computed: {
@@ -553,6 +593,176 @@ export default {
     }
   },
   methods: {
+    // 🔥 دالة جديدة لعرض تفاصيل المستخدم
+    async viewUserDetails(user) {
+      try {
+        this.showUserDetailsModal = true;
+        this.userDetails = {
+          email: user.email,
+          referralCount: 0,
+          teamRechargeTotal: 0,
+          referredUsers: []
+        };
+
+        // 1. حساب عدد الإحالات المباشرة
+        const directReferralsQuery = query(
+          collection(db, "users"),
+          where("invitedBy", "==", user.id)
+        );
+        const directReferralsSnap = await getDocs(directReferralsQuery);
+        const directReferralUsers = [];
+        
+        for (const docSnap of directReferralsSnap.docs) {
+          const referralData = docSnap.data();
+          const referralId = docSnap.id;
+          
+          // حساب إجمالي الشحن للمستخدم المحال
+          let totalRecharge = 0;
+          try {
+            const transactionsQuery = query(
+              collection(db, "transactions"),
+              where("userId", "==", referralId),
+              where("type", "in", ["recharge", "approved_recharge"]),
+              where("status", "in", ["approved", "completed", "success"])
+            );
+            const transactionsSnap = await getDocs(transactionsQuery);
+            transactionsSnap.docs.forEach(transactionDoc => {
+              const transactionData = transactionDoc.data();
+              totalRecharge += Number(transactionData.amount || 0);
+            });
+          } catch (error) {
+            console.error("Error calculating total recharge:", error);
+          }
+
+          directReferralUsers.push({
+            id: referralId,
+            email: referralData.email || "",
+            createdAt: referralData.createdAt || referralData.registeredAt || null,
+            totalRecharge: totalRecharge
+          });
+          
+          // إضافة مبلغ الشحن إلى المجموع الكلي
+          this.userDetails.teamRechargeTotal += totalRecharge;
+        }
+
+        // 2. حساب المستوى الثاني والثالث للإحالات
+        let level2Referrals = [];
+        let level3Referrals = [];
+        
+        // البحث عن المستوى الثاني (المستخدمين الذين invitedBy هو من الإحالات المباشرة)
+        for (const directRef of directReferralUsers) {
+          const level2Query = query(
+            collection(db, "users"),
+            where("invitedBy", "==", directRef.id)
+          );
+          const level2Snap = await getDocs(level2Query);
+          
+          for (const level2Doc of level2Snap.docs) {
+            const level2Data = level2Doc.data();
+            const level2Id = level2Doc.id;
+            
+            // حساب إجمالي الشحن للمستخدم في المستوى الثاني
+            let level2Recharge = 0;
+            try {
+              const level2TransactionsQuery = query(
+                collection(db, "transactions"),
+                where("userId", "==", level2Id),
+                where("type", "in", ["recharge", "approved_recharge"]),
+                where("status", "in", ["approved", "completed", "success"])
+              );
+              const level2TransactionsSnap = await getDocs(level2TransactionsQuery);
+              level2TransactionsSnap.docs.forEach(transactionDoc => {
+                const transactionData = transactionDoc.data();
+                level2Recharge += Number(transactionData.amount || 0);
+              });
+            } catch (error) {
+              console.error("Error calculating level2 recharge:", error);
+            }
+
+            level2Referrals.push({
+              id: level2Id,
+              email: level2Data.email || "",
+              createdAt: level2Data.createdAt || level2Data.registeredAt || null,
+              totalRecharge: level2Recharge,
+              referredBy: directRef.email
+            });
+            
+            // إضافة مبلغ الشحن إلى المجموع الكلي
+            this.userDetails.teamRechargeTotal += level2Recharge;
+
+            // البحث عن المستوى الثالث
+            const level3Query = query(
+              collection(db, "users"),
+              where("invitedBy", "==", level2Id)
+            );
+            const level3Snap = await getDocs(level3Query);
+            
+            for (const level3Doc of level3Snap.docs) {
+              const level3Data = level3Doc.data();
+              const level3Id = level3Doc.id;
+              
+              // حساب إجمالي الشحن للمستخدم في المستوى الثالث
+              let level3Recharge = 0;
+              try {
+                const level3TransactionsQuery = query(
+                  collection(db, "transactions"),
+                  where("userId", "==", level3Id),
+                  where("type", "in", ["recharge", "approved_recharge"]),
+                  where("status", "in", ["approved", "completed", "success"])
+                );
+                const level3TransactionsSnap = await getDocs(level3TransactionsQuery);
+                level3TransactionsSnap.docs.forEach(transactionDoc => {
+                  const transactionData = transactionDoc.data();
+                  level3Recharge += Number(transactionData.amount || 0);
+                });
+              } catch (error) {
+                console.error("Error calculating level3 recharge:", error);
+              }
+
+              level3Referrals.push({
+                id: level3Id,
+                email: level3Data.email || "",
+                createdAt: level3Data.createdAt || level3Data.registeredAt || null,
+                totalRecharge: level3Recharge,
+                referredBy: level2Data.email
+              });
+              
+              // إضافة مبلغ الشحن إلى المجموع الكلي
+              this.userDetails.teamRechargeTotal += level3Recharge;
+            }
+          }
+        }
+
+        // 3. جمع جميع المستخدمين المحالين مع تحديد المستوى
+        const allReferredUsers = [
+          ...directReferralUsers.map(user => ({ ...user, level: 1 })),
+          ...level2Referrals.map(user => ({ ...user, level: 2 })),
+          ...level3Referrals.map(user => ({ ...user, level: 3 }))
+        ];
+
+        // 4. تحديث بيانات العرض
+        this.userDetails.referralCount = allReferredUsers.length;
+        this.userDetails.referredUsers = allReferredUsers;
+
+        console.log("تفاصيل المستخدم المحملة:", this.userDetails);
+
+      } catch (error) {
+        console.error("خطأ في جلب تفاصيل المستخدم:", error);
+        alert("حدث خطأ في جلب تفاصيل المستخدم");
+      }
+    },
+
+    // 🔥 دالة لإغلاق نافذة تفاصيل المستخدم
+    closeUserDetailsModal() {
+      this.showUserDetailsModal = false;
+      this.userDetails = {
+        email: "",
+        referralCount: 0,
+        teamRechargeTotal: 0,
+        referredUsers: []
+      };
+    },
+
     // فتح موذج الموافقة
     openApproveModal(data, type) {
       this.approveModalData = data;
@@ -1737,6 +1947,11 @@ export default {
   justify-content: center;
 }
 
+/* 🔥 لون جديد لزر التفاصيل */
+.details-btn {
+  background: #6c757d;
+}
+
 .green {
   background: #28a745;
 }
@@ -1827,6 +2042,44 @@ export default {
 .status-pending {
   color: #ffc107;
   font-weight: bold;
+}
+
+/* 🔥 أنماط جديدة لقائمة المستخدمين المحالين */
+.referred-users {
+  margin-top: 15px;
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+}
+
+.referred-users h4 {
+  font-size: 12px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.users-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.user-item {
+  background: #f8f9fa;
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.user-item p {
+  margin: 2px 0;
+  font-size: 10px;
+}
+
+.empty-text {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 10px;
 }
 
 /* تحسينات للعرض على الشاشات الصغيرة */
