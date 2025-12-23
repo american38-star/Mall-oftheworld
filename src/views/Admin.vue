@@ -366,6 +366,7 @@
     </div>
   </div>
 </template>
+
 <script>
 import {
   getAuth,
