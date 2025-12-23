@@ -41,7 +41,11 @@
         إلى الأمام
       </button>
 
-      <button class="cashout" @click="cashOut">
+      <button
+        class="cashout"
+        @click="cashOut"
+        :disabled="position === 0"
+      >
         سحب الأرباح
       </button>
     </div>
@@ -68,9 +72,9 @@ export default {
       position: 0,
       result: "",
 
-      // ⚠️ لا يوجد ربح مضمون
+      // ✅ أول خطوة بدون ربح
       steps: [
-        { multiplier: 1.0 },  // بدون ربح
+        { multiplier: 1.0 },  // لا ربح (إلغاء الربح المضمون)
         { multiplier: 1.2 },
         { multiplier: 1.5 },
         { multiplier: 2.0 },
@@ -78,7 +82,8 @@ export default {
         { multiplier: 5.0 },
       ],
 
-      winChance: 0.10, // 10% فقط
+      // ✅ نسبة الفوز 5% فقط
+      winChance: 0.05,
     };
   },
 
@@ -100,13 +105,14 @@ export default {
 
       const ref = doc(db, "users", user.uid);
       const snap = await getDoc(ref);
+
       if (snap.exists()) {
         this.balance = Number(snap.data().balance || 0);
       }
     },
 
     async startGame() {
-      if (this.bet > this.balance) return;
+      if (this.bet <= 0 || this.bet > this.balance) return;
 
       const user = auth.currentUser;
       if (!user) return;
@@ -125,16 +131,19 @@ export default {
     goNext() {
       const roll = Math.random();
 
-      // 90% خسارة
+      // ❌ خسارة بنسبة 95%
       if (roll > this.winChance) {
         this.result = "💥 خسرت الرهان";
         this.started = false;
         return;
       }
 
-      // تقدم خطوة
+      // تقدم خطوة واحدة فقط
       if (this.position < this.steps.length - 1) {
         this.position++;
+      } else {
+        // وصل للنهاية = فوز إجباري
+        this.cashOut();
       }
     },
 
@@ -167,8 +176,18 @@ export default {
   text-align: center;
 }
 
-.balance {
+.title {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.sub {
+  color: #bbb;
   margin-bottom: 10px;
+}
+
+.balance {
+  margin-bottom: 15px;
   font-weight: bold;
 }
 
@@ -177,6 +196,7 @@ export default {
   padding: 10px;
   border-radius: 10px;
   margin-bottom: 10px;
+  border: none;
 }
 
 .bet-box button {
@@ -185,6 +205,7 @@ export default {
   border-radius: 12px;
   background: #0d6efd;
   color: white;
+  border: none;
 }
 
 .road {
@@ -213,18 +234,22 @@ export default {
   padding: 12px;
   border-radius: 12px;
   margin: 5px;
+  border: none;
 }
 
 .forward {
   background: #28a745;
+  color: white;
 }
 
 .cashout {
   background: #ffc107;
+  color: black;
 }
 
 .result {
   margin-top: 20px;
   font-size: 20px;
+  font-weight: bold;
 }
 </style>
