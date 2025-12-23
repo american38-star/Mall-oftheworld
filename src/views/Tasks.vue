@@ -17,10 +17,7 @@
         v-model.number="bet"
         placeholder="أدخل مبلغ USDT"
       />
-      <button
-        @click="startGame"
-        :disabled="bet <= 0 || bet > balance"
-      >
+      <button @click="startGame">
         ابدأ اللعب
       </button>
     </div>
@@ -34,9 +31,6 @@
         :class="{ active: i === position }"
       >
         <div class="multiplier">x{{ step.multiplier }}</div>
-        <small class="chance">
-          {{ (step.winChance * 100).toFixed(1) }}%
-        </small>
         <div v-if="i === position" class="chicken">🐔</div>
       </div>
     </div>
@@ -60,7 +54,7 @@
       </button>
     </div>
 
-    <!-- النتيجة -->
+    <!-- الرسائل -->
     <div v-if="result" class="result">
       {{ result }}
     </div>
@@ -78,19 +72,19 @@ export default {
   data() {
     return {
       balance: 0,
-      bet: 0,
+      bet: null,
       started: false,
       position: 0,
       result: "",
 
-      // ❌ لا يوجد ربح مضمون
+      // ⬇️ المضاعفات (أول خطوة بدون ربح)
       steps: [
-        { multiplier: 1.0, winChance: 0.08 },  // 8%
-        { multiplier: 1.2, winChance: 0.06 },  // 6%
-        { multiplier: 1.5, winChance: 0.04 },  // 4%
-        { multiplier: 2.0, winChance: 0.025 }, // 2.5%
-        { multiplier: 3.0, winChance: 0.015 }, // 1.5%
-        { multiplier: 5.0, winChance: 0.008 }, // 0.8%
+        { multiplier: 1.0, winChance: 0.15 }, // 15%
+        { multiplier: 1.2, winChance: 0.10 }, // 10%
+        { multiplier: 1.5, winChance: 0.07 }, // 7%
+        { multiplier: 2.0, winChance: 0.04 }, // 4%
+        { multiplier: 3.0, winChance: 0.02 }, // 2%
+        { multiplier: 5.0, winChance: 0.01 }, // 1%
       ],
     };
   },
@@ -118,7 +112,17 @@ export default {
     },
 
     async startGame() {
-      if (this.bet <= 0 || this.bet > this.balance) return;
+      this.result = "";
+
+      if (!this.bet || this.bet <= 0) {
+        this.result = "⚠️ الرجاء إدخال مبلغ للعب";
+        return;
+      }
+
+      if (this.bet > this.balance) {
+        this.result = "❌ الرصيد غير كافي";
+        return;
+      }
 
       const user = auth.currentUser;
       if (!user) return;
@@ -131,7 +135,6 @@ export default {
 
       this.started = true;
       this.position = 0;
-      this.result = "";
     },
 
     goNext() {
@@ -166,6 +169,7 @@ export default {
 
       this.result = `🎉 ربحت ${profit.toFixed(2)} USDT`;
       this.started = false;
+      this.bet = null;
     },
   },
 };
@@ -187,7 +191,7 @@ export default {
 
 .sub {
   color: #bbb;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .balance {
@@ -222,7 +226,7 @@ export default {
   width: 15%;
   background: #333;
   border-radius: 12px;
-  padding: 8px;
+  padding: 10px;
 }
 
 .step.active {
@@ -231,11 +235,6 @@ export default {
 
 .multiplier {
   font-weight: bold;
-}
-
-.chance {
-  font-size: 11px;
-  color: #ccc;
 }
 
 .chicken {
