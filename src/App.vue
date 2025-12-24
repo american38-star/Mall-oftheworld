@@ -1,6 +1,5 @@
 <template>
   <div id="app">
-
     <!-- زر تغيير اللغة -->
     <div class="circle-btn lang-btn" @click="toggleLanguageMenu">
       🌐
@@ -264,43 +263,56 @@ body {
   margin: 0;
 }
 
-/* الأزرار الأساسية */
+/* الأزرار الأساسية - تم التصغير */
 .circle-btn {
   position: fixed;
-  top: 90px;
-  width: 48px;
-  height: 48px;
+  bottom: 80px; /* تغيير من top إلى bottom */
+  width: 40px; /* تصغير الحجم */
+  height: 40px; /* تصغير الحجم */
   background: #ffffff;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   color: #333;
-  font-size: 20px;
+  font-size: 18px; /* تصغير حجم الخط */
   cursor: pointer;
   z-index: 9999;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   flex-direction: column;
   text-decoration: none;
+  transition: all 0.3s ease;
 }
 
 .lang-code {
-  font-size: 10px;
-  margin-top: -4px;
+  font-size: 9px; /* تصغير حجم كود اللغة */
+  margin-top: -3px;
   opacity: 0.8;
 }
 
+/* وضع الأزرار في أسفل الشاشة بجانب بعضها */
 .lang-btn {
   right: 15px;
+  bottom: 80px; /* نفس ارتفاع بقية الأزرار */
 }
 
-/* زر بابلوين (سانتا) */
+.support-btn {
+  right: 65px; /* بعد زر اللغة */
+  bottom: 80px;
+}
+
+.instagram-btn {
+  right: 115px; /* بعد زر الدعم */
+  bottom: 80px;
+}
+
+/* زر بابلوين (سانتا) - تم التصغير */
 .bubble-chat-btn {
   position: fixed;
-  top: 90px;
-  right: 70px;
-  width: 48px;
-  height: 48px;
+  right: 165px; /* بعد زر انستغرام */
+  bottom: 80px; /* نفس ارتفاع بقية الأزرار */
+  width: 40px; /* تصغير الحجم */
+  height: 40px; /* تصغير الحجم */
   background: linear-gradient(135deg, #dc2626, #ef4444);
   border-radius: 50%;
   display: flex;
@@ -308,17 +320,17 @@ body {
   align-items: center;
   cursor: pointer;
   z-index: 9999;
-  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
   transition: all 0.3s ease;
 }
 
 .bubble-chat-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 6px 15px rgba(220, 38, 38, 0.4);
 }
 
 .bubble-chat-icon {
-  font-size: 24px;
+  font-size: 20px; /* تصغير الحجم */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -326,14 +338,14 @@ body {
 
 .bubble-notification {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -3px;
+  right: -3px;
   background: #22c55e;
   color: white;
-  width: 20px;
-  height: 20px;
+  width: 16px; /* تصغير الحجم */
+  height: 16px; /* تصغير الحجم */
   border-radius: 50%;
-  font-size: 12px;
+  font-size: 10px; /* تصغير حجم الخط */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -344,6 +356,15 @@ body {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
+}
+
+/* زر انستغرام - تم التصغير */
+.instagram-btn svg {
+  width: 20px; /* تصغير حجم الأيقونة */
+  height: 20px;
+  fill: none;
+  stroke: #E1306C;
+  stroke-width: 1.5;
 }
 
 /* نافذة بابلوين */
@@ -501,28 +522,12 @@ body {
   background: linear-gradient(135deg, #b91c1c, #dc2626);
 }
 
-/* زر انستغرام */
-.instagram-btn {
-  left: 75px; /* تحت زر الدعم مباشرة */
-  top: 90px;
-}
-
-.instagram-btn svg {
-  fill: none;
-  stroke: #E1306C; /* اللون الوردي المشهور لانستغرام */
-  stroke-width: 1.5;
-}
-
-.support-btn {
-  left: 15px;
-}
-
-/* القائمة */
+/* قائمة اللغات - تم تعديل موقعها */
 .lang-menu {
   position: fixed;
-  top: 145px;
+  bottom: 130px; /* فوق الأزرار مباشرة */
   right: 15px;
-  width: 140px;
+  width: 130px; /* تصغير الحجم */
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.15);
@@ -531,8 +536,8 @@ body {
 }
 
 .lang-item {
-  padding: 10px;
-  font-size: 15px;
+  padding: 8px 10px; /* تصغير الحشو */
+  font-size: 14px; /* تصغير حجم الخط */
   cursor: pointer;
   border-bottom: 1px solid #eee;
   text-align: right;
@@ -595,13 +600,63 @@ body {
 
 /* تكييفات للهواتف */
 @media (max-width: 768px) {
+  /* ضبط المسافات للأزرار في الهواتف */
+  .circle-btn, 
   .bubble-chat-btn {
-    right: 70px;
+    bottom: 70px; /* رفع قليلاً فوق شريط التنقل */
+  }
+  
+  .lang-btn {
+    right: 15px;
+  }
+  
+  .support-btn {
+    right: 65px;
+  }
+  
+  .instagram-btn {
+    right: 115px;
+  }
+  
+  .bubble-chat-btn {
+    right: 165px;
   }
   
   .bubble-chat-window {
     width: 95%;
     max-height: 80vh;
+  }
+  
+  /* إذا كانت الشاشة صغيرة جداً، نجعل الأزرار أقرب */
+  @media (max-width: 350px) {
+    .circle-btn,
+    .bubble-chat-btn {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+      bottom: 75px;
+    }
+    
+    .lang-btn {
+      right: 10px;
+    }
+    
+    .support-btn {
+      right: 55px;
+    }
+    
+    .instagram-btn {
+      right: 100px;
+    }
+    
+    .bubble-chat-btn {
+      right: 145px;
+    }
+    
+    .instagram-btn svg {
+      width: 18px;
+      height: 18px;
+    }
   }
 }
 </style>
