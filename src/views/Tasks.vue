@@ -56,32 +56,34 @@
       </div>    
     
       <!-- اللوحة -->    
-      <div class="plinko-board">    
-        <div    
-          v-for="(row,r) in rows"    
-          :key="r"    
-          class="row"    
-        >    
-          <span v-for="n in row" :key="n" class="dot"></span>    
+      <div class="plinko-container">    
+        <div class="plinko-board">    
+          <div    
+            v-for="(row,r) in rows"    
+            :key="r"    
+            class="row"    
+          >    
+            <span v-for="n in row" :key="n" class="dot"></span>    
+          </div>    
         </div>    
     
-        <div    
-          v-if="ball.active"    
-          class="ball"    
-          :style="{ top: ball.y+'px', left: ball.x+'px' }"    
-        ></div>    
+        <!-- المضاعفات تحت آخر صف مباشرة -->    
+        <div class="multipliers-row">    
+          <span    
+            v-for="(m,i) in plinkoMultipliers"    
+            :key="i"    
+            :class="multiplierClass(m)"    
+          >    
+            x{{ m }}    
+          </span>    
+        </div>    
       </div>    
     
-      <!-- المضاعفات (مطابقة للصورة) -->    
-      <div class="multipliers">    
-        <span    
-          v-for="(m,i) in plinkoMultipliers"    
-          :key="i"    
-          :class="multiplierClass(m)"    
-        >    
-          x{{ m }}    
-        </span>    
-      </div>    
+      <div    
+        v-if="ball.active"    
+        class="ball"    
+        :style="{ top: ball.y+'px', left: ball.x+'px' }"    
+      ></div>    
     </div>    
     
     <div v-if="result" class="result">{{ result }}</div>    
@@ -121,7 +123,7 @@ export default {
       rows: [3,4,5,6,7,8,9,10],    
       plinkoMultipliers: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],    
       ball: {    
-        x: 60,    
+        x: 150,    
         y: 0,    
         active: false,    
       },    
@@ -294,10 +296,14 @@ export default {
   color: black;    
 }    
     
+.plinko-container {    
+  position: relative;    
+  margin: 15px auto;    
+}    
+    
 .plinko-board {    
   position: relative;    
-  height: 260px;    
-  margin: 15px auto 5px auto;    
+  height: 280px;    
 }    
     
 .row {    
@@ -319,23 +325,29 @@ export default {
   height: 14px;    
   background: #ff2d55;    
   border-radius: 50%;    
+  top: 0;    
+  left: 50%;    
+  transform: translateX(-50%);    
+  z-index: 10;    
 }    
     
-.multipliers {    
+.multipliers-row {    
   display: flex;    
   justify-content: center;    
+  align-items: center;    
   margin-top: 0;    
   padding-top: 5px;    
+  gap: 2px;    
 }    
     
-.multipliers span {    
-  margin: 0 4px;    
+.multipliers-row span {    
   padding: 4px 6px;    
-  border-radius: 6px;    
+  border-radius: 4px;    
   font-weight: bold;    
-  font-size: 12px;    
-  min-width: 40px;    
+  font-size: 11px;    
+  min-width: 36px;    
   text-align: center;    
+  line-height: 1.2;    
 }    
     
 .high { background: #dc2626; }    
