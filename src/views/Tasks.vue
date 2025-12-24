@@ -57,30 +57,29 @@
 
       <!-- اللوحة -->
       <div class="plinko-board">
-        <div
-          v-for="(row,r) in rows"
-          :key="r"
-          class="row"
-        >
+
+        <!-- النقاط -->
+        <div v-for="(row,r) in rows" :key="r" class="row">
           <span v-for="n in row" :key="n" class="dot"></span>
         </div>
 
+        <!-- ⬜ المضاعفات مباشرة تحت آخر صف نقاط -->
+        <div class="multipliers-inline">
+          <span
+            v-for="(m,i) in plinkoMultipliers"
+            :key="i"
+            :class="multiplierClass(m)"
+          >
+            x{{ m }}
+          </span>
+        </div>
+
+        <!-- الكرة -->
         <div
           v-if="ball.active"
           class="ball"
           :style="{ top: ball.y+'px', left: ball.x+'px' }"
         ></div>
-      </div>
-
-      <!-- المضاعفات (مطابقة للصورة) -->
-      <div class="multipliers">
-        <span
-          v-for="(m,i) in plinkoMultipliers"
-          :key="i"
-          :class="multiplierClass(m)"
-        >
-          x{{ m }}
-        </span>
       </div>
     </div>
 
@@ -102,7 +101,6 @@ export default {
       balance: 0,
       result: "",
 
-      /* ===== Chicken Road ===== */
       bet: null,
       started: false,
       position: 0,
@@ -116,15 +114,10 @@ export default {
         { multiplier: 5.0 },
       ],
 
-      /* ===== Plinko ===== */
       plinkoBet: null,
       rows: [3,4,5,6,7,8,9,10],
       plinkoMultipliers: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],
-      ball: {
-        x: 150,
-        y: 0,
-        active: false,
-      },
+      ball: { x: 150, y: 0, active: false },
     };
   },
 
@@ -139,9 +132,7 @@ export default {
     const user = auth.currentUser;
     if (!user) return;
     const snap = await getDoc(doc(db, "users", user.uid));
-    if (snap.exists()) {
-      this.balance = Number(snap.data().balance || 0);
-    }
+    if (snap.exists()) this.balance = Number(snap.data().balance || 0);
   },
 
   methods: {
@@ -152,56 +143,35 @@ export default {
       this.game = g;
     },
 
-    /* ===== Chicken Road ===== */
     async startChicken() {
       if (!this.bet || this.bet <= 0 || this.bet > this.balance) return;
-
       this.balance -= this.bet;
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        balance: this.balance,
-      });
-
+      await updateDoc(doc(db, "users", auth.currentUser.uid), { balance: this.balance });
       this.started = true;
       this.position = 0;
     },
 
     goNext() {
-      const loseChance = 0.4 + this.position * 0.07;
-      if (Math.random() < loseChance) {
+      if (Math.random() < 0.4 + this.position * 0.07) {
         this.result = "💥 خسرت";
         this.started = false;
         return;
       }
-
-      if (this.position < this.steps.length - 1) {
-        this.position++;
-      } else {
-        this.cashOutChicken();
-      }
+      this.position < this.steps.length - 1 ? this.position++ : this.cashOutChicken();
     },
 
     async cashOutChicken() {
       const profit = this.currentProfit;
       this.balance += profit;
-
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        balance: this.balance,
-      });
-
+      await updateDoc(doc(db, "users", auth.currentUser.uid), { balance: this.balance });
       this.result = `🎉 ربحت ${profit.toFixed(2)} USDT`;
       this.started = false;
     },
 
-    /* ===== Plinko ===== */
     async startPlinko() {
-      if (!this.plinkoBet || this.plinkoBet <= 0 || this.plinkoBet > this.balance)
-        return;
-
+      if (!this.plinkoBet || this.plinkoBet <= 0 || this.plinkoBet > this.balance) return;
       this.balance -= this.plinkoBet;
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        balance: this.balance,
-      });
-
+      await updateDoc(doc(db, "users", auth.currentUser.uid), { balance: this.balance });
       this.ball = { x: 150, y: 0, active: true };
       this.dropBall();
     },
@@ -215,16 +185,11 @@ export default {
           clearInterval(interval);
           this.ball.active = false;
 
-          const index = Math.floor(Math.random() * this.plinkoMultipliers.length);
-          const multiplier = this.plinkoMultipliers[index];
-          const win = this.plinkoBet * multiplier;
-
+          const i = Math.floor(Math.random() * this.plinkoMultipliers.length);
+          const win = this.plinkoBet * this.plinkoMultipliers[i];
           this.balance += win;
 
-          await updateDoc(doc(db, "users", auth.currentUser.uid), {
-            balance: this.balance,
-          });
-
+          await updateDoc(doc(db, "users", auth.currentUser.uid), { balance: this.balance });
           this.result = `🎯 ربحت ${win.toFixed(2)} USDT`;
         }
       }, 40);
@@ -240,70 +205,12 @@ export default {
 </script>
 
 <style scoped>
-.game-page {
-  background: #0f172a;
-  min-height: 100vh;
-  color: white;
-  padding: 15px;
-  text-align: center;
-}
-
-.tabs {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.tabs button {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: #1e293b;
-  color: white;
-  border: none;
-}
-
-.tabs .active {
-  background: #22c55e;
-}
-
-.card {
-  background: #020617;
-  border-radius: 14px;
-  padding: 15px;
-  max-width: 420px;
-  margin: auto;
-}
-
-.road {
-  display: flex;
-  justify-content: space-between;
-  margin: 15px 0;
-}
-
-.step {
-  width: 13%;
-  background: #1e293b;
-  border-radius: 10px;
-  padding: 6px;
-  font-size: 13px;
-}
-
-.step.active {
-  background: #22c55e;
-  color: black;
-}
-
 .plinko-board {
   position: relative;
-  height: 300px;
   margin: 15px auto;
 }
 
-.row {
-  display: flex;
-  justify-content: center;
-}
+.row { display: flex; justify-content: center; }
 
 .dot {
   width: 6px;
@@ -313,28 +220,22 @@ export default {
   margin: 8px;
 }
 
-.ball {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  background: #ff2d55;
-  border-radius: 50%;
+/* ✅ تصغير الأرقام + رفعها مباشرة */
+.multipliers-inline {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  margin-top: 2px;
 }
 
-.multipliers span {
-  margin: 3px;
-  padding: 6px 8px;
-  border-radius: 8px;
+.multipliers-inline span {
+  font-size: 10px;        /* ⬅️ تصغير */
+  padding: 3px 0;
+  border-radius: 6px;
   font-weight: bold;
 }
 
 .high { background: #dc2626; }
 .mid  { background: #22c55e; color: black; }
 .low  { background: #facc15; color: black; }
-
-.result {
-  margin-top: 15px;
-  font-size: 18px;
-  font-weight: bold;
-}
 </style>
