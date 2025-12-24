@@ -1,9 +1,8 @@
 <template>
   <div class="game-page">
-
     <h2 class="title">🐔 Chicken Road</h2>
     <p class="sub">
-      كل خطوة مخاطرة… القرار بيدك، وقد تكون هذه خطوتك الرابحة 🔥
+      كل خطوة مخاطرة… القرار بيدك 🔥
     </p>
 
     <div class="balance">
@@ -17,9 +16,7 @@
         v-model.number="bet"
         placeholder="أدخل مبلغ USDT"
       />
-      <button @click="startGame">
-        ابدأ اللعب
-      </button>
+      <button @click="startGame">ابدأ اللعب</button>
     </div>
 
     <!-- الطريق -->
@@ -41,9 +38,7 @@
         الربح الحالي: {{ currentProfit.toFixed(2) }} USDT
       </div>
 
-      <button class="forward" @click="goNext">
-        إلى الأمام
-      </button>
+      <button class="forward" @click="goNext">إلى الأمام</button>
 
       <button
         class="cashout"
@@ -54,11 +49,9 @@
       </button>
     </div>
 
-    <!-- الرسائل -->
     <div v-if="result" class="result">
       {{ result }}
     </div>
-
   </div>
 </template>
 
@@ -77,22 +70,45 @@ export default {
       position: 0,
       result: "",
 
-      // ✅ نسب الفوز تبدأ من 35% وتتناقص
+      // 🧠 تتبع ربح الجلسة
+      sessionProfit: 0,
+
+      // 📊 المضاعفات
       steps: [
-        { multiplier: 1.0, winChance: 0.35 }, // 35%
-        { multiplier: 1.2, winChance: 0.25 }, // 25%
-        { multiplier: 1.5, winChance: 0.18 }, // 18%
-        { multiplier: 2.0, winChance: 0.12 }, // 12%
-        { multiplier: 3.0, winChance: 0.07 }, // 7%
-        { multiplier: 5.0, winChance: 0.04 }, // 4%
+        { multiplier: 1.0 },
+        { multiplier: 1.2 },
+        { multiplier: 1.5 },
+        { multiplier: 2.0 },
+        { multiplier: 3.0 },
+        { multiplier: 5.0 },
       ],
+
+      // ⚙️ إعدادات الذكاء
+      baseWinRate: 0.45,   // 45%
+      minWinRate: 0.08,    // أقل حد
+      decreasePerStep: 0.06,
     };
   },
 
   computed: {
     currentProfit() {
-      if (!this.started) return 0;
+      if (!this.started || !this.bet || !this.steps[this.position]) {
+        return 0;
+      }
       return this.bet * this.steps[this.position].multiplier;
+    },
+
+    // 🧠 حساب نسبة الفوز الذكية
+    smartWinChance() {
+      let chance =
+        this.baseWinRate -
+        this.position * this.decreasePerStep -
+        Math.max(this.sessionProfit, 0) * 0.02;
+
+      if (chance < this.minWinRate) chance = this.minWinRate;
+      if (chance > 0.6) chance = 0.6;
+
+      return chance;
     },
   },
 
@@ -102,12 +118,16 @@ export default {
 
   methods: {
     async loadBalance() {
-      const user = auth.currentUser;
-      if (!user) return;
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
 
-      const snap = await getDoc(doc(db, "users", user.uid));
-      if (snap.exists()) {
-        this.balance = Number(snap.data().balance || 0);
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists()) {
+          this.balance = Number(snap.data().balance || 0);
+        }
+      } catch (e) {
+        console.error(e);
       }
     },
 
@@ -115,7 +135,7 @@ export default {
       this.result = "";
 
       if (!this.bet || this.bet <= 0) {
-        this.result = "⚠️ الرجاء إدخال مبلغ للعب";
+        this.result = "⚠️ أدخل مبلغ صحيح";
         return;
       }
 
@@ -125,31 +145,41 @@ export default {
       }
 
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) {
+        this.result = "❌ لم يتم تسجيل الدخول";
+        return;
+      }
 
-      // خصم الرهان مباشرة
-      this.balance -= this.bet;
-      await updateDoc(doc(db, "users", user.uid), {
-        balance: this.balance,
-      });
+      try {
+        this.balance -= this.bet;
+        await updateDoc(doc(db, "users", user.uid), {
+          balance: this.balance,
+        });
 
-      this.started = true;
-      this.position = 0;
+        this.started = true;
+        this.position = 0;
+        this.sessionProfit = 0;
+      } catch (e) {
+        console.error(e);
+        this.result = "❌ خطأ في بدء اللعبة";
+      }
     },
 
     goNext() {
-      const step = this.steps[this.position];
+      if (!this.steps[this.position]) return;
+
       const roll = Math.random();
 
       // ❌ خسارة
-      if (roll > step.winChance) {
-        this.result = "💥 خسرت! المخاطرة كانت أعلى من الحظ";
+      if (roll > this.smartWinChance) {
+        this.result = "💥 خسرت!";
+        this.sessionProfit -= this.bet;
         this.started = false;
         this.bet = null;
         return;
       }
 
-      // ✅ تقدم
+      // ✅ فوز
       if (this.position < this.steps.length - 1) {
         this.position++;
       } else {
@@ -162,15 +192,20 @@ export default {
       if (!user) return;
 
       const profit = this.currentProfit;
+      this.sessionProfit += profit;
       this.balance += profit;
 
-      await updateDoc(doc(db, "users", user.uid), {
-        balance: this.balance,
-      });
+      try {
+        await updateDoc(doc(db, "users", user.uid), {
+          balance: this.balance,
+        });
 
-      this.result = `🎉 ربحت ${profit.toFixed(2)} USDT`;
-      this.started = false;
-      this.bet = null;
+        this.result = `🎉 ربحت ${profit.toFixed(2)} USDT`;
+        this.started = false;
+        this.bet = null;
+      } catch (e) {
+        console.error(e);
+      }
     },
   },
 };
@@ -186,19 +221,9 @@ export default {
   text-align: center;
 }
 
-.title {
-  font-size: 24px;
-}
-
-.sub {
-  color: #bbb;
-  margin-bottom: 12px;
-}
-
-.balance {
-  font-weight: bold;
-  margin-bottom: 15px;
-}
+.title { font-size: 24px; }
+.sub { color: #bbb; margin-bottom: 12px; }
+.balance { font-weight: bold; margin-bottom: 15px; }
 
 .bet-box input {
   width: 80%;
@@ -230,18 +255,9 @@ export default {
   padding: 10px;
 }
 
-.step.active {
-  background: #0d6efd;
-}
-
-.multiplier {
-  font-weight: bold;
-}
-
-.chicken {
-  font-size: 26px;
-  margin-top: 5px;
-}
+.step.active { background: #0d6efd; }
+.multiplier { font-weight: bold; }
+.chicken { font-size: 26px; margin-top: 5px; }
 
 .controls button {
   width: 45%;
@@ -251,15 +267,8 @@ export default {
   border: none;
 }
 
-.forward {
-  background: #28a745;
-  color: white;
-}
-
-.cashout {
-  background: #ffc107;
-  color: black;
-}
+.forward { background: #28a745; color: white; }
+.cashout { background: #ffc107; color: black; }
 
 .result {
   margin-top: 20px;
