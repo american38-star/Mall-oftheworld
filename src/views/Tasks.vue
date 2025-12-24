@@ -1,140 +1,150 @@
 <template>
   <div class="game-page">
-    <!-- العنوان -->
-    <div class="game-header">
-      <h1>PLINKO</h1>
-      <div class="subtitle">BIGAMLINE</div>
-    </div>
-
-    <!-- الرصيد -->
-    <div class="balance-container">
-      <div class="balance-label">BALANCE</div>
-      <div class="balance-amount">{{ balance.toFixed(2) }} FUN</div>
-    </div>
-
-    <!-- لوحة المضاعفات -->
-    <div class="multipliers-board">
-      <div 
-        v-for="(multiplier, index) in multipliers" 
-        :key="index"
-        :class="['multiplier-item', getMultiplierClass(multiplier)]"
-      >
-        x{{ multiplier }}
-        <div class="risk-label">{{ getRiskLevel(multiplier) }}</div>
+    <!-- الهيدر العلوي -->
+    <div class="header">
+      <div class="logo">d-lkn9.vercel.app</div>
+      <div class="header-menu">
+        <button class="menu-btn">حسابي</button>
+        <button class="menu-btn vip">VIP</button>
+        <button class="menu-btn">الفريق</button>
+        <button class="menu-btn">المهام</button>
+        <button class="menu-btn active">الرئيسية</button>
       </div>
     </div>
 
-    <!-- لوحة البلينكو -->
-    <div class="plinko-container">
-      <div class="plinko-board" ref="plinkoBoard">
-        <!-- المسارات والأقراص -->
-        <div class="pin-container">
-          <div v-for="row in 8" :key="row" class="pin-row" :style="{ top: row * 40 + 'px' }">
+    <!-- محتوى الصفحة -->
+    <div class="content">
+      <!-- العمود الأيمن: لوحة المضاعفات -->
+      <div class="multipliers-panel">
+        <h1>PLINKO</h1>
+        <div class="subtitle">BIGAMLINE</div>
+        
+        <!-- رصيد اللاعب -->
+        <div class="balance-card">
+          <div class="balance-label">BALANCE</div>
+          <div class="balance-amount">FUN {{ balance.toFixed(2) }}</div>
+        </div>
+
+        <!-- المضاعفات -->
+        <div class="multipliers-grid">
+          <div v-for="(mult, index) in multipliers" :key="index" class="mult-card">
+            <div class="mult-value">x{{ mult.value }}</div>
+            <div class="mult-risk">Risk Level: {{ mult.risk }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- العمود الأيسر: لوحة اللعبة -->
+      <div class="game-panel">
+        <!-- لوحة البلينكو -->
+        <div class="plinko-board" ref="board">
+          <!-- المسامير -->
+          <div class="pins-container">
+            <div v-for="row in 8" :key="row" class="pin-row">
+              <div 
+                v-for="pin in getPinsInRow(row)" 
+                :key="pin.id"
+                class="pin"
+                :style="{
+                  left: pin.left + 'px',
+                  top: (row * 40) + 'px'
+                }"
+              ></div>
+            </div>
+          </div>
+
+          <!-- الكرة -->
+          <div 
+            v-if="ball.active"
+            class="ball"
+            :style="{
+              top: ball.y + 'px',
+              left: ball.x + 'px',
+              backgroundColor: ballColor
+            }"
+          ></div>
+
+          <!-- خط الإسقاط -->
+          <div class="drop-line" :style="{ left: dropPosition + 'px' }"></div>
+
+          <!-- السلات النهائية -->
+          <div class="slots-container">
             <div 
-              v-for="pin in row + 2" 
-              :key="pin"
-              class="pin"
-              :style="{ left: (pin * 40) + 'px' }"
-            ></div>
+              v-for="(slot, index) in slots" 
+              :key="index"
+              class="slot"
+              :style="{
+                left: (index * 44) + 'px',
+                backgroundColor: slot.color
+              }"
+            >
+              <div class="slot-text">x{{ slot.multiplier }}</div>
+            </div>
           </div>
         </div>
 
-        <!-- الكرة -->
-        <div 
-          v-if="ball.active"
-          class="ball"
-          :style="{
-            top: ball.y + 'px',
-            left: ball.x + 'px',
-            backgroundColor: ballColor
-          }"
-        ></div>
+        <!-- عناصر التحكم -->
+        <div class="controls">
+          <!-- خيارات الرهان -->
+          <div class="bet-controls">
+            <div class="bet-info">
+              <div class="min-bet">Min Bet 1.00 FUN</div>
+              <div class="max-bet">Max Bet 1000.00 FUN</div>
+            </div>
+            
+            <div class="bet-input-group">
+              <button class="bet-btn minus" @click="decrementBet">-</button>
+              <input 
+                type="number" 
+                v-model.number="betAmount" 
+                class="bet-input"
+                min="1"
+                max="1000"
+                step="10"
+              />
+              <button class="bet-btn plus" @click="incrementBet">+</button>
+            </div>
 
-        <!-- خط الإسقاط -->
-        <div class="drop-line" :style="{ left: dropPosition + 'px' }"></div>
-      </div>
-    </div>
+            <div class="more-options">
+              <button class="more-btn">More</button>
+            </div>
+          </div>
 
-    <!-- خيارات الرهان -->
-    <div class="bet-controls">
-      <div class="bet-amount">
-        <div class="bet-label">Min Bet 1.00 FUN</div>
-        <div class="bet-input-container">
-          <button class="bet-btn decrement" @click="decrementBet">-</button>
-          <input 
-            type="number" 
-            v-model.number="betAmount" 
-            min="1" 
-            max="1000"
-            class="bet-input"
-          />
-          <button class="bet-btn increment" @click="incrementBet">+</button>
+          <!-- مستويات الخطورة -->
+          <div class="risk-controls">
+            <button 
+              v-for="level in riskLevels" 
+              :key="level.id"
+              :class="['risk-btn', level.class, { active: selectedRisk === level.id }]"
+              @click="selectRisk(level.id)"
+            >
+              {{ level.label }}
+            </button>
+          </div>
+
+          <!-- زر الإسقاط -->
+          <div class="drop-section">
+            <button 
+              class="drop-btn"
+              :disabled="isPlaying || betAmount > balance"
+              @click="dropBall"
+            >
+              <div class="drop-icon">⬇️</div>
+              <div class="drop-text">DROP</div>
+            </button>
+          </div>
         </div>
-        <div class="bet-label">Max Bet 1000.00 FUN</div>
-      </div>
-
-      <!-- مستويات الخطورة -->
-      <div class="risk-levels">
-        <button 
-          v-for="level in riskLevels" 
-          :key="level.id"
-          :class="['risk-btn', { active: selectedRisk === level.id }]"
-          @click="selectRisk(level.id)"
-        >
-          {{ level.label }}
-          <div class="risk-info">{{ level.info }}</div>
-        </button>
-      </div>
-
-      <!-- زر اللعب -->
-      <div class="play-section">
-        <button 
-          class="play-btn"
-          :disabled="isPlaying || balance < betAmount"
-          @click="startGame"
-        >
-          <div class="play-icon">⬇️</div>
-          <div class="play-text">DROP</div>
-        </button>
-      </div>
-
-      <!-- النتائج -->
-      <div v-if="result.show" class="result-popup" :class="result.type">
-        <div class="result-icon">{{ result.icon }}</div>
-        <div class="result-text">{{ result.message }}</div>
-        <div class="result-multiplier">Multiplier: x{{ result.multiplier }}</div>
-        <div class="result-win">Win: {{ result.win.toFixed(2) }} FUN</div>
-        <button class="close-result" @click="closeResult">✕</button>
       </div>
     </div>
 
-    <!-- الإحصائيات -->
-    <div class="stats">
-      <div class="stat-item">
-        <div class="stat-label">Total Bets</div>
-        <div class="stat-value">{{ stats.totalBets }}</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-label">Total Wins</div>
-        <div class="stat-value">{{ stats.totalWins }}</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-label">Win Rate</div>
-        <div class="stat-value">{{ stats.winRate }}%</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-label">Highest Win</div>
-        <div class="stat-value">{{ stats.highestWin.toFixed(2) }}</div>
-      </div>
-    </div>
-
-    <!-- إعادة التعيين (للأغراض التعليمية) -->
-    <div class="reset-section">
-      <button class="reset-btn" @click="resetGame">
-        🔄 Reset Game (Educational Only)
-      </button>
-      <div class="educational-note">
-        ⚠️ This is an educational demo only. No real money involved.
+    <!-- نتيجة الجولة -->
+    <div v-if="showResult" class="result-overlay">
+      <div class="result-modal" :class="resultClass">
+        <div class="result-icon">{{ resultIcon }}</div>
+        <div class="result-title">{{ resultTitle }}</div>
+        <div class="result-multiplier">Multiplier: x{{ currentMultiplier.toFixed(2) }}</div>
+        <div class="result-amount">{{ resultAmount.toFixed(2) }} FUN</div>
+        <button class="close-btn" @click="closeResult">✕</button>
       </div>
     </div>
   </div>
@@ -142,7 +152,7 @@
 
 <script>
 export default {
-  name: "PlinkoGame",
+  name: 'PlinkoGame',
   
   data() {
     return {
@@ -150,323 +160,281 @@ export default {
       balance: 1000.00,
       betAmount: 10,
       selectedRisk: 'normal',
+      
+      // الكرة
       ball: {
         active: false,
         x: 200,
-        y: 0
+        y: 20
       },
+      ballColor: '#00ff88',
       dropPosition: 200,
-      ballColor: '#FF2D55',
       isPlaying: false,
       
-      // المضاعفات (مطابقة للصورة)
-      multipliers: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],
+      // المضاعفات كما في الصورة
+      multipliers: [
+        { value: 1.5, risk: 'Normal' },
+        { value: 4, risk: 'Normal' },
+        { value: 29, risk: 'High' },
+        { value: 0.3, risk: 'Low' },
+        { value: 0.2, risk: 'Low' },
+        { value: 0.3, risk: 'Low' },
+        { value: 29, risk: 'High' },
+        { value: 4, risk: 'Normal' },
+        { value: 1.5, risk: 'Normal' }
+      ],
+      
+      // السلات النهائية
+      slots: [
+        { multiplier: 29, color: '#ff4444' },
+        { multiplier: 4, color: '#44ff44' },
+        { multiplier: 1.5, color: '#44ff44' },
+        { multiplier: 0.3, color: '#ffff44' },
+        { multiplier: 0.2, color: '#ffff44' },
+        { multiplier: 0.3, color: '#ffff44' },
+        { multiplier: 1.5, color: '#44ff44' },
+        { multiplier: 4, color: '#44ff44' },
+        { multiplier: 29, color: '#ff4444' }
+      ],
       
       // مستويات الخطورة
       riskLevels: [
-        { id: 'high', label: 'High', info: 'More extreme results' },
-        { id: 'normal', label: 'Normal', info: 'Balanced gameplay' },
-        { id: 'low', label: 'Low', info: 'More consistent' }
+        { id: 'high', label: 'High', class: 'risk-high' },
+        { id: 'normal', label: 'Normal', class: 'risk-normal' },
+        { id: 'low', label: 'Low', class: 'risk-low' }
       ],
       
-      // النتائج
-      result: {
-        show: false,
-        type: '',
-        icon: '',
-        message: '',
-        multiplier: 0,
-        win: 0
-      },
-      
-      // الإحصائيات
-      stats: {
-        totalBets: 0,
-        totalWins: 0,
-        winRate: 0,
-        highestWin: 0
-      },
-      
-      // متغيرات البلينكو
-      gameInterval: null,
+      // النتيجة
+      showResult: false,
       currentMultiplier: 1,
-      pinRows: 8
+      resultAmount: 0,
+      resultTitle: '',
+      resultIcon: '',
+      resultClass: '',
+      
+      // الحركة
+      animationInterval: null,
+      velocityX: 0,
+      velocityY: 0
     }
   },
   
   computed: {
     boardWidth() {
-      return 400; // عرض لوحة البلينكو
-    },
-    
-    slotCount() {
-      return this.multipliers.length;
-    },
-    
-    slotWidth() {
-      return this.boardWidth / this.slotCount;
+      return 400
     }
   },
   
   methods: {
-    // تغيير قيمة الرهان
+    // حساب عدد المسامير في كل صف
+    getPinsInRow(row) {
+      const pins = []
+      const pinCount = row + 3
+      const spacing = this.boardWidth / (pinCount + 1)
+      
+      for (let i = 1; i <= pinCount; i++) {
+        pins.push({
+          id: `${row}-${i}`,
+          left: spacing * i
+        })
+      }
+      
+      return pins
+    },
+    
+    // تعديل الرهان
     incrementBet() {
       if (this.betAmount < 1000) {
-        this.betAmount = Math.min(this.betAmount + 10, 1000);
+        this.betAmount += 10
+        if (this.betAmount > 1000) this.betAmount = 1000
       }
     },
     
     decrementBet() {
       if (this.betAmount > 1) {
-        this.betAmount = Math.max(this.betAmount - 10, 1);
+        this.betAmount -= 10
+        if (this.betAmount < 1) this.betAmount = 1
       }
     },
     
     // اختيار مستوى الخطورة
-    selectRisk(risk) {
-      this.selectedRisk = risk;
+    selectRisk(level) {
+      this.selectedRisk = level
+      
       // تغيير لون الكرة حسب الخطورة
-      switch(risk) {
+      switch(level) {
         case 'high':
-          this.ballColor = '#FF2D55'; // أحمر
-          break;
+          this.ballColor = '#ff4444'
+          break
         case 'normal':
-          this.ballColor = '#22C55E'; // أخضر
-          break;
+          this.ballColor = '#00ff88'
+          break
         case 'low':
-          this.ballColor = '#FACC15'; // أصفر
-          break;
+          this.ballColor = '#ffff44'
+          break
       }
     },
     
-    // بدء اللعبة
-    startGame() {
-      if (this.isPlaying || this.balance < this.betAmount) return;
+    // إسقاط الكرة
+    async dropBall() {
+      if (this.isPlaying || this.betAmount > this.balance) return
       
       // خصم الرهان
-      this.balance -= this.betAmount;
-      this.stats.totalBets++;
+      this.balance -= this.betAmount
+      this.isPlaying = true
       
       // إعداد الكرة
-      this.isPlaying = true;
-      this.ball.active = true;
-      this.ball.x = this.dropPosition;
-      this.ball.y = 0;
+      this.ball.active = true
+      this.ball.x = this.dropPosition
+      this.ball.y = 20
       
-      // بدء الحركة
-      this.startBallAnimation();
-    },
-    
-    // حركة الكرة
-    startBallAnimation() {
-      let x = this.dropPosition;
-      let y = 0;
-      const gravity = 0.5;
-      let velocityY = 2;
-      let velocityX = (Math.random() - 0.5) * 4; // حركة أفقية عشوائية
+      // سرعة ابتدائية عشوائية
+      this.velocityX = (Math.random() - 0.5) * 8
+      this.velocityY = 2
       
       // تأثير مستوى الخطورة على الحركة
       switch(this.selectedRisk) {
         case 'high':
-          velocityX *= 1.5;
-          break;
+          this.velocityX *= 2
+          break
         case 'low':
-          velocityX *= 0.5;
-          break;
+          this.velocityX *= 0.5
+          break
       }
       
-      this.gameInterval = setInterval(() => {
-        // تطبيق الجاذبية
-        velocityY += gravity;
-        y += velocityY;
-        
-        // حركة أفقية مع ارتداد من الجوانب
-        x += velocityX;
-        if (x <= 20 || x >= this.boardWidth - 20) {
-          velocityX *= -0.8; // ارتداد مع فقدان طاقة
-        }
-        
-        // تحديث موقع الكرة
-        this.ball.x = x;
-        this.ball.y = y;
-        
-        // التحقق من وصول الكرة للأسفل
-        if (y >= 320) {
-          this.endGame(x);
-          clearInterval(this.gameInterval);
-        }
-      }, 16); // ~60 فريم في الثانية
+      // بدء الحركة
+      this.startAnimation()
     },
     
-    // نهاية اللعبة وحساب النتيجة
-    endGame(finalX) {
-      this.isPlaying = false;
+    // حركة الكرة
+    startAnimation() {
+      const gravity = 0.3
+      const friction = 0.98
       
-      // تحديد السلة التي سقطت فيها الكرة
+      this.animationInterval = setInterval(() => {
+        // تطبيق الجاذبية
+        this.velocityY += gravity
+        
+        // تحديث الموضع
+        this.ball.x += this.velocityX
+        this.ball.y += this.velocityY
+        
+        // تطبيق الاحتكاك
+        this.velocityX *= friction
+        
+        // ارتداد من الجوانب
+        if (this.ball.x <= 10 || this.ball.x >= this.boardWidth - 10) {
+          this.velocityX *= -0.8
+          this.ball.x = Math.max(10, Math.min(this.boardWidth - 10, this.ball.x))
+        }
+        
+        // التحقق من الوصول للأسفل
+        if (this.ball.y >= 340) {
+          this.endAnimation()
+        }
+      }, 16)
+    },
+    
+    // نهاية الحركة
+    endAnimation() {
+      clearInterval(this.animationInterval)
+      this.isPlaying = false
+      
+      // حساب السلة النهائية
       const slotIndex = Math.min(
-        this.slotCount - 1,
-        Math.max(0, Math.floor(finalX / this.slotWidth))
-      );
+        8,
+        Math.max(0, Math.floor((this.ball.x - 20) / 40))
+      )
       
-      // الحصول على المضاعف
-      let baseMultiplier = this.multipliers[slotIndex];
+      // المضاعف النهائي
+      this.currentMultiplier = this.slots[slotIndex].multiplier
       
-      // تطبيق تأثير مستوى الخطورة
-      switch(this.selectedRisk) {
-        case 'high':
-          // عالي الخطورة - تباين أكبر
-          if (Math.random() > 0.7) {
-            baseMultiplier *= 1.5;
-          } else if (Math.random() < 0.3) {
-            baseMultiplier *= 0.7;
-          }
-          break;
-        case 'low':
-          // منخفض الخطورة - تباين أقل
-          baseMultiplier *= (0.9 + Math.random() * 0.2);
-          break;
+      // تأثير مستوى الخطورة
+      if (this.selectedRisk === 'high') {
+        if (Math.random() > 0.5) {
+          this.currentMultiplier *= 1.5
+        } else {
+          this.currentMultiplier *= 0.7
+        }
+      } else if (this.selectedRisk === 'low') {
+        this.currentMultiplier *= (0.8 + Math.random() * 0.4)
       }
       
-      this.currentMultiplier = Math.max(0.1, baseMultiplier);
-      const winAmount = this.betAmount * this.currentMultiplier;
+      this.currentMultiplier = Math.max(0.1, this.currentMultiplier)
       
-      // تحديث الرصيد
-      this.balance += winAmount;
-      
-      // تحديث الإحصائيات
-      if (winAmount > this.betAmount) {
-        this.stats.totalWins++;
-        this.stats.highestWin = Math.max(this.stats.highestWin, winAmount);
-      }
-      this.stats.winRate = this.stats.totalBets > 0 
-        ? Math.round((this.stats.totalWins / this.stats.totalBets) * 100) 
-        : 0;
+      // حساب المكسب
+      this.resultAmount = this.betAmount * this.currentMultiplier
+      this.balance += this.resultAmount
       
       // عرض النتيجة
-      this.showResult(winAmount);
+      this.showGameResult()
     },
     
-    // عرض نتيجة اللعبة
-    showResult(winAmount) {
-      let type, icon, message;
-      
-      if (winAmount > this.betAmount) {
-        type = 'win';
-        icon = '🎉';
-        message = 'WIN!';
-      } else if (winAmount === this.betAmount) {
-        type = 'draw';
-        icon = '🤝';
-        message = 'DRAW';
+    // عرض نتيجة الجولة
+    showGameResult() {
+      if (this.resultAmount > this.betAmount) {
+        this.resultTitle = 'WIN!'
+        this.resultIcon = '🎉'
+        this.resultClass = 'win'
+      } else if (this.resultAmount === this.betAmount) {
+        this.resultTitle = 'BREAK EVEN'
+        this.resultIcon = '🤝'
+        this.resultClass = 'draw'
       } else {
-        type = 'loss';
-        icon = '😢';
-        message = 'LOSS';
+        this.resultTitle = 'LOSS'
+        this.resultIcon = '😢'
+        this.resultClass = 'loss'
       }
       
-      this.result = {
-        show: true,
-        type,
-        icon,
-        message,
-        multiplier: this.currentMultiplier.toFixed(2),
-        win: winAmount
-      };
+      this.showResult = true
       
-      // إخفاء النتيجة بعد 5 ثواني
+      // إخفاء النتيجة بعد 3 ثواني
       setTimeout(() => {
-        if (this.result.show) {
-          this.closeResult();
-        }
-      }, 5000);
+        this.closeResult()
+      }, 3000)
     },
     
     // إغلاق نافذة النتيجة
     closeResult() {
-      this.result.show = false;
+      this.showResult = false
+      this.ball.active = false
     },
     
-    // تصنيف المضاعفات حسب القيمة
-    getMultiplierClass(multiplier) {
-      if (multiplier >= 10) return 'multiplier-high';
-      if (multiplier >= 1) return 'multiplier-medium';
-      return 'multiplier-low';
-    },
-    
-    // مستوى الخطورة للمضاعف
-    getRiskLevel(multiplier) {
-      if (multiplier >= 10) return 'Risk Level: High';
-      if (multiplier >= 1) return 'Risk Level: Normal';
-      return 'Risk Level: Low';
-    },
-    
-    // إعادة تعيين اللعبة (للأغراض التعليمية)
-    resetGame() {
-      this.balance = 1000;
-      this.betAmount = 10;
-      this.selectedRisk = 'normal';
-      this.ballColor = '#22C55E';
-      this.isPlaying = false;
-      
-      this.result = {
-        show: false,
-        type: '',
-        icon: '',
-        message: '',
-        multiplier: 0,
-        win: 0
-      };
-      
-      this.stats = {
-        totalBets: 0,
-        totalWins: 0,
-        winRate: 0,
-        highestWin: 0
-      };
-      
-      if (this.gameInterval) {
-        clearInterval(this.gameInterval);
-      }
-    },
-    
-    // تغيير موقع الإسقاط
+    // تحديث موقع الإسقاط
     updateDropPosition(event) {
-      if (this.isPlaying) return;
+      if (this.isPlaying) return
       
-      const board = this.$refs.plinkoBoard;
-      if (!board) return;
+      const board = this.$refs.board
+      if (!board) return
       
-      const rect = board.getBoundingClientRect();
-      const x = event.clientX - rect.left;
+      const rect = board.getBoundingClientRect()
+      const x = event.clientX - rect.left
       
-      if (x >= 20 && x <= rect.width - 20) {
-        this.dropPosition = x;
+      if (x >= 30 && x <= rect.width - 30) {
+        this.dropPosition = x
       }
     }
   },
   
   mounted() {
-    // إضافة مستمع لحركة الماوس على لوحة البلينكو
-    const board = this.$refs.plinkoBoard;
+    // إضافة مستمع لحركة الماوس على اللوحة
+    const board = this.$refs.board
     if (board) {
-      board.addEventListener('mousemove', this.updateDropPosition);
-      board.addEventListener('click', (e) => {
-        if (!this.isPlaying) {
-          this.updateDropPosition(e);
-        }
-      });
+      board.addEventListener('mousemove', this.updateDropPosition)
+      board.addEventListener('click', this.updateDropPosition)
     }
   },
   
   beforeUnmount() {
-    // تنظيف المستمعات عند إلغاء التثبيت
-    const board = this.$refs.plinkoBoard;
+    // تنظيف المستمعات
+    const board = this.$refs.board
     if (board) {
-      board.removeEventListener('mousemove', this.updateDropPosition);
+      board.removeEventListener('mousemove', this.updateDropPosition)
+      board.removeEventListener('click', this.updateDropPosition)
     }
     
-    if (this.gameInterval) {
-      clearInterval(this.gameInterval);
+    if (this.animationInterval) {
+      clearInterval(this.animationInterval)
     }
   }
 }
@@ -474,187 +442,285 @@ export default {
 
 <style scoped>
 .game-page {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
   min-height: 100vh;
   color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* الهيدر */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background: rgba(0, 0, 0, 0.8);
+  border-bottom: 1px solid #333;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff88;
+}
+
+.header-menu {
+  display: flex;
+  gap: 10px;
+}
+
+.menu-btn {
+  padding: 8px 20px;
+  background: transparent;
+  border: 1px solid #444;
+  color: #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.menu-btn:hover {
+  background: #222;
+  color: white;
+}
+
+.menu-btn.active {
+  background: #00ff88;
+  color: black;
+  border-color: #00ff88;
+}
+
+.menu-btn.vip {
+  background: linear-gradient(45deg, #ffd700, #ffaa00);
+  color: black;
+  border: none;
+}
+
+/* المحتوى الرئيسي */
+.content {
+  display: flex;
   padding: 20px;
-  font-family: 'Arial', sans-serif;
-  max-width: 800px;
+  gap: 30px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-.game-header {
-  text-align: center;
-  margin-bottom: 20px;
+/* لوحة المضاعفات (اليمين) */
+.multipliers-panel {
+  flex: 0 0 300px;
+  background: rgba(20, 20, 20, 0.9);
+  border-radius: 15px;
+  padding: 25px;
+  border: 1px solid #333;
 }
 
-.game-header h1 {
-  font-size: 48px;
+.multipliers-panel h1 {
+  font-size: 42px;
   font-weight: bold;
-  background: linear-gradient(45deg, #FF2D55, #22C55E);
+  background: linear-gradient(45deg, #00ff88, #0088ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+  margin: 0 0 5px 0;
+  text-align: center;
 }
 
 .subtitle {
-  font-size: 20px;
-  color: #94a3b8;
-  letter-spacing: 4px;
-  margin-top: 5px;
+  font-size: 18px;
+  color: #888;
+  text-align: center;
+  margin-bottom: 30px;
+  letter-spacing: 2px;
 }
 
-.balance-container {
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid #22C55E;
-  border-radius: 15px;
-  padding: 15px 30px;
+.balance-card {
+  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  padding: 20px;
   text-align: center;
-  margin: 20px auto;
-  max-width: 300px;
-  backdrop-filter: blur(10px);
+  margin-bottom: 30px;
 }
 
 .balance-label {
   font-size: 14px;
-  color: #94a3b8;
-  margin-bottom: 5px;
+  color: #888;
+  margin-bottom: 8px;
 }
 
 .balance-amount {
   font-size: 32px;
   font-weight: bold;
-  color: #22C55E;
+  color: #00ff88;
 }
 
-.multipliers-board {
+.multipliers-grid {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  gap: 8px;
-  margin: 30px 0;
-  padding: 0 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
 }
 
-.multiplier-item {
-  background: rgba(255, 255, 255, 0.1);
+.mult-card {
+  background: rgba(40, 40, 40, 0.9);
   border-radius: 10px;
-  padding: 15px 5px;
+  padding: 15px;
   text-align: center;
-  font-weight: bold;
-  font-size: 20px;
-  transition: transform 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  border: 1px solid #444;
+  transition: transform 0.3s;
 }
 
-.multiplier-item:hover {
+.mult-card:hover {
   transform: translateY(-5px);
+  border-color: #00ff88;
 }
 
-.multiplier-high {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  color: white;
+.mult-value {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 5px;
 }
 
-.multiplier-medium {
-  background: linear-gradient(135deg, #22C55E, #4ade80);
-  color: black;
+.mult-card:nth-child(3) .mult-value,
+.mult-card:nth-child(7) .mult-value {
+  color: #ff4444;
 }
 
-.multiplier-low {
-  background: linear-gradient(135deg, #facc15, #fde047);
-  color: black;
+.mult-card:nth-child(4) .mult-value,
+.mult-card:nth-child(5) .mult-value,
+.mult-card:nth-child(6) .mult-value {
+  color: #ffff44;
 }
 
-.risk-label {
-  font-size: 10px;
-  opacity: 0.8;
-  margin-top: 5px;
+.mult-card:nth-child(1) .mult-value,
+.mult-card:nth-child(2) .mult-value,
+.mult-card:nth-child(8) .mult-value,
+.mult-card:nth-child(9) .mult-value {
+  color: #00ff88;
 }
 
-.plinko-container {
-  position: relative;
-  margin: 40px 0;
+.mult-risk {
+  font-size: 12px;
+  color: #888;
 }
 
+/* لوحة اللعبة (اليسار) */
+.game-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* لوحة البلينكو */
 .plinko-board {
-  background: rgba(15, 23, 42, 0.8);
-  height: 350px;
-  border-radius: 20px;
-  border: 3px solid #334155;
+  flex: 1;
+  background: rgba(10, 10, 10, 0.9);
+  border-radius: 15px;
+  padding: 30px;
   position: relative;
-  overflow: hidden;
-  cursor: pointer;
+  border: 2px solid #333;
+  min-height: 500px;
 }
 
-.pin-container {
+.pins-container {
   position: relative;
-  height: 100%;
+  height: 300px;
 }
 
 .pin-row {
   position: absolute;
-  display: flex;
-  justify-content: center;
   width: 100%;
-  left: 0;
 }
 
 .pin {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   background: white;
   border-radius: 50%;
-  margin: 0 10px;
+  transform: translate(-50%, -50%);
 }
 
 .ball {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #FF2D55;
-  box-shadow: 0 0 10px rgba(255, 45, 85, 0.7);
-  transition: all 0.1s ease;
+  background: #00ff88;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 20px currentColor;
   z-index: 10;
+  transition: left 0.1s, top 0.1s;
 }
 
 .drop-line {
   position: absolute;
   top: 0;
-  width: 3px;
+  width: 2px;
   height: 100%;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 255, 136, 0.3);
+  z-index: 5;
+}
+
+.slots-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.slot {
+  width: 40px;
+  height: 60px;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: black;
+}
+
+.slot-text {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* عناصر التحكم */
+.controls {
+  background: rgba(20, 20, 20, 0.9);
+  border-radius: 15px;
+  padding: 25px;
+  border: 1px solid #333;
 }
 
 .bet-controls {
-  background: rgba(30, 41, 59, 0.8);
-  border-radius: 20px;
-  padding: 20px;
-  margin: 20px 0;
-}
-
-.bet-amount {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  gap: 20px;
 }
 
-.bet-label {
-  font-size: 14px;
-  color: #94a3b8;
+.bet-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   flex: 1;
+}
+
+.min-bet,
+.max-bet {
+  font-size: 14px;
+  color: #888;
   text-align: center;
 }
 
-.bet-input-container {
+.bet-input-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
   flex: 2;
   justify-content: center;
 }
@@ -662,10 +728,10 @@ export default {
 .bet-input {
   width: 150px;
   padding: 15px;
-  font-size: 24px;
+  font-size: 28px;
   text-align: center;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid #22C55E;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #00ff88;
   border-radius: 10px;
   color: white;
   font-weight: bold;
@@ -675,76 +741,91 @@ export default {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  border: none;
-  background: #334155;
+  border: 2px solid #444;
+  background: rgba(0, 0, 0, 0.7);
   color: white;
   font-size: 24px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
 }
 
 .bet-btn:hover {
-  background: #475569;
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
 }
 
-.risk-levels {
+.more-options {
+  flex: 1;
+  text-align: right;
+}
+
+.more-btn {
+  padding: 12px 30px;
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid #00ff88;
+  color: #00ff88;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.risk-controls {
   display: flex;
-  gap: 10px;
-  margin: 20px 0;
+  gap: 15px;
+  margin-bottom: 25px;
   justify-content: center;
 }
 
 .risk-btn {
   flex: 1;
-  padding: 15px;
-  border: none;
+  padding: 18px 0;
+  border: 2px solid #444;
+  background: rgba(0, 0, 0, 0.7);
+  color: #ccc;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
+  font-size: 18px;
   font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
 .risk-btn.active {
   transform: scale(1.05);
 }
 
-.risk-btn:nth-child(1).active {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
+.risk-high.active {
+  background: linear-gradient(135deg, #ff4444, #ff0000);
+  border-color: #ff4444;
+  color: white;
 }
 
-.risk-btn:nth-child(2).active {
-  background: linear-gradient(135deg, #22C55E, #4ade80);
+.risk-normal.active {
+  background: linear-gradient(135deg, #00ff88, #008844);
+  border-color: #00ff88;
+  color: black;
 }
 
-.risk-btn:nth-child(3).active {
-  background: linear-gradient(135deg, #facc15, #fde047);
+.risk-low.active {
+  background: linear-gradient(135deg, #ffff44, #ffaa00);
+  border-color: #ffff44;
+  color: black;
 }
 
-.risk-info {
-  font-size: 12px;
-  opacity: 0.7;
-  margin-top: 5px;
-  font-weight: normal;
-  text-transform: none;
-}
-
-.play-section {
+.drop-section {
   text-align: center;
-  margin: 30px 0;
 }
 
-.play-btn {
-  width: 100px;
-  height: 100px;
+.drop-btn {
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #22C55E, #16a34a);
-  color: white;
+  background: linear-gradient(135deg, #00ff88, #008844);
+  color: black;
   cursor: pointer;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -752,179 +833,150 @@ export default {
   margin: 0 auto;
 }
 
-.play-btn:hover:not(:disabled) {
+.drop-btn:hover:not(:disabled) {
   transform: scale(1.1);
-  box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
 }
 
-.play-btn:disabled {
+.drop-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.play-icon {
-  font-size: 32px;
-  margin-bottom: 5px;
+.drop-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
 }
 
-.play-text {
-  font-size: 18px;
+.drop-text {
+  font-size: 20px;
   font-weight: bold;
 }
 
-.result-popup {
+/* نافذة النتيجة */
+.result-overlay {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.95);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.result-modal {
+  background: rgba(30, 30, 30, 0.95);
   border-radius: 20px;
-  padding: 30px;
+  padding: 40px;
   text-align: center;
   min-width: 300px;
-  z-index: 1000;
   border: 3px solid;
-  backdrop-filter: blur(10px);
-  animation: popup 0.5s ease;
+  position: relative;
+  animation: popIn 0.5s;
 }
 
-@keyframes popup {
-  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-.result-popup.win {
-  border-color: #22C55E;
+.result-modal.win {
+  border-color: #00ff88;
 }
 
-.result-popup.loss {
-  border-color: #dc2626;
+.result-modal.loss {
+  border-color: #ff4444;
 }
 
-.result-popup.draw {
-  border-color: #facc15;
+.result-modal.draw {
+  border-color: #ffff44;
 }
 
 .result-icon {
   font-size: 60px;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
-.result-text {
+.result-title {
   font-size: 36px;
   font-weight: bold;
   margin-bottom: 10px;
 }
 
 .result-multiplier {
-  font-size: 24px;
-  color: #94a3b8;
-  margin-bottom: 5px;
+  font-size: 20px;
+  color: #888;
+  margin-bottom: 10px;
 }
 
-.result-win {
-  font-size: 28px;
+.result-amount {
+  font-size: 32px;
   font-weight: bold;
-  color: #22C55E;
+  color: #00ff88;
 }
 
-.close-result {
+.close-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 15px;
+  right: 15px;
   background: none;
   border: none;
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 5px 10px;
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
-  margin: 30px 0;
-}
-
-.stat-item {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 15px;
-  text-align: center;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-bottom: 5px;
-}
-
-.stat-value {
+  color: #888;
   font-size: 24px;
-  font-weight: bold;
-  color: white;
-}
-
-.reset-section {
-  text-align: center;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.reset-btn {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white;
-  border: none;
-  padding: 15px 30px;
-  border-radius: 10px;
-  font-size: 16px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  padding: 5px;
 }
 
-.reset-btn:hover {
-  transform: scale(1.05);
-}
-
-.educational-note {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: 10px;
-  font-style: italic;
+.close-btn:hover {
+  color: white;
 }
 
 /* تصميم متجاوب */
+@media (max-width: 1200px) {
+  .content {
+    flex-direction: column;
+  }
+  
+  .multipliers-panel {
+    flex: none;
+    width: 100%;
+  }
+  
+  .bet-controls {
+    flex-direction: column;
+  }
+  
+  .multipliers-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
-  .game-header h1 {
-    font-size: 36px;
-  }
-  
-  .multipliers-board {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-  
-  .stat-item {
-    padding: 10px;
-  }
-  
-  .stat-value {
-    font-size: 18px;
-  }
-  
-  .bet-amount {
+  .header {
     flex-direction: column;
     gap: 15px;
   }
   
-  .risk-levels {
-    flex-direction: column;
+  .header-menu {
+    flex-wrap: wrap;
+    justify-content: center;
   }
   
-  .stats {
-    grid-template-columns: repeat(2, 1fr);
+  .multipliers-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .bet-input {
+    width: 120px;
+    font-size: 24px;
+  }
+  
+  .drop-btn {
+    width: 100px;
+    height: 100px;
   }
 }
 </style>
