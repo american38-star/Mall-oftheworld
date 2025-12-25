@@ -306,21 +306,21 @@ export default {
     
 .plinko-board {    
   position: relative;    
-  height: 260px;    
+  height: 280px;    
 }    
     
 .row {    
   display: flex;    
   justify-content: center;    
-  margin: 4px 0;    
+  margin: 6px 0;    
 }    
     
 .dot {    
-  width: 8px;    
-  height: 8px;    
+  width: 10px;    
+  height: 10px;    
   background: white;    
   border-radius: 50%;    
-  margin: 6px 8px;    
+  margin: 8px 10px;    
 }    
     
 .ball {    
@@ -339,7 +339,7 @@ export default {
   display: flex;    
   justify-content: center;    
   align-items: center;    
-  margin-top: -15px;    
+  margin-top: -12px;    
   padding-top: 0;    
   gap: 1px;    
 }    
