@@ -175,6 +175,9 @@ export default {
         y: 0,    
         active: false,    
       },    
+      // لتخزين المضاعف الذي وقعت عليه الكرة    
+      finalMultiplier: null,    
+      finalMultiplierIndex: null,    
     };    
   },    
     
@@ -202,6 +205,8 @@ export default {
       this.game = g;    
       this.errorMessage = "";    
       this.chickenErrorMessage = "";    
+      this.finalMultiplier = null;    
+      this.finalMultiplierIndex = null;    
     },    
     
     /* ===== Chicken Road ===== */    
@@ -284,31 +289,79 @@ export default {
       });    
     
       this.ball = { x: 150, y: 0, active: true };    
+      this.finalMultiplier = null;    
+      this.finalMultiplierIndex = null;    
+      this.result = "";    
       this.dropBall();    
     },    
     
     dropBall() {    
+      // حساب المضاعف النهائي مسبقاً قبل تحريك الكرة    
+      const multiplierIndex = this.calculateFinalMultiplierIndex();    
+      const multiplier = this.plinkoMultipliers[multiplierIndex];    
+      this.finalMultiplier = multiplier;    
+      this.finalMultiplierIndex = multiplierIndex;    
+      
+      // محاكاة حركة الكرة مع الوصول إلى المضاعف المحدد    
+      const targetX = this.calculateTargetX(multiplierIndex);    
+      
       const interval = setInterval(async () => {    
         this.ball.y += 10;    
-        this.ball.x += Math.random() > 0.5 ? 12 : -12;    
+        
+        // تحريك الكرة نحو الهدف النهائي    
+        if (this.ball.x < targetX) {    
+          this.ball.x += Math.random() > 0.3 ? 12 : 8;    
+        } else if (this.ball.x > targetX) {    
+          this.ball.x += Math.random() > 0.3 ? -12 : -8;    
+        } else {    
+          this.ball.x += Math.random() > 0.5 ? 12 : -12;    
+        }    
     
         if (this.ball.y >= 260) {    
           clearInterval(interval);    
           this.ball.active = false;    
-    
-          const index = Math.floor(Math.random() * this.plinkoMultipliers.length);    
-          const multiplier = this.plinkoMultipliers[index];    
+          
+          // حساب الربح بناءً على المضاعف المحدد مسبقاً    
           const win = this.plinkoBet * multiplier;    
-    
           this.balance += win;    
     
           await updateDoc(doc(db, "users", auth.currentUser.uid), {    
             balance: this.balance,    
           });    
     
-          this.result = `🎯 ربحت ${win.toFixed(2)} USDT`;    
+          this.result = `🎯 ربحت ${win.toFixed(2)} USDT (x${multiplier})`;    
         }    
       }, 40);    
+    },    
+    
+    // حساب المضاعف النهائي بناءً على الاحتمالات    
+    calculateFinalMultiplierIndex() {    
+      const random = Math.random();    
+      
+      // احتمالات مرتبطة بمضاعفات Plinko النموذجية    
+      if (random < 0.05) {    
+        // 5% فرصة للحصول على x29    
+        return Math.random() > 0.5 ? 0 : 8; // أول أو آخر مضاعف    
+      } else if (random < 0.15) {    
+        // 10% فرصة للحصول على x4    
+        return Math.random() > 0.5 ? 1 : 7;    
+      } else if (random < 0.35) {    
+        // 20% فرصة للحصول على x1.5    
+        return Math.random() > 0.5 ? 2 : 6;    
+      } else if (random < 0.65) {    
+        // 30% فرصة للحصول على x0.3    
+        return Math.random() > 0.5 ? 3 : 5;    
+      } else {    
+        // 35% فرصة للحصول على x0.2    
+        return 4;    
+      }    
+    },    
+    
+    // حساب موقع X النهائي بناءً على مؤشر المضاعف    
+    calculateTargetX(multiplierIndex) {    
+      // إحداثيات X للمضاعفات من اليسار إلى اليمين    
+      const multiplierPositions = [20, 65, 110, 155, 200, 245, 290, 335, 380];    
+      return multiplierPositions[multiplierIndex];    
     },    
     
     clearError() {    
