@@ -55,8 +55,9 @@
         <button :disabled="ball.active" @click="startPlinko">PLAY</button>    
       </div>    
     
-      <!-- اللوحة -->    
+      <!-- اللوحة والمضاعفات -->    
       <div class="plinko-container">    
+        <!-- اللوحة -->    
         <div class="plinko-board">    
           <div    
             v-for="(row,r) in rows"    
@@ -67,23 +68,25 @@
           </div>    
         </div>    
     
-        <!-- المضاعفات تحت آخر صف مباشرة -->    
+        <!-- المضاعفات تحت آخر صف نقاط مباشرة -->    
         <div class="multipliers-row">    
-          <span    
-            v-for="(m,i) in plinkoMultipliers"    
-            :key="i"    
-            :class="multiplierClass(m)"    
-          >    
-            x{{ m }}    
-          </span>    
+          <div class="multiplier-item">x29</div>    
+          <div class="multiplier-item">x4</div>    
+          <div class="multiplier-item">x1.5</div>    
+          <div class="multiplier-item">x0.3</div>    
+          <div class="multiplier-item">x0.2</div>    
+          <div class="multiplier-item">x0.3</div>    
+          <div class="multiplier-item">x1.5</div>    
+          <div class="multiplier-item">x4</div>    
+          <div class="multiplier-item">x29</div>    
         </div>    
-      </div>    
     
-      <div    
-        v-if="ball.active"    
-        class="ball"    
-        :style="{ top: ball.y+'px', left: ball.x+'px' }"    
-      ></div>    
+        <div    
+          v-if="ball.active"    
+          class="ball"    
+          :style="{ top: ball.y+'px', left: ball.x+'px' }"    
+        ></div>    
+      </div>    
     </div>    
     
     <div v-if="result" class="result">{{ result }}</div>    
@@ -298,12 +301,12 @@ export default {
     
 .plinko-container {    
   position: relative;    
-  margin: 15px auto;    
+  margin: 15px auto 5px auto;    
 }    
     
 .plinko-board {    
   position: relative;    
-  height: 280px;    
+  height: 260px;    
 }    
     
 .row {    
@@ -335,24 +338,52 @@ export default {
   display: flex;    
   justify-content: center;    
   align-items: center;    
-  margin-top: 0;    
-  padding-top: 5px;    
+  margin-top: -5px;    
+  padding-top: 0;    
   gap: 2px;    
 }    
     
-.multipliers-row span {    
-  padding: 4px 6px;    
-  border-radius: 4px;    
+.multiplier-item {    
+  padding: 2px 4px;    
+  border-radius: 3px;    
   font-weight: bold;    
-  font-size: 11px;    
-  min-width: 36px;    
+  font-size: 10px;    
+  min-width: 32px;    
   text-align: center;    
-  line-height: 1.2;    
+  line-height: 1;    
+  height: 18px;    
+  display: flex;    
+  align-items: center;    
+  justify-content: center;    
 }    
     
-.high { background: #dc2626; }    
-.mid  { background: #22c55e; color: black; }    
-.low  { background: #facc15; color: black; }    
+.multipliers-row .multiplier-item:nth-child(1),    
+.multipliers-row .multiplier-item:nth-child(9) {    
+  background: #dc2626; /* أحمر */    
+}    
+    
+.multipliers-row .multiplier-item:nth-child(2),    
+.multipliers-row .multiplier-item:nth-child(8) {    
+  background: #22c55e; /* أخضر */    
+  color: black;    
+}    
+    
+.multipliers-row .multiplier-item:nth-child(3),    
+.multipliers-row .multiplier-item:nth-child(7) {    
+  background: #22c55e; /* أخضر */    
+  color: black;    
+}    
+    
+.multipliers-row .multiplier-item:nth-child(4),    
+.multipliers-row .multiplier-item:nth-child(6) {    
+  background: #facc15; /* أصفر */    
+  color: black;    
+}    
+    
+.multipliers-row .multiplier-item:nth-child(5) {    
+  background: #facc15; /* أصفر */    
+  color: black;    
+}    
     
 .result {    
   margin-top: 15px;    
