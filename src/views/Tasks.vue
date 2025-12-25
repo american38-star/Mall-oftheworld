@@ -301,7 +301,7 @@ export default {
     
 .plinko-container {    
   position: relative;    
-  margin: 15px auto 5px auto;    
+  margin: 15px auto 0 auto;    
 }    
     
 .plinko-board {    
@@ -312,14 +312,15 @@ export default {
 .row {    
   display: flex;    
   justify-content: center;    
+  margin: 4px 0;    
 }    
     
 .dot {    
-  width: 6px;    
-  height: 6px;    
+  width: 8px;    
+  height: 8px;    
   background: white;    
   border-radius: 50%;    
-  margin: 8px;    
+  margin: 6px 8px;    
 }    
     
 .ball {    
@@ -338,20 +339,20 @@ export default {
   display: flex;    
   justify-content: center;    
   align-items: center;    
-  margin-top: -5px;    
+  margin-top: -15px;    
   padding-top: 0;    
-  gap: 2px;    
+  gap: 1px;    
 }    
     
 .multiplier-item {    
-  padding: 2px 4px;    
-  border-radius: 3px;    
+  padding: 1px 3px;    
+  border-radius: 2px;    
   font-weight: bold;    
-  font-size: 10px;    
-  min-width: 32px;    
+  font-size: 9px;    
+  min-width: 28px;    
   text-align: center;    
   line-height: 1;    
-  height: 18px;    
+  height: 16px;    
   display: flex;    
   align-items: center;    
   justify-content: center;    
