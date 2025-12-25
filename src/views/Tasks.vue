@@ -353,20 +353,20 @@ export default {
   display: flex;    
   justify-content: center;    
   align-items: center;    
-  margin-top: -10px;    
+  margin-top: -8px;    
   padding-top: 0;    
-  gap: 1px;    
+  gap: 0.5px;    
 }    
     
 .multiplier-item {    
-  padding: 1px 3px;    
-  border-radius: 2px;    
+  padding: 0px 2px;    
+  border-radius: 1px;    
   font-weight: bold;    
-  font-size: 9px;    
-  min-width: 28px;    
+  font-size: 8px;    
+  min-width: 24px;    
   text-align: center;    
   line-height: 1;    
-  height: 16px;    
+  height: 14px;    
   display: flex;    
   align-items: center;    
   justify-content: center;    
