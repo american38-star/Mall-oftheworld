@@ -362,7 +362,7 @@ export default {
         }  
         
         // تأمين الكرة ضمن الحدود  
-        ball.x = Math.max(30, Math.min(370, ball.x));  
+        ball.x = Math.max(35, Math.min(385, ball.x));  
         
         // عند الوصول  
         if (progress >= 1) {  
@@ -416,8 +416,8 @@ export default {
     
     // الحصول على موضع المضاعف بدقة  
     getMultiplierPosition(index) {    
-      // المواقع المحددة بناءً على العرض 420px - 43.5px بين كل مضاعف  
-      const positions = [36.75, 80.25, 123.75, 167.25, 210.75, 254.25, 297.75, 341.25, 384.75];    
+      // مواضع المضاعفات - 43.5px بين كل مضاعف  
+      const positions = [40, 83.5, 127, 170.5, 214, 257.5, 301, 344.5, 388];    
       return positions[index];    
     },    
     
@@ -606,27 +606,28 @@ export default {
     
 .multipliers-row {    
   display: flex;    
-  justify-content: center;    
+  justify-content: space-between;    
   align-items: center;    
   margin-top: 15px;    
-  padding-top: 0;    
-  gap: 0; /* إزالة المسافة بين العناصر */    
+  padding: 0;    
+  width: 100%;    
+  gap: 0;    
 }    
     
 .multiplier-item {    
-  padding: 1px 4px;    
-  border-radius: 2px;    
+  padding: 2px 4px;    
+  border-radius: 3px;    
   font-weight: bold;    
-  font-size: 9px;    
-  min-width: 36px; /* زيادة العرض ليكون مناسباً لـ 43.5px */    
-  max-width: 40px;    
+  font-size: 10px;    
+  width: 38px; /* عرض مناسب لمسافة 43.5px */    
+  min-width: 38px;    
+  max-width: 38px;    
   text-align: center;    
   line-height: 1;    
-  height: 15px;    
+  height: 18px;    
   display: flex;    
   align-items: center;    
   justify-content: center;    
-  margin: 0 1.5px; /* مسافة صغيرة جداً بين العناصر */    
   flex-shrink: 0;    
 }    
     
