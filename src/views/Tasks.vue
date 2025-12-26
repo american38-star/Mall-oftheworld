@@ -102,11 +102,17 @@
           <div class="multiplier-item" style="min-width: 25px;">x29</div>    
         </div>    
     
-        <div    
-          v-if="ball.active"    
-          class="ball"    
-          :style="{ top: ball.y+'px', left: ball.x+'px' }"    
-        ></div>    
+        <!-- عرض جميع الكرات النشطة -->
+        <div 
+          v-for="(ball, index) in activeBalls" 
+          :key="index"
+          class="ball" 
+          :style="{ 
+            top: ball.y + 'px', 
+            left: ball.x + 'px',
+            'background-color': ball.color
+          }"
+        ></div>
       </div>    
     
       <!-- حقل الرهان وزر ابدأ الآن في الأسفل -->    
@@ -170,15 +176,10 @@ export default {
       plinkoBet: null,    
       rows: [3,4,5,6,7,8,9,10],    
       plinkoMultipliers: [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29],    
-      ball: {    
-        x: 150,    
-        y: 0,    
-        active: false,    
-      },    
-      // لتخزين المضاعف الذي وقعت عليه الكرة    
-      finalMultiplier: null,    
-      finalMultiplierIndex: null,    
-      dropInterval: null,    
+      // مصفوفة لتخزين جميع الكرات النشطة
+      activeBalls: [],
+      dropIntervals: {}, // لتخزين الـ intervals لكل كرة
+      ballCounter: 0, // عداد لإنشاء IDs فريدة للكرات
     };    
   },    
     
@@ -202,16 +203,17 @@ export default {
     switchGame(g) {    
       this.result = "";    
       this.started = false;    
-      this.ball.active = false;    
+      this.activeBalls = [];
       this.game = g;    
       this.errorMessage = "";    
       this.chickenErrorMessage = "";    
-      this.finalMultiplier = null;    
-      this.finalMultiplierIndex = null;    
-      if (this.dropInterval) {    
-        clearInterval(this.dropInterval);    
-        this.dropInterval = null;    
-      }    
+      
+      // إيقاف جميع الـ intervals
+      Object.values(this.dropIntervals).forEach(interval => {
+        clearInterval(interval);
+      });
+      this.dropIntervals = {};
+      this.ballCounter = 0;
     },    
     
     /* ===== Chicken Road ===== */    
@@ -293,67 +295,86 @@ export default {
         balance: this.balance,    
       });    
     
-      this.ball = { x: 150, y: 0, active: true };    
-      this.finalMultiplier = null;    
-      this.finalMultiplierIndex = null;    
-      this.result = "";    
-      this.dropBall();    
+      // إنشاء كرة جديدة
+      const ballId = ++this.ballCounter;
+      const colors = ['#ff2d55', '#ff9500', '#34c759', '#007aff', '#ff3b30', '#5ac8fa', '#ffcc00'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      
+      const newBall = {
+        id: ballId,
+        x: 150,
+        y: 0,
+        color: randomColor,
+        multiplier: null,
+        multiplierIndex: null,
+        finalX: null,
+        active: true
+      };
+      
+      this.activeBalls.push(newBall);
+      this.dropBall(ballId);
     },    
     
-    dropBall() {    
-      // حساب المضاعف النهائي مسبقاً قبل تحريك الكرة    
+    dropBall(ballId) {    
+      // البحث عن الكرة في المصفوفة
+      const ballIndex = this.activeBalls.findIndex(b => b.id === ballId);
+      if (ballIndex === -1) return;
+      
+      const ball = this.activeBalls[ballIndex];
+      
+      // حساب المضاعف النهائي
       const multiplierIndex = this.calculateFinalMultiplierIndex();    
       const multiplier = this.plinkoMultipliers[multiplierIndex];    
-      this.finalMultiplier = multiplier;    
-      this.finalMultiplierIndex = multiplierIndex;    
       
-      // إحداثيات X النهائية بدقة  
-      const finalX = this.getMultiplierPosition(multiplierIndex);  
+      // تحديث بيانات الكرة
+      ball.multiplier = multiplier;
+      ball.multiplierIndex = multiplierIndex;
+      ball.finalX = this.getMultiplierPosition(multiplierIndex);
       
-      console.log(`المضاعف المختار: x${multiplier} (مؤشر: ${multiplierIndex})`);  
-      console.log(`الموضع النهائي: ${finalX}px`);  
-      
-      // حركة الكرة بثلاث مراحل  
+      // حركة الكرة
       let currentStep = 0;  
       const totalSteps = 40;  
       const startX = 150;  
       const startY = 0;  
       const finalY = 280;  
+      const finalX = ball.finalX;
       
-      this.dropInterval = setInterval(async () => {    
+      // حفظ الـ interval
+      this.dropIntervals[ballId] = setInterval(async () => {    
         currentStep++;  
         const progress = Math.min(currentStep / totalSteps, 1);  
         
-        // حركة Y ثابتة  
-        this.ball.y = startY + (finalY - startY) * progress;  
+        // تحديث موقع الكرة
+        ball.y = startY + (finalY - startY) * progress;  
         
         // حركة X بثلاث مراحل  
         if (progress < 0.4) {  
           // مرحلة عشوائية  
-          this.ball.x = startX + (Math.random() - 0.5) * 60;  
+          ball.x = startX + (Math.random() - 0.5) * 60;  
         } else if (progress < 0.8) {  
           // مرحلة توجيه  
           const phaseProgress = (progress - 0.4) / 0.4;  
-          this.ball.x = startX + (finalX - startX) * phaseProgress * 0.5;  
+          ball.x = startX + (finalX - startX) * phaseProgress * 0.5;  
         } else {  
           // مرحلة نهائية دقيقة  
           const finalProgress = (progress - 0.8) / 0.2;  
-          this.ball.x = finalX - 10 + finalProgress * 10;  
+          ball.x = finalX - 10 + finalProgress * 10;  
         }  
         
         // تأمين الكرة ضمن الحدود  
-        this.ball.x = Math.max(30, Math.min(370, this.ball.x));  
+        ball.x = Math.max(30, Math.min(370, ball.x));  
         
         // عند الوصول  
         if (progress >= 1) {  
-          clearInterval(this.dropInterval);  
+          clearInterval(this.dropIntervals[ballId]);  
+          delete this.dropIntervals[ballId];
           
           // ضبط الموضع النهائي بدقة  
-          this.ball.x = finalX;  
-          this.ball.y = finalY;  
+          ball.x = finalX;  
+          ball.y = finalY;  
           
           setTimeout(async () => {  
-            this.ball.active = false;  
+            ball.active = false;  
             
             const win = this.plinkoBet * multiplier;    
             this.balance += win;    
@@ -363,6 +384,14 @@ export default {
             });    
   
             this.result = `🎯 ربحت ${win.toFixed(2)} USDT (x${multiplier})`;  
+            
+            // إزالة الكرة بعد 2 ثانية
+            setTimeout(() => {
+              const index = this.activeBalls.findIndex(b => b.id === ballId);
+              if (index !== -1) {
+                this.activeBalls.splice(index, 1);
+              }
+            }, 2000);
           }, 400);  
         }    
       }, 50);  
