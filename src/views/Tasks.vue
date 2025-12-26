@@ -309,16 +309,18 @@ export default {
       
       // إحداثيات X النهائية لكل مضاعف بدقة  
       const finalX = this.getMultiplierPosition(multiplierIndex);  
+      const containerWidth = 420; // عرض الـ container الحالي
+      const margin = 20; // هامش الأمان
       
       console.log(`المضاعف المختار: x${multiplier} (مؤشر: ${multiplierIndex})`);  
       console.log(`الموضع النهائي المستهدف: ${finalX}px`);  
       
       // حركة الكرة مع الوصول المؤكد إلى الهدف  
       let currentStep = 0;  
-      const totalSteps = 35; // زيادة الخطوات للتأكد من الوصول للأسفل  
+      const totalSteps = 50; // زيادة الخطوات للتأكد من الوصول للأسفل  
       const startX = 150;  
       const startY = 0;  
-      const finalY = 280; // زيادة النهاية للتأكد من الوصول  
+      const finalY = 320; // زيادة النهاية للتأكد من الوصول  
       
       this.dropInterval = setInterval(async () => {    
         currentStep++;  
@@ -330,19 +332,24 @@ export default {
         this.ball.y = startY + (finalY - startY) * progress;  
         
         // حركة X - تتبع الهدف النهائي  
-        // في النصف الأول: حركة عشوائية طبيعية  
-        // في النصف الثاني: توجيه نحو الهدف  
-        if (progress < 0.7) {  
-          // حركة عشوائية في البداية  
-          this.ball.x = startX + (Math.random() - 0.5) * 100 * (1 - progress);  
+        if (progress < 0.6) {  
+          // حركة عشوائية في البداية مع انحراف محدود
+          const randomFactor = (Math.random() - 0.5) * 80 * (1 - progress);
+          this.ball.x = startX + randomFactor;
+        } else if (progress < 0.85) {  
+          // مرحلة التوجيه المتوسط
+          const midProgress = (progress - 0.6) / 0.25;
+          const currentTarget = startX + (finalX - startX) * midProgress * 0.7;
+          const randomFactor = (Math.random() - 0.5) * 20 * (1 - progress);
+          this.ball.x = currentTarget + randomFactor;
         } else {  
-          // توجيه نحو الهدف النهائي  
-          const targetProgress = (progress - 0.7) / 0.3;  
-          this.ball.x = startX + (finalX - startX) * targetProgress;  
+          // التوجيه الدقيق نحو الهدف
+          const finalProgress = (progress - 0.85) / 0.15;
+          this.ball.x = startX + (finalX - startX) * (0.7 + finalProgress * 0.3);
         }  
         
         // تأمين الكرة ضمن الحدود  
-        this.ball.x = Math.max(20, Math.min(380, this.ball.x));  
+        this.ball.x = Math.max(margin, Math.min(containerWidth - margin, this.ball.x));  
         
         // عند الوصول للنهاية  
         if (progress >= 1) {  
@@ -351,10 +358,11 @@ export default {
           // التأكد من أن الكرة في الموضع النهائي الصحيح  
           this.ball.x = finalX;  
           this.ball.y = finalY;  
-          this.ball.active = false;  
           
-          // تأخير بسيط قبل عرض النتيجة  
+          // تأخير بسيط قبل إخفاء الكرة وعرض النتيجة  
           setTimeout(async () => {  
+            this.ball.active = false;
+            
             // حساب الربح بناءً على المضاعف المحدد مسبقاً    
             const win = this.plinkoBet * multiplier;    
             this.balance += win;    
@@ -365,9 +373,9 @@ export default {
   
             this.result = `🎯 ربحت ${win.toFixed(2)} USDT (x${multiplier})`;  
             console.log(`✅ الكرة وصلت إلى: x${multiplier} في الموضع ${this.ball.x}px`);  
-          }, 300);  
+          }, 500);  
         }    
-      }, 60); // سرعة معتدلة  
+      }, 50); // سرعة أسرع قليلاً  
     },    
     
     // حساب المضاعف النهائي بناءً على الاحتمالات    
@@ -390,10 +398,11 @@ export default {
     
     // الحصول على موضع المضاعف بدقة  
     getMultiplierPosition(index) {    
-      // إحداثيات X للمضاعفات من اليسار إلى اليمين  
-      // تم تعديلها لتتناسب مع العرض الحالي  
-      const positions = [40, 85, 130, 175, 220, 265, 310, 355, 400];    
-      return positions[index];    
+      // توزيع المضاعفات بشكل متناسب مع عرض اللوحة
+      const containerWidth = 420;
+      const totalItems = 9;
+      const itemWidth = containerWidth / totalItems;
+      return (index + 0.5) * itemWidth;
     },    
     
     clearError() {    
@@ -545,6 +554,8 @@ export default {
 .plinko-container {    
   position: relative;    
   margin: 15px auto 15px auto;    
+  width: 100%;    
+  max-width: 420px;    
 }    
     
 .plinko-board {    
@@ -573,38 +584,41 @@ export default {
   background: #ff2d55;    
   border-radius: 50%;    
   top: 0;    
-  left: 50%;    
+  left: 150px;    
   transform: translateX(-50%);    
   z-index: 10;    
-  transition: left 0.1s linear, top 0.1s linear; /* تحسين الحركة */    
+  transition: left 0.05s linear, top 0.05s linear; /* تحسين الحركة */    
 }    
     
 .multipliers-row {    
   display: flex;    
-  justify-content: center;    
+  justify-content: space-between;    
   align-items: center;    
-  margin-top: 10px; /* زيادة المسافة */    
-  padding-top: 0;    
-  gap: 2px; /* زيادة المسافة بين المضاعفات */    
+  margin-top: 10px;    
+  padding: 5px 0;    
+  width: 100%;    
 }    
     
 .multiplier-item {    
-  padding: 1px 3px;    
-  border-radius: 2px;    
+  padding: 3px 6px;    
+  border-radius: 4px;    
   font-weight: bold;    
-  font-size: 9px;    
-  min-width: 24px;    
+  font-size: 11px;    
+  min-width: 30px;    
   text-align: center;    
   line-height: 1;    
-  height: 15px;    
+  height: 20px;    
   display: flex;    
   align-items: center;    
   justify-content: center;    
+  flex: 1;    
+  margin: 0 2px;    
 }    
     
 .multipliers-row .multiplier-item:nth-child(1),    
 .multipliers-row .multiplier-item:nth-child(9) {    
   background: #dc2626; /* أحمر */    
+  color: white;    
 }    
     
 .multipliers-row .multiplier-item:nth-child(2),    
