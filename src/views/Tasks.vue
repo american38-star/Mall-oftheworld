@@ -307,63 +307,54 @@ export default {
       this.finalMultiplier = multiplier;    
       this.finalMultiplierIndex = multiplierIndex;    
       
-      // إحداثيات X النهائية لكل مضاعف بدقة  
+      // إحداثيات X النهائية بدقة  
       const finalX = this.getMultiplierPosition(multiplierIndex);  
-      const containerWidth = 420; // عرض الـ container الحالي
-      const margin = 20; // هامش الأمان
       
       console.log(`المضاعف المختار: x${multiplier} (مؤشر: ${multiplierIndex})`);  
-      console.log(`الموضع النهائي المستهدف: ${finalX}px`);  
+      console.log(`الموضع النهائي: ${finalX}px`);  
       
-      // حركة الكرة مع الوصول المؤكد إلى الهدف  
+      // حركة الكرة بثلاث مراحل  
       let currentStep = 0;  
-      const totalSteps = 50; // زيادة الخطوات للتأكد من الوصول للأسفل  
+      const totalSteps = 40;  
       const startX = 150;  
       const startY = 0;  
-      const finalY = 320; // زيادة النهاية للتأكد من الوصول  
+      const finalY = 280;  
       
       this.dropInterval = setInterval(async () => {    
         currentStep++;  
-        
-        // حساب التقدم  
         const progress = Math.min(currentStep / totalSteps, 1);  
         
-        // حركة Y - نزول إلى الأسفل بالتأكيد  
+        // حركة Y ثابتة  
         this.ball.y = startY + (finalY - startY) * progress;  
         
-        // حركة X - تتبع الهدف النهائي  
-        if (progress < 0.6) {  
-          // حركة عشوائية في البداية مع انحراف محدود
-          const randomFactor = (Math.random() - 0.5) * 80 * (1 - progress);
-          this.ball.x = startX + randomFactor;
-        } else if (progress < 0.85) {  
-          // مرحلة التوجيه المتوسط
-          const midProgress = (progress - 0.6) / 0.25;
-          const currentTarget = startX + (finalX - startX) * midProgress * 0.7;
-          const randomFactor = (Math.random() - 0.5) * 20 * (1 - progress);
-          this.ball.x = currentTarget + randomFactor;
+        // حركة X بثلاث مراحل  
+        if (progress < 0.4) {  
+          // مرحلة عشوائية  
+          this.ball.x = startX + (Math.random() - 0.5) * 60;  
+        } else if (progress < 0.8) {  
+          // مرحلة توجيه  
+          const phaseProgress = (progress - 0.4) / 0.4;  
+          this.ball.x = startX + (finalX - startX) * phaseProgress * 0.5;  
         } else {  
-          // التوجيه الدقيق نحو الهدف
-          const finalProgress = (progress - 0.85) / 0.15;
-          this.ball.x = startX + (finalX - startX) * (0.7 + finalProgress * 0.3);
+          // مرحلة نهائية دقيقة  
+          const finalProgress = (progress - 0.8) / 0.2;  
+          this.ball.x = finalX - 10 + finalProgress * 10;  
         }  
         
         // تأمين الكرة ضمن الحدود  
-        this.ball.x = Math.max(margin, Math.min(containerWidth - margin, this.ball.x));  
+        this.ball.x = Math.max(30, Math.min(370, this.ball.x));  
         
-        // عند الوصول للنهاية  
+        // عند الوصول  
         if (progress >= 1) {  
           clearInterval(this.dropInterval);  
           
-          // التأكد من أن الكرة في الموضع النهائي الصحيح  
+          // ضبط الموضع النهائي بدقة  
           this.ball.x = finalX;  
           this.ball.y = finalY;  
           
-          // تأخير بسيط قبل إخفاء الكرة وعرض النتيجة  
           setTimeout(async () => {  
-            this.ball.active = false;
+            this.ball.active = false;  
             
-            // حساب الربح بناءً على المضاعف المحدد مسبقاً    
             const win = this.plinkoBet * multiplier;    
             this.balance += win;    
   
@@ -372,37 +363,33 @@ export default {
             });    
   
             this.result = `🎯 ربحت ${win.toFixed(2)} USDT (x${multiplier})`;  
-            console.log(`✅ الكرة وصلت إلى: x${multiplier} في الموضع ${this.ball.x}px`);  
-          }, 500);  
+          }, 400);  
         }    
-      }, 50); // سرعة أسرع قليلاً  
+      }, 50);  
     },    
     
     // حساب المضاعف النهائي بناءً على الاحتمالات    
     calculateFinalMultiplierIndex() {    
       const random = Math.random();    
       
-      // احتمالات واقعية لمضاعفات Plinko  
-      if (random < 0.02) { // 2% فرصة للحصول على x29  
+      if (random < 0.02) {  
         return Math.random() > 0.5 ? 0 : 8;  
-      } else if (random < 0.07) { // 5% فرصة للحصول على x4  
+      } else if (random < 0.07) {  
         return Math.random() > 0.5 ? 1 : 7;  
-      } else if (random < 0.17) { // 10% فرصة للحصول على x1.5  
+      } else if (random < 0.17) {  
         return Math.random() > 0.5 ? 2 : 6;  
-      } else if (random < 0.47) { // 30% فرصة للحصول على x0.3  
+      } else if (random < 0.47) {  
         return Math.random() > 0.5 ? 3 : 5;  
-      } else { // 53% فرصة للحصول على x0.2  
+      } else {  
         return 4;  
       }    
     },    
     
     // الحصول على موضع المضاعف بدقة  
     getMultiplierPosition(index) {    
-      // توزيع المضاعفات بشكل متناسب مع عرض اللوحة
-      const containerWidth = 420;
-      const totalItems = 9;
-      const itemWidth = containerWidth / totalItems;
-      return (index + 0.5) * itemWidth;
+      // المواقع المحددة بناءً على العرض 420px  
+      const positions = [30, 75, 120, 165, 210, 255, 300, 345, 390];    
+      return positions[index];    
     },    
     
     clearError() {    
@@ -554,13 +541,11 @@ export default {
 .plinko-container {    
   position: relative;    
   margin: 15px auto 15px auto;    
-  width: 100%;    
-  max-width: 420px;    
 }    
     
 .plinko-board {    
   position: relative;    
-  height: 320px; /* زيادة الارتفاع */    
+  height: 320px;    
 }    
     
 .row {    
@@ -587,60 +572,57 @@ export default {
   left: 150px;    
   transform: translateX(-50%);    
   z-index: 10;    
-  transition: left 0.05s linear, top 0.05s linear; /* تحسين الحركة */    
+  transition: left 0.05s linear, top 0.05s linear;    
 }    
     
 .multipliers-row {    
   display: flex;    
-  justify-content: space-between;    
+  justify-content: center;    
   align-items: center;    
   margin-top: 10px;    
-  padding: 5px 0;    
-  width: 100%;    
+  padding-top: 0;    
+  gap: 5px;    
 }    
     
 .multiplier-item {    
-  padding: 3px 6px;    
-  border-radius: 4px;    
+  padding: 1px 3px;    
+  border-radius: 2px;    
   font-weight: bold;    
-  font-size: 11px;    
-  min-width: 30px;    
+  font-size: 9px;    
+  min-width: 24px;    
   text-align: center;    
   line-height: 1;    
-  height: 20px;    
+  height: 15px;    
   display: flex;    
   align-items: center;    
   justify-content: center;    
-  flex: 1;    
-  margin: 0 2px;    
 }    
     
 .multipliers-row .multiplier-item:nth-child(1),    
 .multipliers-row .multiplier-item:nth-child(9) {    
-  background: #dc2626; /* أحمر */    
-  color: white;    
+  background: #dc2626;    
 }    
     
 .multipliers-row .multiplier-item:nth-child(2),    
 .multipliers-row .multiplier-item:nth-child(8) {    
-  background: #22c55e; /* أخضر */    
+  background: #22c55e;    
   color: black;    
 }    
     
 .multipliers-row .multiplier-item:nth-child(3),    
 .multipliers-row .multiplier-item:nth-child(7) {    
-  background: #22c55e; /* أخضر */    
+  background: #22c55e;    
   color: black;    
 }    
     
 .multipliers-row .multiplier-item:nth-child(4),    
 .multipliers-row .multiplier-item:nth-child(6) {    
-  background: #facc15; /* أصفر */    
+  background: #facc15;    
   color: black;    
 }    
     
 .multipliers-row .multiplier-item:nth-child(5) {    
-  background: #facc15; /* أصفر */    
+  background: #facc15;    
   color: black;    
 }    
     
