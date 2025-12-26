@@ -416,8 +416,8 @@ export default {
     
     // الحصول على موضع المضاعف بدقة  
     getMultiplierPosition(index) {    
-      // المواقع المحددة بناءً على العرض 420px - متقاربة جداً  
-      const positions = [35, 77, 119, 161, 203, 245, 287, 329, 371];    
+      // المواقع المحددة بناءً على العرض 420px - 43.5px بين كل مضاعف  
+      const positions = [36.75, 80.25, 123.75, 167.25, 210.75, 254.25, 297.75, 341.25, 384.75];    
       return positions[index];    
     },    
     
@@ -574,26 +574,26 @@ export default {
     
 .plinko-board {    
   position: relative;    
-  height: 320px; /* إرجاع الارتفاع الأصلي */    
+  height: 320px;    
 }    
     
 .row {    
   display: flex;    
   justify-content: center;    
-  margin: 10px 0; /* إرجاع المسافة الأصلية */    
+  margin: 10px 0;    
 }    
     
 .dot {    
-  width: 9px; /* إرجاع الحجم الأصلي */    
+  width: 9px;    
   height: 9px;    
   background: white;    
   border-radius: 50%;    
-  margin: 9px 10px; /* إرجاع المسافة الأصلية */    
+  margin: 9px 10px;    
 }    
     
 .ball {    
   position: absolute;    
-  width: 14px; /* إرجاع الحجم الأصلي */    
+  width: 14px;    
   height: 14px;    
   background: #ff2d55;    
   border-radius: 50%;    
@@ -608,23 +608,26 @@ export default {
   display: flex;    
   justify-content: center;    
   align-items: center;    
-  margin-top: 15px; /* نفس المسافة */    
+  margin-top: 15px;    
   padding-top: 0;    
-  gap: 1px; /* تقريب جداً من بعضها */    
+  gap: 0; /* إزالة المسافة بين العناصر */    
 }    
     
 .multiplier-item {    
-  padding: 1px 2px; /* تقليل الحشو */    
+  padding: 1px 4px;    
   border-radius: 2px;    
   font-weight: bold;    
-  font-size: 9px; /* نفس حجم الخط */    
-  min-width: 24px; /* نفس العرض */    
+  font-size: 9px;    
+  min-width: 36px; /* زيادة العرض ليكون مناسباً لـ 43.5px */    
+  max-width: 40px;    
   text-align: center;    
   line-height: 1;    
-  height: 15px; /* نفس الارتفاع */    
+  height: 15px;    
   display: flex;    
   align-items: center;    
   justify-content: center;    
+  margin: 0 1.5px; /* مسافة صغيرة جداً بين العناصر */    
+  flex-shrink: 0;    
 }    
     
 .multipliers-row .multiplier-item:nth-child(1),    
