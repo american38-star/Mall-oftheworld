@@ -197,7 +197,7 @@ export default {
   align-items: center;
   padding: 40px;
   min-height: 100vh;
-  background: linear-gradient(#0d6efd, #6bb4ff);
+  background: #1a1a1a; /* أسود احترافي غير مزعج للعين */
 }
 
 .card {
