@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" :class="{ 'dark-mode': true }">
     <!-- زر تغيير اللغة -->
     <div class="circle-btn lang-btn" @click="toggleLanguageMenu">
       🌐
@@ -25,7 +25,7 @@
           </div>
           <button class="bubble-close-btn" @click="closeNewYearMessage">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6L18 18" stroke="#666" stroke-width="2" stroke-linecap="round"/>
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </button>
         </div>
@@ -259,78 +259,140 @@ export default {
 </script>
 
 <style>
-body {
-  margin: 0;
+/* ========== DARK MODE PROFESSIONAL - أسود ناعم غير مزعج ========== */
+
+:root {
+  --bg-primary: #0A0C10;      /* خلفية رئيسية عميقة وناعمة */
+  --bg-secondary: #15181C;     /* خلفية ثانوية للبطاقات */
+  --bg-tertiary: #1E2126;      /* خلفية ثالثة للعناصر */
+  --bg-hover: #2C3036;         /* خلفية عند التحويم */
+  --border-color: #2C3036;     /* لون الحدود */
+  --text-primary: #FFFFFF;     /* نص رئيسي أبيض */
+  --text-secondary: #B0B3B8;   /* نص ثانوي رمادي فاتح */
+  --text-muted: #8A8F99;       /* نص خافت */
+  --accent-color: #2D5F5F;     /* لون مميز أخضر داكن */
+  --accent-hover: #3D7A7A;     /* لون مميز عند التحويم */
+  --danger-color: #B91C1C;     /* أحمر داكن للتحذيرات */
+  --danger-hover: #991B1B;     /* أحمر أغمق عند التحويم */
+  --success-color: #2D5F5F;    /* أخضر للنجاح */
+  --shadow-color: rgba(0, 0, 0, 0.5);
 }
 
-/* الأزرار الأساسية - تم التصغير */
+body {
+  margin: 0;
+  background: var(--bg-primary);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* تحسين شريط التمرير */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-hover);
+  border-radius: 8px;
+  border: 2px solid var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3A3F45;
+}
+
+/* ===== الأزرار الأساسية ===== */
 .circle-btn {
   position: fixed;
-  bottom: 80px; /* تغيير من top إلى bottom */
-  width: 40px; /* تصغير الحجم */
-  height: 40px; /* تصغير الحجم */
-  background: #ffffff;
+  bottom: 80px;
+  width: 40px;
+  height: 40px;
+  background: var(--bg-secondary);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  color: #333;
-  font-size: 18px; /* تصغير حجم الخط */
+  color: var(--text-primary);
+  font-size: 18px;
   cursor: pointer;
   z-index: 9999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--shadow-color);
   flex-direction: column;
   text-decoration: none;
   transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+}
+
+.circle-btn:hover {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+  border-color: var(--accent-color);
 }
 
 .lang-code {
-  font-size: 9px; /* تصغير حجم كود اللغة */
+  font-size: 9px;
   margin-top: -3px;
   opacity: 0.8;
+  color: var(--text-muted);
 }
 
-/* وضع الأزرار في أسفل الشاشة بجانب بعضها */
+/* ===== وضع الأزرار ===== */
 .lang-btn {
   right: 15px;
-  bottom: 80px; /* نفس ارتفاع بقية الأزرار */
+  bottom: 80px;
 }
 
 .support-btn {
-  right: 65px; /* بعد زر اللغة */
+  right: 65px;
   bottom: 80px;
 }
 
 .instagram-btn {
-  right: 115px; /* بعد زر الدعم */
+  right: 115px;
   bottom: 80px;
 }
 
-/* زر بابلوين (سانتا) - تم التصغير */
+.instagram-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--text-primary);
+  fill: none;
+}
+
+/* ===== زر بابلوين ===== */
 .bubble-chat-btn {
   position: fixed;
-  right: 165px; /* بعد زر انستغرام */
-  bottom: 80px; /* نفس ارتفاع بقية الأزرار */
-  width: 40px; /* تصغير الحجم */
-  height: 40px; /* تصغير الحجم */
-  background: linear-gradient(135deg, #dc2626, #ef4444);
+  right: 165px;
+  bottom: 80px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--danger-color), #DC2626);
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   z-index: 9999;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.3);
   transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .bubble-chat-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 15px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 6px 15px rgba(185, 28, 28, 0.4);
 }
 
 .bubble-chat-icon {
-  font-size: 20px; /* تصغير الحجم */
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,16 +402,17 @@ body {
   position: absolute;
   top: -3px;
   right: -3px;
-  background: #22c55e;
+  background: var(--accent-color);
   color: white;
-  width: 16px; /* تصغير الحجم */
-  height: 16px; /* تصغير الحجم */
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  font-size: 10px; /* تصغير حجم الخط */
+  font-size: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: pulse 2s infinite;
+  border: 1px solid var(--bg-secondary);
 }
 
 @keyframes pulse {
@@ -358,23 +421,15 @@ body {
   100% { transform: scale(1); }
 }
 
-/* زر انستغرام - تم التصغير */
-.instagram-btn svg {
-  width: 20px; /* تصغير حجم الأيقونة */
-  height: 20px;
-  fill: none;
-  stroke: #E1306C;
-  stroke-width: 1.5;
-}
-
-/* نافذة بابلوين */
+/* ===== نافذة بابلوين ===== */
 .bubble-chat-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -384,11 +439,12 @@ body {
 .bubble-chat-window {
   width: 90%;
   max-width: 400px;
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  box-shadow: 0 20px 60px var(--shadow-color);
   animation: bubbleSlide 0.3s ease;
+  border: 1px solid var(--border-color);
 }
 
 @keyframes bubbleSlide {
@@ -403,12 +459,13 @@ body {
 }
 
 .bubble-chat-header {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
+  background: linear-gradient(135deg, var(--danger-color), #DC2626);
   color: white;
   padding: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .bubble-chat-title {
@@ -420,44 +477,46 @@ body {
 .bubble-avatar {
   width: 40px;
   height: 40px;
-  background: white;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: #dc2626;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .bubble-sender {
   font-weight: bold;
   font-size: 16px;
-}
-
-.bubble-time {
-  font-size: 12px;
-  opacity: 0.8;
+  color: white;
 }
 
 .bubble-close-btn {
-  background: none;
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   color: white;
   cursor: pointer;
   padding: 5px;
   border-radius: 50%;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .bubble-close-btn:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
 }
 
-/* جسم المحادثة */
 .bubble-chat-body {
   padding: 20px;
   max-height: 400px;
   overflow-y: auto;
+  background: var(--bg-secondary);
 }
 
 .bubble-message {
@@ -477,11 +536,11 @@ body {
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-top: 8px solid #e5e7eb;
+  border-top: 8px solid var(--bg-tertiary);
 }
 
 .bubble-content {
-  background: #e5e7eb;
+  background: var(--bg-tertiary);
   padding: 12px 16px;
   border-radius: 18px;
   border-top-right-radius: 4px;
@@ -490,57 +549,66 @@ body {
   text-align: right;
   line-height: 1.5;
   font-size: 14px;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
-.bubble-message .bubble-time {
-  font-size: 11px;
-  color: #666;
-  margin-top: 4px;
-  text-align: right;
+.bubble-content strong {
+  color: var(--accent-hover);
 }
 
-/* تذييل بابلوين */
+.bubble-content em {
+  color: var(--text-muted);
+}
+
 .bubble-chat-footer {
   padding: 16px;
-  background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-color);
 }
 
 .bubble-action-btn {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #dc2626, #ef4444);
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
   color: white;
   border: none;
   border-radius: 12px;
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: all 0.3s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .bubble-action-btn:hover {
-  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  background: linear-gradient(135deg, var(--accent-hover), #4D9494);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(45, 95, 95, 0.3);
 }
 
-/* قائمة اللغات - تم تعديل موقعها */
+/* ===== قائمة اللغات ===== */
 .lang-menu {
   position: fixed;
-  bottom: 130px; /* فوق الأزرار مباشرة */
+  bottom: 130px;
   right: 15px;
-  width: 130px; /* تصغير الحجم */
-  background: #ffffff;
+  width: 130px;
+  background: var(--bg-secondary);
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 20px var(--shadow-color);
   z-index: 9999;
   overflow: hidden;
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
 }
 
 .lang-item {
-  padding: 8px 10px; /* تصغير الحشو */
-  font-size: 14px; /* تصغير حجم الخط */
+  padding: 8px 10px;
+  font-size: 14px;
   cursor: pointer;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
   text-align: right;
+  color: var(--text-secondary);
+  transition: all 0.2s;
 }
 
 .lang-item:last-child {
@@ -548,17 +616,20 @@ body {
 }
 
 .lang-item:hover {
-  background: #f5faff;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  padding-right: 15px;
 }
 
-/* إعلان Popup */
+/* ===== إعلان Popup ===== */
 .ad-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -566,44 +637,103 @@ body {
 }
 
 .ad-box {
-  background: #eaf2ff;
+  background: var(--bg-secondary);
   width: 90%;
   max-width: 400px;
-  margin: 15% auto;
-  border-radius: 15px;
-  padding: 15px;
+  border-radius: 20px;
+  padding: 20px;
   text-align: center;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 25px 60px var(--shadow-color);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .ad-box h2 {
-  background: #3b82f6;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
   color: white;
-  padding: 10px;
-  border-radius: 10px;
+  padding: 15px;
+  border-radius: 12px;
+  margin: -20px -20px 15px -20px;
+  font-size: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ad-content {
   max-height: 250px;
   overflow-y: auto;
-  margin: 10px 0;
+  margin: 15px 0;
   font-size: 14px;
+  color: var(--text-secondary);
+  padding: 0 5px;
+  text-align: right;
+  line-height: 1.7;
+}
+
+.ad-content p {
+  color: var(--text-secondary);
+}
+
+.ad-content strong {
+  color: var(--text-primary);
 }
 
 .ad-box button {
-  background: #3b82f6;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
+  padding: 12px 30px;
+  border-radius: 30px;
   cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 10px;
 }
 
-/* تكييفات للهواتف */
+.ad-box button:hover {
+  background: linear-gradient(135deg, var(--accent-hover), #4D9494);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(45, 95, 95, 0.4);
+}
+
+/* ===== تحسينات عامة ===== */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+small, .text-muted {
+  color: var(--text-muted);
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+  margin: 20px 0;
+}
+
+/* ===== تكييفات للهواتف ===== */
 @media (max-width: 768px) {
-  /* ضبط المسافات للأزرار في الهواتف */
   .circle-btn, 
   .bubble-chat-btn {
-    bottom: 70px; /* رفع قليلاً فوق شريط التنقل */
+    bottom: 70px;
   }
   
   .lang-btn {
@@ -627,7 +757,6 @@ body {
     max-height: 80vh;
   }
   
-  /* إذا كانت الشاشة صغيرة جداً، نجعل الأزرار أقرب */
   @media (max-width: 350px) {
     .circle-btn,
     .bubble-chat-btn {
