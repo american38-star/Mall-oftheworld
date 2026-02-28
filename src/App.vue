@@ -308,7 +308,7 @@ body {
   position: relative;
 }
 
-/* حاوية الصفحات - مهم جداً لإصلاح التنسيق */
+/* حاوية الصفحات */
 .page-container {
   width: 100%;
   max-width: 100%;
@@ -316,6 +316,7 @@ body {
   position: relative;
   z-index: 1;
   min-height: 100vh;
+  padding-bottom: 70px; /* مساحة للشريط السفلي */
 }
 
 /* اتجاه الصفحة */
@@ -323,10 +324,10 @@ body {
   direction: rtl;
 }
 
-/* ===== الأزرار العائمة - تعديل المسافات ===== */
+/* ===== الأزرار العائمة - رفعها للأعلى ===== */
 .circle-btn {
   position: fixed;
-  bottom: 80px;
+  bottom: 90px; /* زيادة المسافة من الأسفل */
   width: 45px;
   height: 45px;
   background: #11151C;
@@ -367,7 +368,7 @@ body {
   color: #D4AF37;
 }
 
-/* مواقع الأزرار - تعديل المسافات */
+/* مواقع الأزرار */
 .lang-btn {
   right: 15px;
   background: linear-gradient(135deg, #11151C, #1A1F2A);
@@ -394,7 +395,7 @@ body {
 .bubble-chat-btn {
   position: fixed;
   right: 180px;
-  bottom: 80px;
+  bottom: 90px; /* زيادة المسافة من الأسفل */
   width: 45px;
   height: 45px;
   background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
@@ -612,7 +613,7 @@ body {
 /* ===== قائمة اللغات ===== */
 .lang-menu {
   position: fixed;
-  bottom: 140px;
+  bottom: 150px; /* زيادة المسافة من الأسفل */
   right: 15px;
   width: 220px;
   background: #11151C;
@@ -902,7 +903,7 @@ body {
 @media (max-width: 768px) {
   .circle-btn,
   .bubble-chat-btn {
-    bottom: 70px;
+    bottom: 80px; /* تعديل للهواتف */
     width: 40px;
     height: 40px;
     font-size: 18px;
@@ -914,7 +915,7 @@ body {
   .bubble-chat-btn { right: 160px; }
   
   .lang-menu {
-    bottom: 130px;
+    bottom: 140px;
     right: 10px;
     width: 200px;
   }
@@ -936,6 +937,7 @@ body {
   
   .circle-btn,
   .bubble-chat-btn {
+    bottom: 75px; /* تعديل للهواتف الصغيرة */
     width: 38px;
     height: 38px;
     font-size: 16px;
