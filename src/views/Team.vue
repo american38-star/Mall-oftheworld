@@ -1,110 +1,165 @@
 <template>
   <div class="team-page">
     <!-- حالة التحميل -->
-    <div v-if="loading" class="loading-box">جاري تحميل بيانات الفريق...</div>
+    <div v-if="loading" class="loading-box">
+      <div class="gold-spinner"></div>
+      <p>جاري تحميل بيانات الفريق...</p>
+    </div>
 
     <!-- حالة الخطأ -->
     <div v-if="error" class="error-box">
-      حدث خطأ أثناء جلب بيانات الفريق:<br />
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>حدث خطأ أثناء جلب بيانات الفريق:</p>
       <strong>{{ error }}</strong>
+      <button @click="$router.go()" class="retry-btn">إعادة المحاولة</button>
     </div>
 
-    <!-- كود الدعوة -->
-    <div class="invite-section" v-if="!loading && !error">
-      <h2>فريقك</h2>
-
-      <div class="ref-box">
-        <label>كود الإحالة:</label>
-        <div class="ref-code">{{ referralCode || "غير متوفر" }}</div>
-        <button @click="copyText(referralCode)">نسخ</button>
-      </div>
-
-      <div class="ref-box">
-        <label>رابط الدعوة:</label>
-        <div class="ref-code">{{ inviteLink || "غير متوفر" }}</div>
-        <button @click="copyText(inviteLink)">نسخ</button>
-      </div>
-    </div>
-
-    <!-- إحصائيات الفريق -->
-    <div class="team-stats-box" v-if="!loading && !error">
-      <div class="stat-row">
-        <div class="stat-item">
-          <div class="stat-title">انسحاب الفريق</div>
-          <div class="stat-value">${{ teamStats.withdraw }}</div>
+    <!-- المحتوى الرئيسي -->
+    <template v-if="!loading && !error">
+      <!-- كود الدعوة -->
+      <div class="invite-section">
+        <h2>🔗 كود الدعوة الخاص بك</h2>
+        
+        <div class="ref-box">
+          <label>كود الإحالة:</label>
+          <div class="ref-code">{{ referralCode || "غير متوفر" }}</div>
+          <button @click="copyText(referralCode)" class="gold-btn">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
         </div>
 
-        <div class="stat-item">
-          <div class="stat-title">إعادة شحن الفريق</div>
-          <div class="stat-value">${{ teamStats.recharge }}</div>
+        <div class="ref-box">
+          <label>رابط الدعوة:</label>
+          <div class="ref-code">{{ inviteLink || "غير متوفر" }}</div>
+          <button @click="copyText(inviteLink)" class="gold-btn">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
         </div>
 
-        <div class="stat-item">
-          <div class="stat-title">حجم الفريق</div>
-          <div class="stat-value">{{ teamStats.totalMembers }}</div>
+        <div class="share-buttons">
+          <button @click="shareViaWhatsApp" class="share-btn whatsapp">
+            <i class="fab fa-whatsapp"></i> واتساب
+          </button>
+          <button @click="shareViaTelegram" class="share-btn telegram">
+            <i class="fab fa-telegram"></i> تليجرام
+          </button>
         </div>
       </div>
 
-      <div class="stat-row">
-        <div class="stat-item">
-          <div class="stat-title">الانسحاب الأول</div>
-          <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
-        </div>
+      <!-- إحصائيات الفريق -->
+      <div class="team-stats-box">
+        <h2>📊 إحصائيات الفريق</h2>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-icon">💰</div>
+            <div class="stat-title">إجمالي الشحن</div>
+            <div class="stat-value">{{ teamStats.recharge }} USDT</div>
+          </div>
 
-        <div class="stat-item">
-          <div class="stat-title">الشحن لأول مرة</div>
-          <div class="stat-value">{{ teamStats.firstRecharge }}</div>
-        </div>
+          <div class="stat-item">
+            <div class="stat-icon">💸</div>
+            <div class="stat-title">إجمالي السحب</div>
+            <div class="stat-value">{{ teamStats.withdraw }} USDT</div>
+          </div>
 
-        <div class="stat-item">
-          <div class="stat-title">فريق جديد</div>
-          <div class="stat-value">{{ teamStats.newMembers }}</div>
-        </div>
-      </div>
-    </div>
+          <div class="stat-item">
+            <div class="stat-icon">👥</div>
+            <div class="stat-title">حجم الفريق</div>
+            <div class="stat-value">{{ teamStats.totalMembers }}</div>
+          </div>
 
-    <!-- المستويات -->
-    <div class="levels-container" v-if="!loading && !error">
-      <div class="level-card level1">
-        <div class="lvl-header">مستوى 1</div>
-        <div class="lvl-body">
-          <div>عدد الإحالات: <strong>{{ stats.l1.count }}</strong></div>
-          <div>العمولة: <strong>6%</strong></div>
-          <div>الدخل: <strong>{{ stats.l1.earnings.toFixed(2) }} USDT</strong></div>
-        </div>
-      </div>
+          <div class="stat-item">
+            <div class="stat-icon">🆕</div>
+            <div class="stat-title">أعضاء جدد</div>
+            <div class="stat-value">{{ teamStats.newMembers }}</div>
+          </div>
 
-      <div class="level-card level2">
-        <div class="lvl-header">مستوى 2</div>
-        <div class="lvl-body">
-          <div>عدد الإحالات: <strong>{{ stats.l2.count }}</strong></div>
-          <div>العمولة: <strong>2%</strong></div>
-          <div>الدخل: <strong>{{ stats.l2.earnings.toFixed(2) }} USDT</strong></div>
-        </div>
-      </div>
+          <div class="stat-item">
+            <div class="stat-icon">💳</div>
+            <div class="stat-title">أول شحن</div>
+            <div class="stat-value">{{ teamStats.firstRecharge }}</div>
+          </div>
 
-      <div class="level-card level3">
-        <div class="lvl-header">مستوى 3</div>
-        <div class="lvl-body">
-          <div>عدد الإحالات: <strong>{{ stats.l3.count }}</strong></div>
-          <div>العمولة: <strong>1%</strong></div>
-          <div>الدخل: <strong>{{ stats.l3.earnings.toFixed(2) }} USDT</strong></div>
+          <div class="stat-item">
+            <div class="stat-icon">🏧</div>
+            <div class="stat-title">أول سحب</div>
+            <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <button class="btn-back" @click="$router.push('/home')">عودة</button>
+      <!-- المستويات -->
+      <div class="levels-container">
+        <h2>📈 مستويات العمولة</h2>
+        
+        <div class="level-cards">
+          <div class="level-card level1">
+            <div class="level-header">
+              <span class="level-badge">المستوى الأول</span>
+              <span class="commission-rate">6%</span>
+            </div>
+            <div class="level-body">
+              <div class="level-count">
+                <i class="fas fa-users"></i>
+                <span>{{ stats.l1.count }} عضو</span>
+              </div>
+              <div class="level-earnings">
+                <i class="fas fa-coins"></i>
+                <span>{{ stats.l1.earnings.toFixed(2) }} USDT</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="level-card level2">
+            <div class="level-header">
+              <span class="level-badge">المستوى الثاني</span>
+              <span class="commission-rate">2%</span>
+            </div>
+            <div class="level-body">
+              <div class="level-count">
+                <i class="fas fa-users"></i>
+                <span>{{ stats.l2.count }} عضو</span>
+              </div>
+              <div class="level-earnings">
+                <i class="fas fa-coins"></i>
+                <span>{{ stats.l2.earnings.toFixed(2) }} USDT</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="level-card level3">
+            <div class="level-header">
+              <span class="level-badge">المستوى الثالث</span>
+              <span class="commission-rate">1%</span>
+            </div>
+            <div class="level-body">
+              <div class="level-count">
+                <i class="fas fa-users"></i>
+                <span>{{ stats.l3.count }} عضو</span>
+              </div>
+              <div class="level-earnings">
+                <i class="fas fa-coins"></i>
+                <span>{{ stats.l3.earnings.toFixed(2) }} USDT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- معلومات إضافية -->
+      <div class="info-box">
+        <i class="fas fa-info-circle"></i>
+        <p>يتم تحديث الإحصائيات تلقائياً. العمولات تُحتسب من شحنات الأعضاء المعتمدة فقط.</p>
+      </div>
+
+      <button class="btn-back" @click="$router.push('/home')">
+        <i class="fas fa-arrow-right"></i> عودة للرئيسية
+      </button>
+    </template>
   </div>
 </template>
 
 <script>
-/*
-  Team.vue النهائي — تجنّب تكرار الشحن/السحب + تجاهل السجلات غير المعتمدة
-  تأكد:
-   - مجموعات Firestore لديك: users, recharge_logs, withdraw_logs, referral_rewards (أو غيرها إذا سميت مختلف)
-   - إذا سميت الحقول داخل السجلات بشكل مختلف غيّر userIdFieldInLogs / txIdFieldInLogs
-*/
-
 import { auth, db } from "../firebase";
 import {
   doc,
@@ -125,9 +180,8 @@ export default {
       loading: true,
       error: null,
 
-      // عدّل هذه القيم حسب حقولك في السجلات
-      userIdFieldInLogs: "userId", // الحقل داخل recharge_logs/withdraw_logs الذي يحتوي UID
-      txIdFieldInLogs: "txid", // إن كنت تستخدم معرف عملية (TxID) لتجنّب التكرار
+      userIdFieldInLogs: "userId",
+      txIdFieldInLogs: "txid",
 
       teamStats: {
         withdraw: "0.00",
@@ -150,12 +204,12 @@ export default {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         this.loading = false;
+        this.$router.push("/login");
         return;
       }
 
       try {
         const uid = user.uid;
-        // جلب بيانات المستخدم لإظهار referralCode
         const udoc = await getDoc(doc(db, "users", uid));
         if (udoc.exists()) {
           const data = udoc.data();
@@ -166,7 +220,6 @@ export default {
           this.inviteLink = `${window.location.origin}/register?ref=${this.referralCode}`;
         }
 
-        // تحميل المستويات والإحصائيات
         await this.loadTeamLevels(uid);
         await this.loadTeamStats(uid);
       } catch (err) {
@@ -186,11 +239,27 @@ export default {
       }
       navigator.clipboard
         .writeText(text)
-        .then(() => alert("تم النسخ"))
+        .then(() => {
+          this.showNotification("تم النسخ بنجاح!");
+        })
         .catch(() => alert("فشل النسخ — انسخ يدويًا"));
     },
 
-    // تقسيم مصفوفة إلى chunks (Firestore 'in' limit)
+    shareViaWhatsApp() {
+      const message = `انضم إليّ عبر هذا الرابط: ${this.inviteLink}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    },
+
+    shareViaTelegram() {
+      const message = `انضم إليّ عبر هذا الرابط: ${this.inviteLink}`;
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(this.inviteLink)}&text=${encodeURIComponent(message)}`, '_blank');
+    },
+
+    showNotification(msg) {
+      // يمكنك استخدام مكتبة إشعارات أو alert بسيط
+      alert(msg);
+    },
+
     chunkArray(arr, size = 10) {
       const res = [];
       for (let i = 0; i < arr.length; i += size) {
@@ -199,7 +268,6 @@ export default {
       return res;
     },
 
-    // ========== مستويات الفريق ==========
     async loadTeamLevels(uid) {
       try {
         const usersRef = collection(db, "users");
@@ -210,7 +278,7 @@ export default {
         const level1Ids = s1.docs.map((d) => d.id);
         this.stats.l1.count = level1Ids.length;
 
-        // L2 (invitedBy in level1Ids) chunked
+        // L2
         let level2Ids = [];
         if (level1Ids.length) {
           const chunks = this.chunkArray(level1Ids, 10);
@@ -222,7 +290,7 @@ export default {
         }
         this.stats.l2.count = level2Ids.length;
 
-        // L3 (invitedBy in level2Ids) chunked
+        // L3
         let level3Ids = [];
         if (level2Ids.length) {
           const chunks2 = this.chunkArray(level2Ids, 10);
@@ -234,12 +302,11 @@ export default {
         }
         this.stats.l3.count = level3Ids.length;
 
-        // إجمالي أعضاء فريدين
         const allIds = [...level1Ids, ...level2Ids, ...level3Ids];
         const uniqueIds = Array.from(new Set(allIds));
         this.teamStats.totalMembers = uniqueIds.length;
+        this.teamStats.newMembers = level1Ids.length;
 
-        // حساب أرباح الإحالة (إن وجدت)
         await this.loadReferralRewards(uid);
       } catch (err) {
         console.error("loadTeamLevels error:", err);
@@ -267,17 +334,14 @@ export default {
       }
     },
 
-    // ========== تحميل إحصائيات الشحن/السحب مع تجنّب التكرار ==========
     async loadTeamStats(uid) {
       try {
         const usersRef = collection(db, "users");
 
-        // أعضاء المستوى الأول
         const q1 = query(usersRef, where("invitedBy", "==", uid));
         const s1 = await getDocs(q1);
         const level1Members = s1.docs.map((d) => d.id);
 
-        // level2
         let level2Members = [];
         if (level1Members.length) {
           for (const ch of this.chunkArray(level1Members, 10)) {
@@ -287,7 +351,6 @@ export default {
           }
         }
 
-        // level3
         let level3Members = [];
         if (level2Members.length) {
           for (const ch of this.chunkArray(level2Members, 10)) {
@@ -297,38 +360,28 @@ export default {
           }
         }
 
-        // أعضاء فريدون
         const all = [...level1Members, ...level2Members, ...level3Members];
         const membersUnique = Array.from(new Set(all));
 
-        // newMembers = عدد مستوى 1 (اختياري)
-        this.teamStats.newMembers = level1Members.length;
-
-        // عدادات
         let withdrawSum = 0;
         let rechargeSum = 0;
         let firstWithdrawCount = 0;
         let firstRechargeCount = 0;
 
-        // مجموعات لمنع العد المزدوج - نستخدم txid أو doc.id كفاصل فريد
         const seenRechargeTx = new Set();
         const seenWithdrawTx = new Set();
 
         const uidField = this.userIdFieldInLogs;
         const txField = this.txIdFieldInLogs;
 
-        // لكل عضو فريد
         for (const memberId of membersUnique) {
-          // ===== withdraw_logs =====
+          // withdraw_logs
           const withdrawQ = query(collection(db, "withdraw_logs"), where(uidField, "==", memberId));
           const wSnap = await getDocs(withdrawQ);
 
           let memberHadWithdraw = false;
           wSnap.forEach((d) => {
             const data = d.data() || {};
-
-            // تَأكُّد: فقط احسب السجلات المعتمدة (approved)
-            // البعض يستخدم 'type' والبعض يستخدم 'status'، لذلك نفحص كلاهما إن وُجد
             if (data.type && String(data.type).toLowerCase() !== "approved") return;
             if (data.status && String(data.status).toLowerCase() !== "approved") return;
 
@@ -344,15 +397,13 @@ export default {
           });
           if (memberHadWithdraw) firstWithdrawCount++;
 
-          // ===== recharge_logs =====
+          // recharge_logs
           const rechargeQ = query(collection(db, "recharge_logs"), where(uidField, "==", memberId));
           const rSnap = await getDocs(rechargeQ);
 
           let memberHadRecharge = false;
           rSnap.forEach((d) => {
             const data = d.data() || {};
-
-            // فقط نحسب إذا السجل معتمد (approved)
             if (data.type && String(data.type).toLowerCase() !== "approved") return;
             if (data.status && String(data.status).toLowerCase() !== "approved") return;
 
@@ -369,7 +420,6 @@ export default {
           if (memberHadRecharge) firstRechargeCount++;
         }
 
-        // النتائج النهائية
         this.teamStats.withdraw = parseFloat(withdrawSum || 0).toFixed(2);
         this.teamStats.recharge = parseFloat(rechargeSum || 0).toFixed(2);
         this.teamStats.firstWithdraw = firstWithdrawCount;
@@ -385,22 +435,376 @@ export default {
 </script>
 
 <style scoped>
-/* نفس التنسيق السابق */
-.team-page { direction: rtl; padding: 12px; background: #f0f5ff; min-height: 100vh; }
-.invite-section { background: #fff; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px #0001; margin-bottom: 20px; text-align: center; }
-.ref-box { display:flex; align-items:center; justify-content:center; margin:8px 0; }
-.ref-code { background:#f1f1f1; padding:8px 12px; border-radius:8px; margin:0 8px; flex:1; word-break:break-all; }
-.team-stats-box { background:#fff; padding:15px; border-radius:14px; box-shadow:0 4px 12px #0001; margin-bottom:20px; }
-.stat-row { display:flex; justify-content:space-between; margin-bottom:12px; }
-.stat-item { text-align:center; flex:1; }
-.stat-title { color:#444; font-size:14px; margin-bottom:4px; }
-.stat-value { font-size:16px; font-weight:bold; color:#000; }
-.levels-container { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
-.level-card { border-radius:14px; color:white; padding:12px; min-height:160px; }
-.level1 { background: linear-gradient(135deg,#ff5f6d,#ffc371); }
-.level2 { background: linear-gradient(135deg,#42e695,#3bb2b8); }
-.level3 { background: linear-gradient(135deg,#667eea,#764ba2); }
-.btn-back { margin-top:24px; width:100%; padding:12px; border-radius:12px; border:2px solid #0d6efd; background:white; color:#0d6efd; font-size:17px; }
-.loading-box, .error-box { background:white; margin:16px; padding:14px; border-radius:12px; text-align:center; box-shadow:0 4px 12px #0001; }
-.error-box { color:#b00020; }
+/* الخلفية الرئيسية - أسود فاخر */
+.team-page {
+  direction: rtl;
+  min-height: 100vh;
+  background: #0A0C10;
+  padding: 20px;
+  color: #ffffff;
+  font-family: 'Cairo', sans-serif;
+}
+
+/* العناوين الرئيسية */
+h2 {
+  color: #D4AF37;
+  font-size: 22px;
+  margin-bottom: 20px;
+  text-align: center;
+  position: relative;
+  padding-bottom: 10px;
+}
+
+h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #D4AF37, #F6E27A, #D4AF37, transparent);
+  border-radius: 3px;
+}
+
+/* ===== قسم الدعوة ===== */
+.invite-section {
+  background: #11151C;
+  border-radius: 24px;
+  padding: 25px 20px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.ref-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 0;
+  flex-wrap: wrap;
+}
+
+.ref-box label {
+  color: #D4AF37;
+  font-weight: 600;
+  min-width: 100px;
+  font-size: 14px;
+}
+
+.ref-code {
+  flex: 1;
+  background: #1A1F2A;
+  padding: 12px 15px;
+  border-radius: 12px;
+  color: #ffffff;
+  font-family: monospace;
+  font-size: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  word-break: break-all;
+}
+
+.gold-btn {
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  border: none;
+  color: #0A0C10;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.gold-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+.share-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.share-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.share-btn.whatsapp {
+  background: #25D366;
+  color: white;
+}
+
+.share-btn.telegram {
+  background: #0088cc;
+  color: white;
+}
+
+.share-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* ===== إحصائيات الفريق ===== */
+.team-stats-box {
+  background: #11151C;
+  border-radius: 24px;
+  padding: 25px 20px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.stat-item {
+  background: #1A1F2A;
+  padding: 15px;
+  border-radius: 16px;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  border-color: #D4AF37;
+  transform: translateY(-3px);
+}
+
+.stat-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.stat-title {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  color: #D4AF37;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* ===== المستويات ===== */
+.levels-container {
+  background: #11151C;
+  border-radius: 24px;
+  padding: 25px 20px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.level-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.level-card {
+  background: #1A1F2A;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  transition: all 0.3s ease;
+}
+
+.level-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.2);
+}
+
+.level-header {
+  background: linear-gradient(135deg, #D4AF37, #C5A028);
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #0A0C10;
+}
+
+.level-badge {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.commission-rate {
+  background: rgba(10, 12, 16, 0.2);
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.level-body {
+  padding: 20px;
+}
+
+.level-count, .level-earnings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  color: #ffffff;
+}
+
+.level-count i, .level-earnings i {
+  color: #D4AF37;
+  width: 20px;
+}
+
+.level1 .level-header { background: linear-gradient(135deg, #D4AF37, #F6E27A); }
+.level2 .level-header { background: linear-gradient(135deg, #C5A028, #D4AF37); }
+.level3 .level-header { background: linear-gradient(135deg, #B8962E, #C5A028); }
+
+/* ===== صندوق المعلومات ===== */
+.info-box {
+  background: rgba(212, 175, 55, 0.1);
+  border-right: 4px solid #D4AF37;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-box i {
+  color: #D4AF37;
+  font-size: 24px;
+}
+
+.info-box p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ===== زر العودة ===== */
+.btn-back {
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: 2px solid #D4AF37;
+  color: #D4AF37;
+  border-radius: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-back:hover {
+  background: #D4AF37;
+  color: #0A0C10;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+}
+
+/* ===== حالات التحميل والخطأ ===== */
+.loading-box, .error-box {
+  background: #11151C;
+  border-radius: 24px;
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  max-width: 400px;
+  margin: 50px auto;
+}
+
+.gold-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(212, 175, 55, 0.1);
+  border-top: 4px solid #D4AF37;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-box i {
+  font-size: 48px;
+  color: #ff6b6b;
+  margin-bottom: 15px;
+}
+
+.error-box strong {
+  color: #ff6b6b;
+  display: block;
+  margin: 10px 0;
+}
+
+.retry-btn {
+  background: #D4AF37;
+  border: none;
+  color: #0A0C10;
+  padding: 12px 30px;
+  border-radius: 12px;
+  font-weight: 700;
+  margin-top: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #F6E27A;
+  transform: translateY(-2px);
+}
+
+/* ===== تحسينات للجوال ===== */
+@media (max-width: 600px) {
+  .team-page {
+    padding: 12px;
+  }
+
+  .ref-box {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ref-box label {
+    min-width: auto;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .level-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .share-buttons {
+    flex-direction: column;
+  }
+}
 </style>
