@@ -47,44 +47,44 @@
           </div>
         </div>
 
-        <!-- إحصائيات الفريق -->
+        <!-- إحصائيات الفريق - تم تعديل العريض -->
         <div class="team-stats-box">
           <h2>📊 إحصائيات الفريق</h2>
           <div class="stats-grid">
             <div class="stat-item">
               <div class="stat-icon">💰</div>
-              <div class="stat-title">إجمالي الشحن</div>
-              <div class="stat-value">{{ teamStats.recharge }} USDT</div>
+              <div class="stat-title">إجمالي السحب</div>
+              <div class="stat-value light">{{ teamStats.withdraw }} USDT</div>
             </div>
 
             <div class="stat-item">
               <div class="stat-icon">💸</div>
-              <div class="stat-title">إجمالي السحب</div>
-              <div class="stat-value">{{ teamStats.withdraw }} USDT</div>
+              <div class="stat-title">إجمالي الشحن</div>
+              <div class="stat-value light">{{ teamStats.recharge }} USDT</div>
             </div>
 
             <div class="stat-item">
               <div class="stat-icon">👥</div>
               <div class="stat-title">حجم الفريق</div>
-              <div class="stat-value">{{ teamStats.totalMembers }}</div>
+              <div class="stat-value light">{{ teamStats.totalMembers }}</div>
             </div>
 
             <div class="stat-item">
               <div class="stat-icon">🆕</div>
               <div class="stat-title">أعضاء جدد</div>
-              <div class="stat-value">{{ teamStats.newMembers }}</div>
+              <div class="stat-value light">{{ teamStats.newMembers }}</div>
             </div>
 
             <div class="stat-item">
               <div class="stat-icon">💳</div>
               <div class="stat-title">أول شحن</div>
-              <div class="stat-value">{{ teamStats.firstRecharge }}</div>
+              <div class="stat-value light">{{ teamStats.firstRecharge }}</div>
             </div>
 
             <div class="stat-item">
               <div class="stat-icon">🏧</div>
               <div class="stat-title">أول سحب</div>
-              <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
+              <div class="stat-value light">{{ teamStats.firstWithdraw }}</div>
             </div>
           </div>
         </div>
@@ -448,7 +448,7 @@ export default {
 .content-wrapper {
   max-width: 600px;
   margin: 0 auto;
-  padding: 20px 20px 120px 20px; /* زيادة المساحة السفلية للأزرار العائمة */
+  padding: 20px 20px 120px 20px;
   width: 100%;
   box-sizing: border-box;
   position: relative;
@@ -463,6 +463,7 @@ h2 {
   text-align: center;
   position: relative;
   padding-bottom: 10px;
+  font-weight: 600; /* أخف من قبل */
 }
 
 h2::after {
@@ -524,7 +525,7 @@ h2::after {
   color: #0A0C10;
   padding: 10px 20px;
   border-radius: 12px;
-  font-weight: 700;
+  font-weight: 600; /* أخف من قبل */
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -552,7 +553,7 @@ h2::after {
   padding: 12px;
   border: none;
   border-radius: 12px;
-  font-weight: 700;
+  font-weight: 600; /* أخف من قبل */
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -576,7 +577,7 @@ h2::after {
   filter: brightness(1.1);
 }
 
-/* ===== إحصائيات الفريق ===== */
+/* ===== إحصائيات الفريق - تم تعديل العريض ===== */
 .team-stats-box {
   background: #11151C;
   border-radius: 24px;
@@ -622,13 +623,17 @@ h2::after {
   font-size: 12px;
   margin-bottom: 5px;
   white-space: nowrap;
+  font-weight: 400; /* وزن عادي */
 }
 
 .stat-value {
-  color: #D4AF37;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 18px;
   word-break: break-word;
+}
+
+.stat-value.light {
+  font-weight: 500; /* وزن متوسط - ليس ثقيلاً */
+  color: #D4AF37;
 }
 
 /* ===== المستويات ===== */
@@ -674,7 +679,7 @@ h2::after {
 }
 
 .level-badge {
-  font-weight: 700;
+  font-weight: 600; /* أخف من قبل */
   font-size: 12px;
 }
 
@@ -682,7 +687,7 @@ h2::after {
   background: rgba(10, 12, 16, 0.2);
   padding: 4px 6px;
   border-radius: 20px;
-  font-weight: 700;
+  font-weight: 600; /* أخف من قبل */
   font-size: 11px;
 }
 
@@ -699,12 +704,17 @@ h2::after {
   gap: 8px;
   color: #ffffff;
   font-size: 13px;
+  font-weight: 400; /* وزن عادي */
 }
 
 .level-count i, .level-earnings i {
   color: #D4AF37;
   width: 18px;
   font-size: 14px;
+}
+
+.level-count span, .level-earnings span {
+  font-weight: 500; /* وزن متوسط */
 }
 
 .level1 .level-header { background: linear-gradient(135deg, #D4AF37, #F6E27A); }
@@ -736,6 +746,7 @@ h2::after {
   font-size: 13px;
   margin: 0;
   line-height: 1.5;
+  font-weight: 400; /* وزن عادي */
 }
 
 /* ===== زر العودة ===== */
@@ -747,7 +758,7 @@ h2::after {
   color: #D4AF37;
   border-radius: 16px;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600; /* أخف من قبل */
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -779,6 +790,10 @@ h2::after {
   z-index: 1;
 }
 
+.loading-box p {
+  font-weight: 400;
+}
+
 .gold-spinner {
   width: 50px;
   height: 50px;
@@ -803,6 +818,7 @@ h2::after {
   color: #ff6b6b;
   display: block;
   margin: 10px 0;
+  font-weight: 600;
 }
 
 .retry-btn {
@@ -811,7 +827,7 @@ h2::after {
   color: #0A0C10;
   padding: 12px 30px;
   border-radius: 12px;
-  font-weight: 700;
+  font-weight: 600;
   margin-top: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -825,7 +841,7 @@ h2::after {
 /* ===== تحسينات للجوال مع مراعاة الأزرار العائمة ===== */
 @media (max-width: 768px) {
   .content-wrapper {
-    padding: 15px 15px 130px 15px; /* زيادة المساحة السفلية للأزرار */
+    padding: 15px 15px 130px 15px;
   }
 }
 
@@ -874,7 +890,7 @@ h2::after {
   }
 
   .stat-value {
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .level-cards {
