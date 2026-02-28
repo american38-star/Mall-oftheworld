@@ -1,165 +1,109 @@
 <template>
   <div class="team-page">
     <!-- حالة التحميل -->
-    <div v-if="loading" class="loading-box">
-      <div class="gold-spinner"></div>
-      <p>جاري تحميل بيانات الفريق...</p>
-    </div>
+    <div v-if="loading" class="loading-box">جاري تحميل بيانات الفريق...</div>
 
     <!-- حالة الخطأ -->
     <div v-if="error" class="error-box">
-      <i class="fas fa-exclamation-triangle"></i>
-      <p>حدث خطأ أثناء جلب بيانات الفريق:</p>
+      حدث خطأ أثناء جلب بيانات الفريق:<br />
       <strong>{{ error }}</strong>
-      <button @click="$router.go()" class="retry-btn">إعادة المحاولة</button>
     </div>
 
-    <!-- المحتوى الرئيسي -->
-    <template v-if="!loading && !error">
-      <div class="content-wrapper">
-        <!-- كود الدعوة -->
-        <div class="invite-section">
-          <h2>🔗 كود الدعوة الخاص بك</h2>
-          
-          <div class="ref-box">
-            <label>كود الإحالة:</label>
-            <div class="ref-code">{{ referralCode || "غير متوفر" }}</div>
-            <button @click="copyText(referralCode)" class="gold-btn">
-              <i class="fas fa-copy"></i> نسخ
-            </button>
-          </div>
+    <!-- كود الدعوة -->
+    <div class="invite-section" v-if="!loading && !error">
+      <h2>فريقك</h2>
 
-          <div class="ref-box">
-            <label>رابط الدعوة:</label>
-            <div class="ref-code">{{ inviteLink || "غير متوفر" }}</div>
-            <button @click="copyText(inviteLink)" class="gold-btn">
-              <i class="fas fa-copy"></i> نسخ
-            </button>
-          </div>
-
-          <div class="share-buttons">
-            <button @click="shareViaWhatsApp" class="share-btn whatsapp">
-              <i class="fab fa-whatsapp"></i> واتساب
-            </button>
-            <button @click="shareViaTelegram" class="share-btn telegram">
-              <i class="fab fa-telegram"></i> تليجرام
-            </button>
-          </div>
-        </div>
-
-        <!-- إحصائيات الفريق - تم تصغير الحقول -->
-        <div class="team-stats-box">
-          <h2>📊 إحصائيات الفريق</h2>
-          <div class="stats-grid">
-            <!-- الصف الأول -->
-            <div class="stat-item">
-              <div class="stat-icon">💸</div>
-              <div class="stat-value">{{ teamStats.recharge }} USDT</div>
-              <div class="stat-title">إجمالي الشحن</div>
-            </div>
-
-            <div class="stat-item">
-              <div class="stat-icon">💰</div>
-              <div class="stat-value">{{ teamStats.withdraw }} USDT</div>
-              <div class="stat-title">إجمالي السحب</div>
-            </div>
-
-            <div class="stat-item">
-              <div class="stat-icon">👥</div>
-              <div class="stat-value">{{ teamStats.totalMembers }}</div>
-              <div class="stat-title">حجم الفريق</div>
-            </div>
-
-            <!-- الصف الثاني -->
-            <div class="stat-item">
-              <div class="stat-icon">🆕</div>
-              <div class="stat-value">{{ teamStats.newMembers }}</div>
-              <div class="stat-title">أعضاء جدد</div>
-            </div>
-
-            <div class="stat-item">
-              <div class="stat-icon">💳</div>
-              <div class="stat-value">{{ teamStats.firstRecharge }}</div>
-              <div class="stat-title">أول شحن</div>
-            </div>
-
-            <div class="stat-item">
-              <div class="stat-icon">🏧</div>
-              <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
-              <div class="stat-title">أول سحب</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- المستويات -->
-        <div class="levels-container">
-          <h2>📈 مستويات العمولة</h2>
-          
-          <div class="level-cards">
-            <div class="level-card level1">
-              <div class="level-header">
-                <span class="level-badge">المستوى الأول</span>
-                <span class="commission-rate">6%</span>
-              </div>
-              <div class="level-body">
-                <div class="level-count">
-                  <i class="fas fa-users"></i>
-                  <span>{{ stats.l1.count }} عضو</span>
-                </div>
-                <div class="level-earnings">
-                  <i class="fas fa-coins"></i>
-                  <span>{{ stats.l1.earnings.toFixed(2) }} USDT</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="level-card level2">
-              <div class="level-header">
-                <span class="level-badge">المستوى الثاني</span>
-                <span class="commission-rate">2%</span>
-              </div>
-              <div class="level-body">
-                <div class="level-count">
-                  <i class="fas fa-users"></i>
-                  <span>{{ stats.l2.count }} عضو</span>
-                </div>
-                <div class="level-earnings">
-                  <i class="fas fa-coins"></i>
-                  <span>{{ stats.l2.earnings.toFixed(2) }} USDT</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="level-card level3">
-              <div class="level-header">
-                <span class="level-badge">المستوى الثالث</span>
-                <span class="commission-rate">1%</span>
-              </div>
-              <div class="level-body">
-                <div class="level-count">
-                  <i class="fas fa-users"></i>
-                  <span>{{ stats.l3.count }} عضو</span>
-                </div>
-                <div class="level-earnings">
-                  <i class="fas fa-coins"></i>
-                  <span>{{ stats.l3.earnings.toFixed(2) }} USDT</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- معلومات إضافية -->
-        <div class="info-box">
-          <i class="fas fa-info-circle"></i>
-          <p>يتم تحديث الإحصائيات تلقائياً. العمولات تُحتسب من شحنات الأعضاء المعتمدة فقط.</p>
-        </div>
-
-        <button class="btn-back" @click="$router.push('/home')">
-          <i class="fas fa-arrow-right"></i> عودة للرئيسية
-        </button>
+      <div class="ref-box">
+        <label>كود الإحالة:</label>
+        <div class="ref-code">{{ referralCode || "غير متوفر" }}</div>
+        <button @click="copyText(referralCode)">نسخ</button>
       </div>
-    </template>
+
+      <div class="ref-box">
+        <label>رابط الدعوة:</label>
+        <div class="ref-code">{{ inviteLink || "غير متوفر" }}</div>
+        <button @click="copyText(inviteLink)">نسخ</button>
+      </div>
+    </div>
+
+    <!-- إحصائيات الفريق - مربعات مصغرة -->
+    <div class="team-stats-box" v-if="!loading && !error">
+      <h2>📊 إحصائيات الفريق</h2>
+      
+      <!-- الصف الأول -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value">{{ teamStats.recharge }} USDT</div>
+          <div class="stat-label">إجمالي الشحن</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">💸</div>
+          <div class="stat-value">{{ teamStats.withdraw }} USDT</div>
+          <div class="stat-label">إجمالي السحب</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value">{{ teamStats.totalMembers }}</div>
+          <div class="stat-label">حجم الفريق</div>
+        </div>
+      </div>
+
+      <!-- الصف الثاني -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">🆕</div>
+          <div class="stat-value">{{ teamStats.newMembers }}</div>
+          <div class="stat-label">أعضاء جدد</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">💳</div>
+          <div class="stat-value">{{ teamStats.firstRecharge }}</div>
+          <div class="stat-label">أول شحن</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🏧</div>
+          <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
+          <div class="stat-label">أول سحب</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- المستويات -->
+    <div class="levels-container" v-if="!loading && !error">
+      <div class="level-card level1">
+        <div class="lvl-header">مستوى 1</div>
+        <div class="lvl-body">
+          <div>عدد الإحالات: <strong>{{ stats.l1.count }}</strong></div>
+          <div>العمولة: <strong>6%</strong></div>
+          <div>الدخل: <strong>{{ stats.l1.earnings.toFixed(2) }} USDT</strong></div>
+        </div>
+      </div>
+
+      <div class="level-card level2">
+        <div class="lvl-header">مستوى 2</div>
+        <div class="lvl-body">
+          <div>عدد الإحالات: <strong>{{ stats.l2.count }}</strong></div>
+          <div>العمولة: <strong>2%</strong></div>
+          <div>الدخل: <strong>{{ stats.l2.earnings.toFixed(2) }} USDT</strong></div>
+        </div>
+      </div>
+
+      <div class="level-card level3">
+        <div class="lvl-header">مستوى 3</div>
+        <div class="lvl-body">
+          <div>عدد الإحالات: <strong>{{ stats.l3.count }}</strong></div>
+          <div>العمولة: <strong>1%</strong></div>
+          <div>الدخل: <strong>{{ stats.l3.earnings.toFixed(2) }} USDT</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-back" @click="$router.push('/home')">عودة</button>
   </div>
 </template>
 
@@ -177,7 +121,6 @@ import { onAuthStateChanged } from "firebase/auth";
 
 export default {
   name: "Team",
-
   data() {
     return {
       referralCode: "",
@@ -209,7 +152,6 @@ export default {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         this.loading = false;
-        this.$router.push("/login");
         return;
       }
 
@@ -244,20 +186,8 @@ export default {
       }
       navigator.clipboard
         .writeText(text)
-        .then(() => {
-          alert("تم النسخ بنجاح!");
-        })
+        .then(() => alert("تم النسخ"))
         .catch(() => alert("فشل النسخ — انسخ يدويًا"));
-    },
-
-    shareViaWhatsApp() {
-      const message = `انضم إليّ عبر هذا الرابط: ${this.inviteLink}`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-    },
-
-    shareViaTelegram() {
-      const message = `انضم إليّ عبر هذا الرابط: ${this.inviteLink}`;
-      window.open(`https://t.me/share/url?url=${encodeURIComponent(this.inviteLink)}&text=${encodeURIComponent(message)}`, '_blank');
     },
 
     chunkArray(arr, size = 10) {
@@ -435,568 +365,250 @@ export default {
 </script>
 
 <style scoped>
-/* الخلفية الرئيسية - أسود فاخر */
 .team-page {
   direction: rtl;
-  min-height: 100vh;
+  padding: 15px;
   background: #0A0C10;
-  padding: 0;
-  color: #ffffff;
+  min-height: 100vh;
+  padding-bottom: 90px;
+  color: #fff;
   font-family: 'Cairo', sans-serif;
-  position: relative;
-  width: 100%;
 }
 
-.content-wrapper {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 20px 20px 120px 20px;
-  width: 100%;
-  box-sizing: border-box;
-  position: relative;
-  z-index: 1;
-}
-
-/* العناوين الرئيسية */
 h2 {
   color: #D4AF37;
-  font-size: 22px;
-  margin-bottom: 20px;
+  font-size: 20px;
+  margin-bottom: 15px;
   text-align: center;
-  position: relative;
-  padding-bottom: 10px;
-  font-weight: 600;
 }
 
-h2::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60px;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #D4AF37, #F6E27A, #D4AF37, transparent);
-  border-radius: 3px;
-}
-
-/* ===== قسم الدعوة ===== */
+/* قسم الدعوة */
 .invite-section {
   background: #11151C;
-  border-radius: 24px;
-  padding: 25px 20px;
-  margin-bottom: 25px;
+  padding: 20px;
+  border-radius: 16px;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  width: 100%;
-  box-sizing: border-box;
+  margin-bottom: 20px;
 }
 
 .ref-box {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 15px 0;
+  margin: 10px 0;
   flex-wrap: wrap;
-  width: 100%;
 }
 
 .ref-box label {
   color: #D4AF37;
-  font-weight: 600;
-  min-width: 100px;
+  min-width: 90px;
   font-size: 14px;
 }
 
 .ref-code {
   flex: 1;
   background: #1A1F2A;
-  padding: 12px 15px;
-  border-radius: 12px;
-  color: #ffffff;
-  font-family: monospace;
-  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 13px;
   border: 1px solid rgba(212, 175, 55, 0.2);
   word-break: break-all;
-  min-width: 150px;
 }
 
-.gold-btn {
+.ref-box button {
   background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  border: none;
   color: #0A0C10;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  white-space: nowrap;
-}
-
-.gold-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
-}
-
-.share-buttons {
-  display: flex;
-  gap: 15px;
-  margin-top: 20px;
-  justify-content: center;
-  width: 100%;
-}
-
-.share-btn {
-  flex: 1;
-  padding: 12px;
   border: none;
-  border-radius: 12px;
-  font-weight: 600;
+  padding: 8px 15px;
+  border-radius: 10px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.3s ease;
+  font-weight: 600;
+  font-size: 14px;
 }
 
-.share-btn.whatsapp {
-  background: #25D366;
-  color: white;
-}
-
-.share-btn.telegram {
-  background: #0088cc;
-  color: white;
-}
-
-.share-btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
-}
-
-/* ===== إحصائيات الفريق - تم تصغير الحقول ===== */
+/* إحصائيات الفريق - مربعات صغيرة */
 .team-stats-box {
   background: #11151C;
-  border-radius: 24px;
-  padding: 25px 20px;
-  margin-bottom: 25px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  width: 100%;
-}
-
-.stat-item {
-  background: #1A1F2A;
-  padding: 12px 5px;
+  padding: 20px;
   border-radius: 16px;
-  text-align: center;
-  border: 1px solid rgba(212, 175, 55, 0.1);
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 90px; /* تصغير الارتفاع */
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  margin-bottom: 20px;
 }
 
-.stat-item:hover {
-  border-color: #D4AF37;
-  transform: translateY(-2px);
+.stats-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.stats-row:last-child {
+  margin-bottom: 0;
+}
+
+.stat-card {
+  flex: 1;
+  background: #1A1F2A;
+  border-radius: 12px;
+  padding: 10px 5px;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  min-width: 0; /* لمنع تمدد المربعات */
 }
 
 .stat-icon {
-  font-size: 22px; /* تصغير الأيقونة */
+  font-size: 20px;
   margin-bottom: 5px;
   color: #D4AF37;
 }
 
 .stat-value {
-  font-size: 15px; /* تصغير الخط */
+  font-size: 14px;
   font-weight: 600;
   color: #D4AF37;
   margin-bottom: 3px;
-  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.stat-title {
+.stat-label {
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.6);
-  font-size: 11px; /* تصغير الخط */
-  font-weight: 400;
   white-space: nowrap;
 }
 
-/* ===== المستويات ===== */
+/* المستويات */
 .levels-container {
-  background: #11151C;
-  border-radius: 24px;
-  padding: 25px 20px;
-  margin-bottom: 25px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.level-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  width: 100%;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
 .level-card {
-  background: #1A1F2A;
-  border-radius: 16px;
-  overflow: hidden;
+  border-radius: 14px;
+  padding: 12px;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
 }
 
-.level-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.15);
-}
-
-.level-header {
+.level1 {
   background: linear-gradient(135deg, #D4AF37, #C5A028);
-  padding: 8px 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+}
+.level2 {
+  background: linear-gradient(135deg, #C5A028, #B8962E);
+}
+.level3 {
+  background: linear-gradient(135deg, #B8962E, #A47C1E);
+}
+
+.lvl-header {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 8px;
+  color: #0A0C10;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  padding-bottom: 4px;
+  text-align: center;
+}
+
+.lvl-body {
+  font-size: 12px;
   color: #0A0C10;
 }
 
-.level-badge {
-  font-weight: 600;
-  font-size: 11px;
-}
-
-.commission-rate {
-  background: rgba(10, 12, 16, 0.2);
-  padding: 3px 5px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 10px;
-}
-
-.level-body {
-  padding: 10px 8px;
+.lvl-body div {
+  margin: 4px 0;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  justify-content: space-between;
 }
 
-.level-count, .level-earnings {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 400;
+.lvl-body strong {
+  color: #0A0C10;
+  font-weight: 700;
 }
 
-.level-count i, .level-earnings i {
-  color: #D4AF37;
-  width: 16px;
-  font-size: 12px;
-}
-
-.level-count span, .level-earnings span {
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.level1 .level-header { background: linear-gradient(135deg, #D4AF37, #F6E27A); }
-.level2 .level-header { background: linear-gradient(135deg, #C5A028, #D4AF37); }
-.level3 .level-header { background: linear-gradient(135deg, #B8962E, #C5A028); }
-
-/* ===== صندوق المعلومات ===== */
-.info-box {
-  background: rgba(212, 175, 55, 0.1);
-  border-right: 4px solid #D4AF37;
-  padding: 12px 15px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.info-box i {
-  color: #D4AF37;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.info-box p {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 12px;
-  margin: 0;
-  line-height: 1.4;
-  font-weight: 400;
-}
-
-/* ===== زر العودة ===== */
+/* زر العودة */
 .btn-back {
   width: 100%;
   padding: 14px;
-  background: transparent;
+  border-radius: 14px;
   border: 2px solid #D4AF37;
+  background: transparent;
   color: #D4AF37;
-  border-radius: 16px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  transition: all 0.3s;
   margin-top: 10px;
-  box-sizing: border-box;
 }
 
 .btn-back:hover {
   background: #D4AF37;
   color: #0A0C10;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
 }
 
-/* ===== حالات التحميل والخطأ ===== */
+/* حالات التحميل */
 .loading-box, .error-box {
   background: #11151C;
-  border-radius: 24px;
-  padding: 40px 20px;
+  padding: 20px;
+  border-radius: 16px;
   text-align: center;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  max-width: 400px;
-  margin: 50px auto;
-  width: 90%;
-  position: relative;
-  z-index: 1;
+  margin: 20px auto;
+  max-width: 300px;
 }
 
-.loading-box p {
-  font-weight: 400;
-  font-size: 14px;
-}
-
-.gold-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(212, 175, 55, 0.1);
-  border-top: 3px solid #D4AF37;
-  border-radius: 50%;
-  margin: 0 auto 15px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.error-box i {
-  font-size: 40px;
+.error-box {
   color: #ff6b6b;
-  margin-bottom: 12px;
 }
 
-.error-box strong {
-  color: #ff6b6b;
-  display: block;
-  margin: 8px 0;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.retry-btn {
-  background: #D4AF37;
-  border: none;
-  color: #0A0C10;
-  padding: 10px 25px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 14px;
-  margin-top: 15px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.retry-btn:hover {
-  background: #F6E27A;
-  transform: translateY(-2px);
-}
-
-/* ===== تحسينات للجوال مع مراعاة الأزرار العائمة ===== */
-@media (max-width: 768px) {
-  .content-wrapper {
-    padding: 15px 15px 130px 15px;
+/* تحسينات للشاشات الصغيرة */
+@media (max-width: 480px) {
+  .stats-row {
+    gap: 5px;
   }
-}
-
-@media (max-width: 600px) {
-  .content-wrapper {
-    padding: 12px 12px 120px 12px;
-  }
-
-  .ref-box {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  .ref-box label {
-    min-width: auto;
-    margin-bottom: 5px;
-  }
-
-  .ref-code {
-    width: 100%;
-    font-size: 13px;
-    padding: 10px;
-  }
-
-  .gold-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .stats-grid {
-    gap: 8px;
-  }
-
-  .stat-item {
+  
+  .stat-card {
     padding: 8px 3px;
-    min-height: 80px;
   }
-
+  
   .stat-icon {
-    font-size: 20px;
+    font-size: 18px;
   }
-
+  
   .stat-value {
-    font-size: 14px;
-  }
-
-  .stat-title {
-    font-size: 10px;
-  }
-
-  .level-cards {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .level-card {
-    width: 100%;
-  }
-
-  .level-header {
-    padding: 8px;
-  }
-
-  .level-badge {
     font-size: 12px;
   }
-
-  .commission-rate {
-    font-size: 11px;
-    padding: 3px 6px;
+  
+  .stat-label {
+    font-size: 9px;
   }
-
-  .level-body {
-    padding: 10px;
-    flex-direction: row;
-    justify-content: space-around;
+  
+  .levels-container {
+    gap: 6px;
   }
-
-  .level-count, .level-earnings {
+  
+  .level-card {
+    padding: 8px 5px;
+  }
+  
+  .lvl-header {
     font-size: 13px;
   }
-
-  .share-buttons {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .share-btn {
-    width: 100%;
-  }
-
-  .info-box {
-    padding: 10px 12px;
-  }
-
-  .info-box i {
-    font-size: 16px;
-  }
-
-  .info-box p {
-    font-size: 11px;
-  }
-
-  .btn-back {
-    padding: 12px;
-    font-size: 15px;
+  
+  .lvl-body {
+    font-size: 10px;
   }
 }
 
 @media (max-width: 350px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  .stat-item {
-    flex-direction: row;
-    justify-content: space-between;
-    text-align: right;
-    padding: 8px 12px;
-    min-height: auto;
-  }
-
-  .stat-icon {
-    margin-bottom: 0;
-    margin-left: 8px;
-    font-size: 18px;
-  }
-
-  .stat-value {
-    margin-bottom: 0;
-    font-size: 13px;
-  }
-
-  .stat-title {
-    font-size: 11px;
-    margin-right: auto;
-    margin-left: 10px;
+  .stats-row {
+    flex-wrap: wrap;
   }
   
-  .content-wrapper {
-    padding: 10px 10px 140px 10px;
-  }
-}
-
-/* تأكد من أن المحتوى لا يتداخل مع الأزرار العائمة */
-@media (min-width: 769px) {
-  .content-wrapper {
-    padding-bottom: 100px;
+  .stat-card {
+    flex: 0 0 calc(50% - 5px);
   }
 }
 </style>
