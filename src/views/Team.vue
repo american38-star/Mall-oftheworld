@@ -25,52 +25,60 @@
         <button @click="copyText(inviteLink)">نسخ</button>
       </div>
 
-      <!-- أزرار المشاركة - واتساب وتليجرام -->
-      <div class="share-buttons">
-        <button class="share-btn whatsapp" @click="shareViaWhatsApp">
+      <!-- أزرار مشاركة صغيرة -->
+      <div class="share-small">
+        <button class="share-small-btn whatsapp" @click="shareViaWhatsApp" title="مشاركة عبر واتساب">
           <i class="fab fa-whatsapp"></i>
-          مشاركة عبر واتساب
         </button>
-        <button class="share-btn telegram" @click="shareViaTelegram">
+        <button class="share-small-btn telegram" @click="shareViaTelegram" title="مشاركة عبر تليجرام">
           <i class="fab fa-telegram"></i>
-          مشاركة عبر تليجرام
         </button>
       </div>
     </div>
 
-    <!-- إحصائيات الفريق -->
+    <!-- إحصائيات الفريق - مربعات مصغرة -->
     <div class="team-stats-box" v-if="!loading && !error">
-      <div class="stat-row">
-        <div class="stat-item">
-          <div class="stat-title">انسحاب الفريق</div>
-          <div class="stat-value">${{ teamStats.withdraw }}</div>
+      <h2>📊 إحصائيات الفريق</h2>
+      
+      <!-- الصف الأول -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value">{{ teamStats.recharge }} USDT</div>
+          <div class="stat-label">إجمالي الشحن</div>
         </div>
 
-        <div class="stat-item">
-          <div class="stat-title">إعادة شحن الفريق</div>
-          <div class="stat-value">${{ teamStats.recharge }}</div>
+        <div class="stat-card">
+          <div class="stat-icon">💸</div>
+          <div class="stat-value">{{ teamStats.withdraw }} USDT</div>
+          <div class="stat-label">إجمالي السحب</div>
         </div>
 
-        <div class="stat-item">
-          <div class="stat-title">حجم الفريق</div>
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
           <div class="stat-value">{{ teamStats.totalMembers }}</div>
+          <div class="stat-label">حجم الفريق</div>
         </div>
       </div>
 
-      <div class="stat-row">
-        <div class="stat-item">
-          <div class="stat-title">الانسحاب الأول</div>
-          <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
-        </div>
-
-        <div class="stat-item">
-          <div class="stat-title">الشحن لأول مرة</div>
-          <div class="stat-value">{{ teamStats.firstRecharge }}</div>
-        </div>
-
-        <div class="stat-item">
-          <div class="stat-title">فريق جديد</div>
+      <!-- الصف الثاني -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">🆕</div>
           <div class="stat-value">{{ teamStats.newMembers }}</div>
+          <div class="stat-label">أعضاء جدد</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">💳</div>
+          <div class="stat-value">{{ teamStats.firstRecharge }}</div>
+          <div class="stat-label">أول شحن</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🏧</div>
+          <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
+          <div class="stat-label">أول سحب</div>
         </div>
       </div>
     </div>
@@ -383,47 +391,53 @@ export default {
 <style scoped>
 .team-page {
   direction: rtl;
-  padding: 12px;
+  padding: 15px;
   background: #0A0C10;
   min-height: 100vh;
-  padding-bottom: 100px; /* مساحة للشريط السفلي */
+  padding-bottom: 90px;
+  color: #fff;
+  font-family: 'Cairo', sans-serif;
 }
 
-.invite-section {
-  background: #11151C;
-  padding: 15px;
-  border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  margin-bottom: 20px;
+h2 {
+  color: #D4AF37;
+  font-size: 20px;
+  margin-bottom: 15px;
   text-align: center;
 }
 
-.invite-section h2 {
-  color: #D4AF37;
-  margin-bottom: 15px;
+/* قسم الدعوة */
+.invite-section {
+  background: #11151C;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  margin-bottom: 20px;
 }
 
 .ref-box {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin: 8px 0;
+  gap: 10px;
+  margin: 10px 0;
+  flex-wrap: wrap;
 }
 
 .ref-box label {
   color: #D4AF37;
-  margin-left: 10px;
+  min-width: 90px;
+  font-size: 14px;
 }
 
 .ref-code {
-  background: #1A1F2A;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin: 0 8px;
   flex: 1;
-  word-break: break-all;
+  background: #1A1F2A;
+  padding: 10px 12px;
+  border-radius: 10px;
   color: #fff;
+  font-size: 13px;
   border: 1px solid rgba(212, 175, 55, 0.2);
+  word-break: break-all;
 }
 
 .ref-box button {
@@ -431,148 +445,162 @@ export default {
   color: #0A0C10;
   border: none;
   padding: 8px 15px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 14px;
 }
 
-/* أزرار المشاركة */
-.share-buttons {
+/* أزرار مشاركة صغيرة */
+.share-small {
   display: flex;
+  justify-content: center;
   gap: 10px;
   margin-top: 15px;
-  justify-content: center;
 }
 
-.share-btn {
-  flex: 1;
-  padding: 10px;
+.share-small-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  cursor: pointer;
   transition: all 0.3s ease;
+  font-size: 20px;
 }
 
-.share-btn.whatsapp {
+.share-small-btn.whatsapp {
   background: #25D366;
   color: white;
 }
 
-.share-btn.telegram {
+.share-small-btn.telegram {
   background: #0088cc;
   color: white;
 }
 
-.share-btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
+.share-small-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.share-btn i {
-  font-size: 18px;
-}
-
+/* إحصائيات الفريق - مربعات صغيرة */
 .team-stats-box {
   background: #11151C;
-  padding: 15px;
-  border-radius: 14px;
+  padding: 20px;
+  border-radius: 16px;
   border: 1px solid rgba(212, 175, 55, 0.2);
   margin-bottom: 20px;
 }
 
-.stat-row {
+.stats-row {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.stat-item {
-  text-align: center;
+.stats-row:last-child {
+  margin-bottom: 0;
+}
+
+.stat-card {
   flex: 1;
   background: #1A1F2A;
+  border-radius: 12px;
   padding: 10px 5px;
-  border-radius: 10px;
-  border: 1px solid rgba(212, 175, 55, 0.1);
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  min-width: 0;
 }
 
-.stat-title {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
-  margin-bottom: 4px;
-}
-
-.stat-value {
-  font-size: 15px;
-  font-weight: bold;
+.stat-icon {
+  font-size: 20px;
+  margin-bottom: 5px;
   color: #D4AF37;
 }
 
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #D4AF37;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+
+/* المستويات */
 .levels-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
   margin-bottom: 20px;
 }
 
 .level-card {
   border-radius: 14px;
-  color: white;
   padding: 12px;
-  min-height: 140px;
   border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .level1 {
   background: linear-gradient(135deg, #D4AF37, #C5A028);
 }
-
 .level2 {
   background: linear-gradient(135deg, #C5A028, #B8962E);
 }
-
 .level3 {
   background: linear-gradient(135deg, #B8962E, #A47C1E);
 }
 
 .lvl-header {
-  font-weight: bold;
-  font-size: 16px;
-  margin-bottom: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 8px;
   color: #0A0C10;
   border-bottom: 1px solid rgba(0,0,0,0.1);
-  padding-bottom: 5px;
+  padding-bottom: 4px;
+  text-align: center;
 }
 
 .lvl-body {
-  font-size: 13px;
+  font-size: 12px;
   color: #0A0C10;
 }
 
 .lvl-body div {
-  margin: 5px 0;
+  margin: 4px 0;
+  display: flex;
+  justify-content: space-between;
 }
 
 .lvl-body strong {
   color: #0A0C10;
+  font-weight: 700;
 }
 
+/* زر العودة */
 .btn-back {
-  margin-top: 20px;
   width: 100%;
-  padding: 12px;
-  border-radius: 12px;
+  padding: 14px;
+  border-radius: 14px;
   border: 2px solid #D4AF37;
   background: transparent;
   color: #D4AF37;
   font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
+  margin-top: 10px;
 }
 
 .btn-back:hover {
@@ -580,30 +608,73 @@ export default {
   color: #0A0C10;
 }
 
-.loading-box,
-.error-box {
+/* حالات التحميل */
+.loading-box, .error-box {
   background: #11151C;
-  margin: 16px;
-  padding: 14px;
-  border-radius: 12px;
+  padding: 20px;
+  border-radius: 16px;
   text-align: center;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  color: #fff;
+  margin: 20px auto;
+  max-width: 300px;
 }
 
 .error-box {
   color: #ff6b6b;
 }
 
-/* تحسينات للهواتف */
+/* تحسينات للشاشات الصغيرة */
 @media (max-width: 480px) {
-  .share-buttons {
-    flex-direction: column;
-    gap: 8px;
+  .stats-row {
+    gap: 5px;
   }
   
-  .share-btn {
-    width: 100%;
+  .stat-card {
+    padding: 8px 3px;
+  }
+  
+  .stat-icon {
+    font-size: 18px;
+  }
+  
+  .stat-value {
+    font-size: 12px;
+  }
+  
+  .stat-label {
+    font-size: 9px;
+  }
+  
+  .levels-container {
+    gap: 6px;
+  }
+  
+  .level-card {
+    padding: 8px 5px;
+  }
+  
+  .lvl-header {
+    font-size: 13px;
+  }
+  
+  .lvl-body {
+    font-size: 10px;
+  }
+  
+  .share-small-btn {
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 350px) {
+  .stats-row {
+    flex-wrap: wrap;
+  }
+  
+  .stat-card {
+    flex: 0 0 calc(50% - 5px);
   }
 }
 </style>
