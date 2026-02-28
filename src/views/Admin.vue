@@ -52,15 +52,15 @@
         <div v-if="filteredWithdraws.length === 0" class="empty">لا توجد طلبات سحب حالياً.</div>
         <div class="cards">
           <div class="card withdraw-card" v-for="req in filteredWithdraws" :key="req.id">
-            <p><strong>البريد:</strong> {{ req.email || '—' }}</p>
-            <p><strong>المبلغ:</strong> {{ req.amount }} USDT</p>
+            <p><strong>البريد:</strong> <span class="gold-text">{{ req.email || '—' }}</span></p>
+            <p><strong>المبلغ:</strong> <span class="gold-text">{{ req.amount }} USDT</span></p>
             <p><strong>الشبكة:</strong> {{ req.network || '—' }}</p>
             <p><strong>المحفظة:</strong> {{ req.wallet || '—' }}</p>
             <p class="muted">تم الإنشاء: {{ formatDate(req.createdAt) }}</p>
             <div class="card-actions">
-              <button class="btn green" type="button" @click.stop="openApproveModal(req, 'withdraw')" :disabled="processingId === req.id">موافقة</button>
+              <button class="btn gold" type="button" @click.stop="openApproveModal(req, 'withdraw')" :disabled="processingId === req.id">موافقة</button>
               <button class="btn red" type="button" @click.stop="openRejectModal(req, 'withdraw')" :disabled="processingId === req.id">رفض</button>
-              <button class="btn ghost" type="button" @click.stop="viewWithdrawDetails(req)">تفاصيل</button>
+              <button class="btn gold-outline" type="button" @click.stop="viewWithdrawDetails(req)">تفاصيل</button>
             </div>
           </div>
         </div>
@@ -92,24 +92,31 @@
         <div v-if="filteredRechargeRequests.length === 0" class="empty">لا توجد طلبات تعبئة حالياً.</div>
         <div class="cards">
           <div class="card recharge-card" v-for="r in filteredRechargeRequests" :key="r.id">
-            <p><strong>البريد:</strong> {{ r.email || r.userEmail || '—' }}</p>
-            <p><strong>المبلغ:</strong> {{ r.amount }} USDT</p>
+            <p><strong>البريد:</strong> <span class="gold-text">{{ r.email || r.userEmail || '—' }}</span></p>
+            <p><strong>المبلغ:</strong> <span class="gold-text">{{ r.amount }} USDT</span></p>
             <p><strong>الشبكة:</strong> {{ r.network || '—' }}</p>
-            <p><strong>TxID:</strong> {{ r.txid || '—' }}</p>
-            <p><strong>حالة:</strong> {{ r.status || 'pending' }}</p>
+            <p><strong>TxID:</strong> <span class="gold-text">{{ r.txid || '—' }}</span></p>
+            <p><strong>حالة:</strong> 
+              <span :class="{
+                'status-approved': r.status === 'approved',
+                'status-rejected': r.status === 'rejected',
+                'status-pending': r.status === 'pending'
+              }">
+                {{ r.status === 'approved' ? 'موافق' : r.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة' }}
+              </span>
+            </p>
             <p class="muted">تم الإنشاء: {{ formatDate(r.createdAt) }}</p>
             <div class="card-actions">
-              <button class="btn green" type="button" @click.stop="openApproveModal(r, 'recharge')" :disabled="processingId === r.id || r.status === 'approved'">موافقة</button>
+              <button class="btn gold" type="button" @click.stop="openApproveModal(r, 'recharge')" :disabled="processingId === r.id || r.status === 'approved'">موافقة</button>
               <button class="btn red" type="button" @click.stop="openRejectModal(r, 'recharge')" :disabled="processingId === r.id || r.status === 'rejected'">رفض</button>
               <button class="btn black" type="button" @click.stop="deleteRecharge(r)" :disabled="processingId === r.id">حذف</button>
-              <button class="btn ghost" type="button" @click.stop="viewRechargeDetails(r)">تفاصيل</button>
+              <button class="btn gold-outline" type="button" @click.stop="viewRechargeDetails(r)">تفاصيل</button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- باقي الكود كما هو بدون تغيير -->
     <!-- المستخدمين -->
     <div v-if="activeTab === 'users'" class="panel">
       <div class="panel-header">
@@ -130,11 +137,11 @@
         <div v-if="filteredUsers.length === 0" class="empty">لا يوجد مستخدمين.</div>
         <div class="cards">
           <div class="card user-card" v-for="u in filteredUsers" :key="u.id">
-            <p><strong>البريد:</strong> {{ u.email || '—' }}</p>
-            <p><strong>رصيد:</strong> {{ u.balance ?? 0 }} USDT</p>
+            <p><strong>البريد:</strong> <span class="gold-text">{{ u.email || '—' }}</span></p>
+            <p><strong>رصيد:</strong> <span class="gold-text">{{ u.balance ?? 0 }} USDT</span></p>
             <p><strong>الحالة:</strong> {{ u.blocked ? 'محظور' : 'فعال' }}</p>
             <div class="card-actions">
-              <button class="btn green" type="button" @click="promptRecharge(u)">تعبئة رصيد</button>
+              <button class="btn gold" type="button" @click="promptRecharge(u)">تعبئة رصيد</button>
               <button class="btn red" type="button" @click="promptDeduct(u)">سحب رصيد</button>
               <!-- 🔥 إضافة زر التفاصيل الجديد -->
               <button class="btn details-btn" type="button" @click="viewUserDetails(u)">تفاصيل</button>
@@ -142,7 +149,7 @@
               <button class="btn black" type="button" @click="toggleBlockUser(u)">
                 {{ u.blocked ? 'إلغاء الحظر' : 'حظر' }}
               </button>
-              <button class="btn ghost" type="button" @click="viewUserNotifications(u)">
+              <button class="btn gold-outline" type="button" @click="viewUserNotifications(u)">
                 الإشعارات ({{ u.notificationsCount || 0 }})
               </button>
             </div>
@@ -190,8 +197,8 @@
         <div v-if="withdrawLogs.length === 0" class="empty">لا توجد سجلات.</div>
         <div class="cards">
           <div class="card log-card" v-for="l in filteredWithdrawLogs" :key="l.id">
-            <p><strong>البريد:</strong> {{ l.email }}</p>
-            <p><strong>المبلغ:</strong> {{ l.amount }} USDT</p>
+            <p><strong>البريد:</strong> <span class="gold-text">{{ l.email }}</span></p>
+            <p><strong>المبلغ:</strong> <span class="gold-text">{{ l.amount }} USDT</span></p>
             <p><strong>النوع:</strong> {{ l.type }}</p>
             <p class="muted">الوقت: {{ formatDate(l.createdAt) }}</p>
           </div>
@@ -220,8 +227,8 @@
         <div v-if="rechargeLogs.length === 0" class="empty">لا توجد سجلات تعبئة.</div>
         <div class="cards">
           <div class="card log-card" v-for="log in filteredRechargeLogs" :key="log.id">
-            <p><strong>البريد:</strong> {{ log.email || log.userEmail || '—' }}</p>
-            <p><strong>المبلغ:</strong> {{ log.amount }} USDT</p>
+            <p><strong>البريد:</strong> <span class="gold-text">{{ log.email || log.userEmail || '—' }}</span></p>
+            <p><strong>المبلغ:</strong> <span class="gold-text">{{ log.amount }} USDT</span></p>
             <p><strong>الحالة:</strong> 
               <span :class="{
                 'status-approved': log.type === 'approved' || log.status === 'approved',
@@ -243,8 +250,8 @@
     <div v-if="showRejectModal" class="modal-backdrop" @click.self="closeRejectModal">
       <div class="modal">
         <h3>سبب الرفض</h3>
-        <p><strong>المبلغ:</strong> {{ rejectModalData.amount }} USDT</p>
-        <p><strong>المستخدم:</strong> {{ rejectModalData.email || rejectModalData.userEmail || '—' }}</p>
+        <p><strong>المبلغ:</strong> <span class="gold-text">{{ rejectModalData.amount }} USDT</span></p>
+        <p><strong>المستخدم:</strong> <span class="gold-text">{{ rejectModalData.email || rejectModalData.userEmail || '—' }}</span></p>
         <p><strong>النوع:</strong> {{ rejectModalData.type === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
         
         <div class="input-box" style="margin-top: 15px;">
@@ -253,9 +260,9 @@
             v-model="rejectReason" 
             placeholder="أدخل سبب الرفض..."
             rows="4"
-            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;"
+            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D4AF37; background: #1A1F2A; color: white;"
           ></textarea>
-          <div v-if="rejectError" style="color: red; font-size: 12px; margin-top: 5px;">
+          <div v-if="rejectError" style="color: #ff6b6b; font-size: 12px; margin-top: 5px;">
             {{ rejectError }}
           </div>
         </div>
@@ -264,7 +271,7 @@
           <button class="btn red" type="button" @click="confirmReject" :disabled="processingId === rejectModalData.id">
             تأكيد الرفض
           </button>
-          <button class="btn ghost" type="button" @click="closeRejectModal">إلغاء</button>
+          <button class="btn gold-outline" type="button" @click="closeRejectModal">إلغاء</button>
         </div>
       </div>
     </div>
@@ -273,8 +280,8 @@
     <div v-if="showApproveModal" class="modal-backdrop" @click.self="closeApproveModal">
       <div class="modal">
         <h3>رسالة الموافقة</h3>
-        <p><strong>المبلغ:</strong> {{ approveModalData.amount }} USDT</p>
-        <p><strong>المستخدم:</strong> {{ approveModalData.email || approveModalData.userEmail || '—' }}</p>
+        <p><strong>المبلغ:</strong> <span class="gold-text">{{ approveModalData.amount }} USDT</span></p>
+        <p><strong>المستخدم:</strong> <span class="gold-text">{{ approveModalData.email || approveModalData.userEmail || '—' }}</span></p>
         <p><strong>النوع:</strong> {{ approveModalData.type === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
         
         <div class="input-box" style="margin-top: 15px;">
@@ -283,18 +290,18 @@
             v-model="approveMessage" 
             placeholder="أدخل رسالة تهنئة أو تعليمات للمستخدم..."
             rows="4"
-            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;"
+            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D4AF37; background: #1A1F2A; color: white;"
           ></textarea>
-          <div v-if="approveError" style="color: red; font-size: 12px; margin-top: 5px;">
+          <div v-if="approveError" style="color: #ff6b6b; font-size: 12px; margin-top: 5px;">
             {{ approveError }}
           </div>
         </div>
         
         <div class="modal-actions">
-          <button class="btn green" type="button" @click="confirmApprove" :disabled="processingId === approveModalData.id">
+          <button class="btn gold" type="button" @click="confirmApprove" :disabled="processingId === approveModalData.id">
             تأكيد الموافقة
           </button>
-          <button class="btn ghost" type="button" @click="closeApproveModal">إلغاء</button>
+          <button class="btn gold-outline" type="button" @click="closeApproveModal">إلغاء</button>
         </div>
       </div>
     </div>
@@ -303,21 +310,21 @@
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
         <h3>تفاصيل الطلب</h3>
-        <p v-if="modalType === 'withdraw'"><strong>البريد:</strong> {{ modalData.email }}</p>
-        <p v-if="modalType === 'withdraw'"><strong>المبلغ:</strong> {{ modalData.amount }}</p>
+        <p v-if="modalType === 'withdraw'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email }}</span></p>
+        <p v-if="modalType === 'withdraw'"><strong>المبلغ:</strong> <span class="gold-text">{{ modalData.amount }} USDT</span></p>
         <p v-if="modalType === 'withdraw'"><strong>الشبكة:</strong> {{ modalData.network }}</p>
         <p v-if="modalType === 'withdraw'"><strong>المحفظة:</strong> {{ modalData.wallet }}</p>
-        <p v-if="modalType === 'recharge'"><strong>البريد:</strong> {{ modalData.email || modalData.userEmail }}</p>
-        <p v-if="modalType === 'recharge'"><strong>المبلغ:</strong> {{ modalData.amount }}</p>
+        <p v-if="modalType === 'recharge'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email || modalData.userEmail }}</span></p>
+        <p v-if="modalType === 'recharge'"><strong>المبلغ:</strong> <span class="gold-text">{{ modalData.amount }} USDT</span></p>
         <p v-if="modalType === 'recharge'"><strong>الشبكة:</strong> {{ modalData.network }}</p>
-        <p v-if="modalType === 'recharge' && modalData.txid"><strong>TxID:</strong> {{ modalData.txid }}</p>
+        <p v-if="modalType === 'recharge' && modalData.txid"><strong>TxID:</strong> <span class="gold-text">{{ modalData.txid }}</span></p>
         <p class="muted">تم الإنشاء: {{ formatDate(modalData.createdAt) }}</p>
         <div class="modal-actions">
-          <button v-if="modalType === 'withdraw'" class="btn green" type="button" @click.stop="openApproveModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">موافقة</button>
+          <button v-if="modalType === 'withdraw'" class="btn gold" type="button" @click.stop="openApproveModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">موافقة</button>
           <button v-if="modalType === 'withdraw'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">رفض</button>
-          <button v-if="modalType === 'recharge'" class="btn green" type="button" @click.stop="openApproveModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'approved'">موافقة</button>
+          <button v-if="modalType === 'recharge'" class="btn gold" type="button" @click.stop="openApproveModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'approved'">موافقة</button>
           <button v-if="modalType === 'recharge'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'rejected'">رفض</button>
-          <button class="btn ghost" type="button" @click="closeModal">إغلاق</button>
+          <button class="btn gold-outline" type="button" @click="closeModal">إغلاق</button>
         </div>
       </div>
     </div>
@@ -326,18 +333,18 @@
     <div v-if="showUserDetailsModal" class="modal-backdrop" @click.self="closeUserDetailsModal">
       <div class="modal">
         <h3>تفاصيل المستخدم</h3>
-        <p><strong>البريد:</strong> {{ userDetails.email || '—' }}</p>
-        <p><strong>عدد الإحالات (المستوى 1):</strong> {{ userDetails.referralCount || 0 }}</p>
-        <p><strong>مبلغ الشحن الكلي (المستوى 1):</strong> {{ userDetails.level1RechargeTotal || 0 }} USDT</p>
+        <p><strong>البريد:</strong> <span class="gold-text">{{ userDetails.email || '—' }}</span></p>
+        <p><strong>عدد الإحالات (المستوى 1):</strong> <span class="gold-text">{{ userDetails.referralCount || 0 }}</span></p>
+        <p><strong>مبلغ الشحن الكلي (المستوى 1):</strong> <span class="gold-text">{{ userDetails.level1RechargeTotal || 0 }} USDT</span></p>
         
         <!-- قائمة المستخدمين المحالين للمستوى الأول فقط -->
         <div v-if="userDetails.referredUsers && userDetails.referredUsers.length > 0" class="referred-users">
           <h4>المستخدمين المحالين (المستوى 1):</h4>
           <div class="users-list">
             <div class="user-item" v-for="refUser in userDetails.referredUsers" :key="refUser.id">
-              <p><strong>البريد:</strong> {{ refUser.email || '—' }}</p>
+              <p><strong>البريد:</strong> <span class="gold-text">{{ refUser.email || '—' }}</span></p>
               <p><strong>تاريخ التسجيل:</strong> {{ formatDate(refUser.createdAt) }}</p>
-              <p><strong>إجمالي الشحن:</strong> {{ refUser.totalRecharge || 0 }} USDT</p>
+              <p><strong>إجمالي الشحن:</strong> <span class="gold-text">{{ refUser.totalRecharge || 0 }} USDT</span></p>
             </div>
           </div>
         </div>
@@ -346,7 +353,7 @@
         </div>
         
         <div class="modal-actions">
-          <button class="btn ghost" type="button" @click="closeUserDetailsModal">إغلاق</button>
+          <button class="btn gold-outline" type="button" @click="closeUserDetailsModal">إغلاق</button>
         </div>
       </div>
     </div>
@@ -489,7 +496,6 @@ export default {
         list = list.filter(
           (r) =>
             (r.email || "").toLowerCase().includes(f) ||
-            (r.userEmail || "").toLowerCase().includes(f) ||
             (r.network || "").toLowerCase().includes(f) ||
             (String(r.amount || "") || "").includes(f) ||
             (r.status || "").toLowerCase().includes(f)
@@ -1709,14 +1715,16 @@ export default {
   padding: 12px;
   max-width: 1200px;
   margin: 0 auto;
-  font-family: Inter, system-ui, Arial;
+  font-family: 'Cairo', sans-serif;
   min-height: 100vh;
+  background: #0A0C10;
+  color: #ffffff;
 }
 
 .page-title {
   text-align: left;
   font-size: 18px;
-  color: #0b5cff;
+  color: #D4AF37;
   margin-bottom: 6px;
   font-weight: 600;
 }
@@ -1731,8 +1739,8 @@ export default {
 
 .tab {
   padding: 6px 10px;
-  background: #f1f5ff;
-  border: 1px solid rgba(11, 92, 255, 0.06);
+  background: #11151C;
+  border: 1px solid rgba(212, 175, 55, 0.2);
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
@@ -1741,21 +1749,29 @@ export default {
   flex: 1;
   min-width: 120px;
   text-align: center;
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.tab:hover {
+  border-color: #D4AF37;
 }
 
 .tab.active {
-  background: linear-gradient(90deg, #0066ff, #00c6ff);
-  color: white;
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  color: #0A0C10;
+  border: none;
 }
 
 .panel {
-  background: #fff;
+  background: #11151C;
   padding: 12px;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(9, 30, 66, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.2);
   margin-bottom: 12px;
   max-height: 500px;
   overflow-y: auto;
+  color: #ffffff;
 }
 
 .panel-header {
@@ -1771,7 +1787,7 @@ export default {
   font-size: 14px;
   font-weight: 600;
   margin: 0;
-  color: #333;
+  color: #D4AF37;
 }
 
 .controls {
@@ -1785,22 +1801,35 @@ export default {
 .controls select {
   padding: 5px 8px;
   border-radius: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: #1A1F2A;
+  color: #ffffff;
   font-size: 11px;
   height: 28px;
   min-width: 150px;
+}
+
+.controls input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .controls button {
   padding: 5px 8px;
   border-radius: 6px;
   border: none;
-  background: #0b5cff;
-  color: white;
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  color: #0A0C10;
   cursor: pointer;
   font-size: 11px;
   height: 28px;
   white-space: nowrap;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.controls button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
 }
 
 .cards {
@@ -1810,11 +1839,11 @@ export default {
 }
 
 .card {
-  background: #fff;
+  background: #1A1F2A;
   padding: 10px;
   border-radius: 8px;
-  box-shadow: 0 3px 8px rgba(9, 30, 66, 0.03);
-  border: 1px solid #eee;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  color: #ffffff;
 }
 
 .card p {
@@ -1825,10 +1854,16 @@ export default {
 
 .card strong {
   font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.gold-text {
+  color: #D4AF37;
+  font-weight: 600;
 }
 
 .muted {
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 10px;
 }
 
@@ -1852,11 +1887,29 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* 🔥 لون جديد لزر التفاصيل */
 .details-btn {
   background: #6c757d;
+}
+
+.gold {
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  color: #0A0C10;
+  font-weight: 700;
+}
+
+.gold-outline {
+  background: transparent;
+  border: 1px solid #D4AF37;
+  color: #D4AF37;
 }
 
 .green {
@@ -1875,29 +1928,24 @@ export default {
   background: #333;
 }
 
-.ghost {
-  background: #e6eefc;
-  color: #123;
-}
-
 .loading {
   text-align: center;
   padding: 10px;
-  color: #666;
+  color: #D4AF37;
   font-size: 12px;
 }
 
 .empty {
   text-align: center;
   padding: 12px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 12px;
 }
 
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1905,20 +1953,22 @@ export default {
 }
 
 .modal {
-  background: white;
+  background: #11151C;
   padding: 12px;
   border-radius: 8px;
   width: 90%;
   max-width: 400px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px #D4AF37;
   max-height: 80vh;
   overflow-y: auto;
+  color: #ffffff;
+  border: 1px solid rgba(212, 175, 55, 0.3);
 }
 
 .modal h3 {
   font-size: 14px;
   margin: 0 0 10px 0;
-  color: #333;
+  color: #D4AF37;
   font-weight: 600;
 }
 
@@ -1926,6 +1976,13 @@ export default {
   margin: 5px 0;
   font-size: 11px;
   line-height: 1.3;
+}
+
+.modal label {
+  color: #D4AF37;
+  font-size: 12px;
+  display: block;
+  margin-bottom: 5px;
 }
 
 .modal-actions {
@@ -1954,13 +2011,13 @@ export default {
 /* 🔥 أنماط جديدة لقائمة المستخدمين المحالين */
 .referred-users {
   margin-top: 15px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
   padding-top: 10px;
 }
 
 .referred-users h4 {
   font-size: 12px;
-  color: #333;
+  color: #D4AF37;
   margin-bottom: 8px;
 }
 
@@ -1970,11 +2027,11 @@ export default {
 }
 
 .user-item {
-  background: #f8f9fa;
+  background: #1A1F2A;
   padding: 8px;
   border-radius: 6px;
   margin-bottom: 6px;
-  border: 1px solid #e9ecef;
+  border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .user-item p {
@@ -1983,7 +2040,7 @@ export default {
 }
 
 .empty-text {
-  color: #6c757d;
+  color: rgba(255, 255, 255, 0.5);
   font-style: italic;
   text-align: center;
   padding: 10px;
