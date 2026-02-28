@@ -1,938 +1,944 @@
 <template>
-  <div id="app" :class="{ 'rtl': currentLang === 'AR' }">
-    <!-- زر تغيير اللغة -->
-    <div class="circle-btn lang-btn" @click="toggleLanguageMenu">
-      <i class="fas fa-globe"></i>
-      <span class="lang-code">{{ currentLang }}</span>
+  <div class="team-page">
+    <!-- حالة التحميل -->
+    <div v-if="loading" class="loading-box">
+      <div class="gold-spinner"></div>
+      <p>جاري تحميل بيانات الفريق...</p>
     </div>
 
-    <!-- زر بابلوين (سانتا) لعرض السنة الجديدة -->
-    <div class="bubble-chat-btn" @click="toggleNewYearMessage">
-      <div class="bubble-chat-icon">🎅🏻</div>
-      <div class="bubble-notification">🎉</div>
+    <!-- حالة الخطأ -->
+    <div v-if="error" class="error-box">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>حدث خطأ أثناء جلب بيانات الفريق:</p>
+      <strong>{{ error }}</strong>
+      <button @click="$router.go()" class="retry-btn">إعادة المحاولة</button>
     </div>
 
-    <!-- نافذة بابلوين للرسالة -->
-    <div v-if="showNewYearMessage" class="bubble-chat-overlay" @click="closeNewYearMessage">
-      <div class="bubble-chat-window" @click.stop>
-        <div class="bubble-chat-header">
-          <div class="bubble-chat-title">
-            <div class="bubble-avatar">🎁</div>
-            <div>
-              <div class="bubble-sender">Mall of the World</div>
-              <div class="bubble-time">عرض خاص</div>
-            </div>
-          </div>
-          <button class="bubble-close-btn" @click="closeNewYearMessage">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+    <!-- المحتوى الرئيسي -->
+    <template v-if="!loading && !error">
+      <!-- كود الدعوة -->
+      <div class="invite-section">
+        <h2>🔗 كود الدعوة الخاص بك</h2>
+        
+        <div class="ref-box">
+          <label>كود الإحالة:</label>
+          <div class="ref-code">{{ referralCode || "غير متوفر" }}</div>
+          <button @click="copyText(referralCode)" class="gold-btn">
+            <i class="fas fa-copy"></i> نسخ
           </button>
         </div>
-        
-        <div class="bubble-chat-body">
-          <div class="bubble-message bubble-received">
-            <div class="bubble-tail"></div>
-            <div class="bubble-content">
-              <strong>🎉✨ عرض رأس السنة الجديد – فرصة ذهبية! ✨🎉</strong>
-              <br><br>
-              بمناسبة حلول رأس السنة الجديدة، يسرّ Mall of the World أن يقدّم لكم عرضًا خاصًا ومحدودًا 🎁
-              <br><br>
-              <strong>🔔 تفاصيل العرض:</strong><br>
-              قم بدعوة 10 أشخاص جدد للتسجيل في المنصة، ويجب على كل شخص منهم القيام بشحن رصيد بقيمة 100 دولار.
-              <br><br>
-              <strong>🎁 المكافأة:</strong><br>
-              عند استيفاء الشروط كاملة، ستحصل مباشرة على جائزة نقدية بقيمة 100 دولار 💰
-              <br><br>
-              <strong>📌 الشروط:</strong><br>
-              • الدعوات يجب أن تكون عن طريق رابط الإحالة الخاص بك<br>
-              • كل مستخدم مدعو يجب أن يشحن 100 دولار على الأقل<br>
-              • العرض ساري لفترة محدودة بمناسبة رأس السنة
-              <br><br>
-              <strong>🚀 لا تفوّت الفرصة، ابدأ بدعوة أصدقائك الآن واحتفل بالعام الجديد مع أرباح حقيقية!</strong>
-              <br><br>
-              <em>🎆 Mall of the World يتمنى لكم سنة جديدة مليئة بالنجاح والربح 🎆</em>
-            </div>
-            <div class="bubble-time">12:00</div>
-          </div>
+
+        <div class="ref-box">
+          <label>رابط الدعوة:</label>
+          <div class="ref-code">{{ inviteLink || "غير متوفر" }}</div>
+          <button @click="copyText(inviteLink)" class="gold-btn">
+            <i class="fas fa-copy"></i> نسخ
+          </button>
         </div>
-        
-        <div class="bubble-chat-footer">
-          <button class="bubble-action-btn" @click="closeNewYearMessage">
-            فهمت وشكرًا! 🎯
+
+        <div class="share-buttons">
+          <button @click="shareViaWhatsApp" class="share-btn whatsapp">
+            <i class="fab fa-whatsapp"></i> واتساب
+          </button>
+          <button @click="shareViaTelegram" class="share-btn telegram">
+            <i class="fab fa-telegram"></i> تليجرام
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- زر الدعم -->
-    <a class="circle-btn support-btn"
-       href="https://t.me/mall_oftheworld"
-       target="_blank">
-      <i class="fas fa-headset"></i>
-    </a>
-
-    <!-- زر انستغرام -->
-    <a class="circle-btn instagram-btn"
-       href="https://www.instagram.com/mall_oftheworld?igsh=OXR1emp3N2k2d2Yz"
-       target="_blank">
-      <i class="fab fa-instagram"></i>
-    </a>
-
-    <!-- قائمة اللغات -->
-    <transition name="fade">
-      <div v-if="showLangMenu" class="lang-menu">
-        <div class="lang-menu-header">
-          <i class="fas fa-language"></i>
-          <span>اختر اللغة</span>
-        </div>
-        <div 
-          class="lang-item" 
-          v-for="l in languages" 
-          :key="l.code"
-          @click="setLanguage(l)"
-          :class="{ active: currentLang === l.code }"
-        >
-          <span class="lang-name">{{ l.name }}</span>
-          <span class="lang-code-small">{{ l.code }}</span>
-        </div>
-      </div>
-    </transition>
-
-    <!-- الصفحات -->
-    <router-view />
-
-    <!-- ⭐ شريط التنقل بدون وميض ⭐ -->
-    <BottomNav v-if="authLoaded && showBottomNav" />
-
-    <!-- إعلان Popup فاخر -->
-    <transition name="fade">
-      <div id="companyAd" class="ad-overlay" v-if="showAd" @click.self="closeAd">
-        <div class="ad-box">
-          <div class="ad-header">
-            <h2>
-              <i class="fas fa-crown"></i>
-              إعلان الشركة
-              <i class="fas fa-crown"></i>
-            </h2>
-            <button class="ad-close-btn" @click="closeAd">
-              <i class="fas fa-times"></i>
-            </button>
+      <!-- إحصائيات الفريق -->
+      <div class="team-stats-box">
+        <h2>📊 إحصائيات الفريق</h2>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-icon">💰</div>
+            <div class="stat-title">إجمالي الشحن</div>
+            <div class="stat-value">{{ teamStats.recharge }} USDT</div>
           </div>
 
-          <div class="ad-content">
-            <div class="ad-welcome">
-              <i class="fas fa-bell"></i>
-              <span>🎉 عرض خاص بمناسبة رأس السنة 🎉</span>
-            </div>
-            
-            <p>
-              🎉🎉🎉🎉 مرحبا بالجميع! تأسست Mall of the world في سنغافورة في 20 أغسطس 2021 ومقرها حاليًا في منطقة الأعمال المركزية في سنغافورة. نحن شركة استثمار في التجارة الإلكترونية مع فريق تقني قوي وقوة مالية قوية.
-            </p>
-            
-            <div class="ad-highlight">
-              <i class="fas fa-handshake"></i>
-              <span>شراكات عالمية مع Amazon, eBay, TikTok, Aliexpress, Alibaba, Shopee</span>
-            </div>
+          <div class="stat-item">
+            <div class="stat-icon">💸</div>
+            <div class="stat-title">إجمالي السحب</div>
+            <div class="stat-value">{{ teamStats.withdraw }} USDT</div>
+          </div>
 
-            <div class="ad-stats">
-              <div class="stat-item">
+          <div class="stat-item">
+            <div class="stat-icon">👥</div>
+            <div class="stat-title">حجم الفريق</div>
+            <div class="stat-value">{{ teamStats.totalMembers }}</div>
+          </div>
+
+          <div class="stat-item">
+            <div class="stat-icon">🆕</div>
+            <div class="stat-title">أعضاء جدد</div>
+            <div class="stat-value">{{ teamStats.newMembers }}</div>
+          </div>
+
+          <div class="stat-item">
+            <div class="stat-icon">💳</div>
+            <div class="stat-title">أول شحن</div>
+            <div class="stat-value">{{ teamStats.firstRecharge }}</div>
+          </div>
+
+          <div class="stat-item">
+            <div class="stat-icon">🏧</div>
+            <div class="stat-title">أول سحب</div>
+            <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- المستويات -->
+      <div class="levels-container">
+        <h2>📈 مستويات العمولة</h2>
+        
+        <div class="level-cards">
+          <div class="level-card level1">
+            <div class="level-header">
+              <span class="level-badge">المستوى الأول</span>
+              <span class="commission-rate">6%</span>
+            </div>
+            <div class="level-body">
+              <div class="level-count">
+                <i class="fas fa-users"></i>
+                <span>{{ stats.l1.count }} عضو</span>
+              </div>
+              <div class="level-earnings">
                 <i class="fas fa-coins"></i>
-                <span>الحد الأدنى للشحن: 12 USDT</span>
-              </div>
-              <div class="stat-item">
-                <i class="fas fa-hand-holding-usd"></i>
-                <span>الحد الأدنى للسحب: 3 USDT</span>
-              </div>
-            </div>
-
-            <div class="vip-table">
-              <h3>💎 خطط VIP</h3>
-              <div class="vip-row" v-for="vip in vipPlans" :key="vip.level">
-                <span class="vip-level">VIP {{ vip.level }}</span>
-                <span class="vip-recharge">شحن {{ vip.recharge }} USDT</span>
-                <span class="vip-daily">ربح {{ vip.daily }} USDT/يوم</span>
-              </div>
-            </div>
-
-            <div class="commission-box">
-              <h4>🤝 نظام العمولات</h4>
-              <div class="commission-row">
-                <span>المستوى 1: 6%</span>
-                <span>المستوى 2: 2%</span>
-                <span>المستوى 3: 1%</span>
+                <span>{{ stats.l1.earnings.toFixed(2) }} USDT</span>
               </div>
             </div>
           </div>
 
-          <button class="ad-btn" @click="closeAd">
-            <i class="fas fa-check-circle"></i>
-            فهمت وشكراً!
-          </button>
+          <div class="level-card level2">
+            <div class="level-header">
+              <span class="level-badge">المستوى الثاني</span>
+              <span class="commission-rate">2%</span>
+            </div>
+            <div class="level-body">
+              <div class="level-count">
+                <i class="fas fa-users"></i>
+                <span>{{ stats.l2.count }} عضو</span>
+              </div>
+              <div class="level-earnings">
+                <i class="fas fa-coins"></i>
+                <span>{{ stats.l2.earnings.toFixed(2) }} USDT</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="level-card level3">
+            <div class="level-header">
+              <span class="level-badge">المستوى الثالث</span>
+              <span class="commission-rate">1%</span>
+            </div>
+            <div class="level-body">
+              <div class="level-count">
+                <i class="fas fa-users"></i>
+                <span>{{ stats.l3.count }} عضو</span>
+              </div>
+              <div class="level-earnings">
+                <i class="fas fa-coins"></i>
+                <span>{{ stats.l3.earnings.toFixed(2) }} USDT</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </transition>
+
+      <!-- معلومات إضافية -->
+      <div class="info-box">
+        <i class="fas fa-info-circle"></i>
+        <p>يتم تحديث الإحصائيات تلقائياً. العمولات تُحتسب من شحنات الأعضاء المعتمدة فقط.</p>
+      </div>
+
+      <button class="btn-back" @click="$router.push('/home')">
+        <i class="fas fa-arrow-right"></i> عودة للرئيسية
+      </button>
+    </template>
   </div>
 </template>
 
 <script>
-import BottomNav from "./components/BottomNav.vue";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "../firebase";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default {
-  components: { BottomNav },
+  name: "Team",
 
   data() {
     return {
-      authLoaded: false,
-      user: null,
+      referralCode: "",
+      inviteLink: "",
+      loading: true,
+      error: null,
 
-      showLangMenu: false,
-      currentLang: "AR",
+      userIdFieldInLogs: "userId",
+      txIdFieldInLogs: "txid",
 
-      showAd: false,
-      showNewYearMessage: false,
+      teamStats: {
+        withdraw: "0.00",
+        recharge: "0.00",
+        totalMembers: 0,
+        newMembers: 0,
+        firstRecharge: 0,
+        firstWithdraw: 0,
+      },
 
-      vipPlans: [
-        { level: 1, recharge: '12', daily: '3' },
-        { level: 2, recharge: '52', daily: '13' },
-        { level: 3, recharge: '100', daily: '26' },
-        { level: 4, recharge: '300', daily: '82' },
-        { level: 5, recharge: '500', daily: '145' },
-        { level: 6, recharge: '1500', daily: '479' },
-        { level: 7, recharge: '3000', daily: '1078' },
-        { level: 8, recharge: '5000', daily: '2000' },
-        { level: 9, recharge: '10000', daily: '4546' },
-        { level: 10, recharge: '30000', daily: '17699' },
-        { level: 11, recharge: '90000', daily: '81818' }
-      ],
-
-      languages: [
-        { name: "Polski", code: "PL" },
-        { name: "English", code: "EN" },
-        { name: "Français", code: "FR" },
-        { name: "Italiano", code: "IT" },
-        { name: "日本語", code: "JP" },
-        { name: "한국인", code: "KR" },
-        { name: "Deutsch", code: "DE" },
-        { name: "Русский", code: "RU" },
-        { name: "Tiếng Việt", code: "VI" },
-        { name: "Português", code: "PT" },
-        { name: "Türkçe", code: "TR" },
-        { name: "Español", code: "ES" },
-        { name: "فارسی", code: "FA" },
-        { name: "العربي", code: "AR" }
-      ]
+      stats: {
+        l1: { count: 0, earnings: 0 },
+        l2: { count: 0, earnings: 0 },
+        l3: { count: 0, earnings: 0 },
+      },
     };
   },
 
   created() {
-    const auth = getAuth();
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        this.loading = false;
+        this.$router.push("/login");
+        return;
+      }
 
-    const saved = localStorage.getItem("app_language");
-    if (saved) this.currentLang = saved;
+      try {
+        const uid = user.uid;
+        const udoc = await getDoc(doc(db, "users", uid));
+        if (udoc.exists()) {
+          const data = udoc.data();
+          this.referralCode = data.referralCode || uid.substring(0, 6);
+          this.inviteLink = `${window.location.origin}/register?ref=${this.referralCode}`;
+        } else {
+          this.referralCode = uid.substring(0, 6);
+          this.inviteLink = `${window.location.origin}/register?ref=${this.referralCode}`;
+        }
 
-    onAuthStateChanged(auth, (u) => {
-      this.user = u;
-      this.authLoaded = true;
-      
-      if (this.user) {
-        // إظهار الإعلان بعد تسجيل الدخول مع تأخير بسيط
-        setTimeout(() => {
-          this.showAd = true;
-        }, 1000);
+        await this.loadTeamLevels(uid);
+        await this.loadTeamStats(uid);
+      } catch (err) {
+        console.error("Team load error:", err);
+        this.error = err.message || String(err);
+      } finally {
+        this.loading = false;
       }
     });
   },
 
-  computed: {
-    showBottomNav() {
-      if (!this.user) return false;
-
-      const path = this.$route.path;
-      const hidden = ["/login", "/register", "/admin", "/403"];
-
-      return !hidden.some((r) => path.startsWith(r));
-    }
-  },
-
   methods: {
-    toggleLanguageMenu() {
-      this.showLangMenu = !this.showLangMenu;
+    copyText(text) {
+      if (!text) {
+        alert("لا يوجد شيء للنسخ");
+        return;
+      }
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          alert("تم النسخ بنجاح!");
+        })
+        .catch(() => alert("فشل النسخ — انسخ يدويًا"));
     },
 
-    setLanguage(lang) {
-      this.currentLang = lang.code;
-      localStorage.setItem("app_language", lang.code);
-      this.showLangMenu = false;
-      
-      // تغيير اتجاه الصفحة
-      document.documentElement.dir = lang.code === 'AR' ? 'rtl' : 'ltr';
+    shareViaWhatsApp() {
+      const message = `انضم إليّ عبر هذا الرابط: ${this.inviteLink}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     },
 
-    closeAd() {
-      this.showAd = false;
+    shareViaTelegram() {
+      const message = `انضم إليّ عبر هذا الرابط: ${this.inviteLink}`;
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(this.inviteLink)}&text=${encodeURIComponent(message)}`, '_blank');
     },
 
-    toggleNewYearMessage() {
-      this.showNewYearMessage = !this.showNewYearMessage;
+    chunkArray(arr, size = 10) {
+      const res = [];
+      for (let i = 0; i < arr.length; i += size) {
+        res.push(arr.slice(i, i + size));
+      }
+      return res;
     },
 
-    closeNewYearMessage() {
-      this.showNewYearMessage = false;
-    }
-  }
+    async loadTeamLevels(uid) {
+      try {
+        const usersRef = collection(db, "users");
+
+        // L1
+        const q1 = query(usersRef, where("invitedBy", "==", uid));
+        const s1 = await getDocs(q1);
+        const level1Ids = s1.docs.map((d) => d.id);
+        this.stats.l1.count = level1Ids.length;
+
+        // L2
+        let level2Ids = [];
+        if (level1Ids.length) {
+          const chunks = this.chunkArray(level1Ids, 10);
+          for (const ch of chunks) {
+            const q2 = query(usersRef, where("invitedBy", "in", ch));
+            const s2 = await getDocs(q2);
+            level2Ids = level2Ids.concat(s2.docs.map((d) => d.id));
+          }
+        }
+        this.stats.l2.count = level2Ids.length;
+
+        // L3
+        let level3Ids = [];
+        if (level2Ids.length) {
+          const chunks2 = this.chunkArray(level2Ids, 10);
+          for (const ch of chunks2) {
+            const q3 = query(usersRef, where("invitedBy", "in", ch));
+            const s3 = await getDocs(q3);
+            level3Ids = level3Ids.concat(s3.docs.map((d) => d.id));
+          }
+        }
+        this.stats.l3.count = level3Ids.length;
+
+        const allIds = [...level1Ids, ...level2Ids, ...level3Ids];
+        const uniqueIds = Array.from(new Set(allIds));
+        this.teamStats.totalMembers = uniqueIds.length;
+        this.teamStats.newMembers = level1Ids.length;
+
+        await this.loadReferralRewards(uid);
+      } catch (err) {
+        console.error("loadTeamLevels error:", err);
+        throw err;
+      }
+    },
+
+    async loadReferralRewards(uid) {
+      try {
+        const rewardsRef = collection(db, "referral_rewards");
+        const calc = async (level) => {
+          const q = query(rewardsRef, where("receiver", "==", uid), where("level", "==", level));
+          const s = await getDocs(q);
+          return s.docs.reduce((sum, d) => sum + Number(d.data().amount || 0), 0);
+        };
+
+        this.stats.l1.earnings = await calc(1);
+        this.stats.l2.earnings = await calc(2);
+        this.stats.l3.earnings = await calc(3);
+      } catch (err) {
+        console.warn("loadReferralRewards warning:", err);
+        this.stats.l1.earnings = 0;
+        this.stats.l2.earnings = 0;
+        this.stats.l3.earnings = 0;
+      }
+    },
+
+    async loadTeamStats(uid) {
+      try {
+        const usersRef = collection(db, "users");
+
+        const q1 = query(usersRef, where("invitedBy", "==", uid));
+        const s1 = await getDocs(q1);
+        const level1Members = s1.docs.map((d) => d.id);
+
+        let level2Members = [];
+        if (level1Members.length) {
+          for (const ch of this.chunkArray(level1Members, 10)) {
+            const q2 = query(usersRef, where("invitedBy", "in", ch));
+            const s2 = await getDocs(q2);
+            level2Members = level2Members.concat(s2.docs.map((d) => d.id));
+          }
+        }
+
+        let level3Members = [];
+        if (level2Members.length) {
+          for (const ch of this.chunkArray(level2Members, 10)) {
+            const q3 = query(usersRef, where("invitedBy", "in", ch));
+            const s3 = await getDocs(q3);
+            level3Members = level3Members.concat(s3.docs.map((d) => d.id));
+          }
+        }
+
+        const all = [...level1Members, ...level2Members, ...level3Members];
+        const membersUnique = Array.from(new Set(all));
+
+        let withdrawSum = 0;
+        let rechargeSum = 0;
+        let firstWithdrawCount = 0;
+        let firstRechargeCount = 0;
+
+        const seenRechargeTx = new Set();
+        const seenWithdrawTx = new Set();
+
+        const uidField = this.userIdFieldInLogs;
+        const txField = this.txIdFieldInLogs;
+
+        for (const memberId of membersUnique) {
+          // withdraw_logs
+          const withdrawQ = query(collection(db, "withdraw_logs"), where(uidField, "==", memberId));
+          const wSnap = await getDocs(withdrawQ);
+
+          let memberHadWithdraw = false;
+          wSnap.forEach((d) => {
+            const data = d.data() || {};
+            if (data.type && String(data.type).toLowerCase() !== "approved") return;
+            if (data.status && String(data.status).toLowerCase() !== "approved") return;
+
+            const key = (data[txField] && String(data[txField])) || d.id;
+            if (seenWithdrawTx.has(key)) return;
+            seenWithdrawTx.add(key);
+
+            const amt = Number(data.amount || 0);
+            if (!isNaN(amt) && amt !== 0) {
+              withdrawSum += amt;
+              memberHadWithdraw = true;
+            }
+          });
+          if (memberHadWithdraw) firstWithdrawCount++;
+
+          // recharge_logs
+          const rechargeQ = query(collection(db, "recharge_logs"), where(uidField, "==", memberId));
+          const rSnap = await getDocs(rechargeQ);
+
+          let memberHadRecharge = false;
+          rSnap.forEach((d) => {
+            const data = d.data() || {};
+            if (data.type && String(data.type).toLowerCase() !== "approved") return;
+            if (data.status && String(data.status).toLowerCase() !== "approved") return;
+
+            const key = (data[txField] && String(data[txField])) || d.id;
+            if (seenRechargeTx.has(key)) return;
+            seenRechargeTx.add(key);
+
+            const amt = Number(data.amount || 0);
+            if (!isNaN(amt) && amt !== 0) {
+              rechargeSum += amt;
+              memberHadRecharge = true;
+            }
+          });
+          if (memberHadRecharge) firstRechargeCount++;
+        }
+
+        this.teamStats.withdraw = parseFloat(withdrawSum || 0).toFixed(2);
+        this.teamStats.recharge = parseFloat(rechargeSum || 0).toFixed(2);
+        this.teamStats.firstWithdraw = firstWithdrawCount;
+        this.teamStats.firstRecharge = firstRechargeCount;
+        this.teamStats.totalMembers = membersUnique.length;
+      } catch (err) {
+        console.error("loadTeamStats error:", err);
+        this.error = err.message || String(err);
+      }
+    },
+  },
 };
 </script>
 
-<style>
-/* استيراد خطوط وأيقونات */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
-
-* {
-  margin: 0;
-  padding: 0;
+<style scoped>
+/* الخلفية الرئيسية - أسود فاخر */
+.team-page {
+  direction: rtl;
+  min-height: 100vh;
+  background: #0A0C10;
+  padding: 20px;
+  color: #ffffff;
+  font-family: 'Cairo', sans-serif;
+  padding-bottom: 100px; /* مساحة للشريط السفلي */
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
   box-sizing: border-box;
 }
 
-body {
-  font-family: 'Cairo', sans-serif;
-  background: #0A0C10;
-  color: #ffffff;
-  overflow-x: hidden;
-}
-
-#app {
-  min-height: 100vh;
-  position: relative;
-}
-
-/* اتجاه الصفحة */
-#app.rtl {
-  direction: rtl;
-}
-
-/* ===== الأزرار العائمة ===== */
-.circle-btn {
-  position: fixed;
-  bottom: 80px;
-  width: 45px;
-  height: 45px;
-  background: #11151C;
-  border: 2px solid #D4AF37;
-  border-radius: 50%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+/* العناوين الرئيسية */
+h2 {
   color: #D4AF37;
-  font-size: 20px;
-  cursor: pointer;
-  z-index: 9999;
-  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
-  transition: all 0.3s ease;
-  text-decoration: none;
-}
-
-.circle-btn:hover {
-  transform: translateY(-5px) scale(1.1);
-  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
-  background: #D4AF37;
-  color: #0A0C10;
-}
-
-.lang-code {
-  font-size: 10px;
-  font-weight: 700;
-  margin-top: -5px;
-  background: #D4AF37;
-  color: #0A0C10;
-  padding: 2px 4px;
-  border-radius: 4px;
-}
-
-.lang-btn:hover .lang-code {
-  background: #0A0C10;
-  color: #D4AF37;
-}
-
-/* مواقع الأزرار */
-.lang-btn {
-  right: 15px;
-  background: linear-gradient(135deg, #11151C, #1A1F2A);
-}
-
-.support-btn {
-  right: 70px;
-}
-
-.instagram-btn {
-  right: 125px;
-}
-
-.instagram-btn i {
   font-size: 22px;
-  color: #D4AF37;
-}
-
-.instagram-btn:hover i {
-  color: #0A0C10;
-}
-
-/* ===== زر بابلوين (سانتا) ===== */
-.bubble-chat-btn {
-  position: fixed;
-  right: 180px;
-  bottom: 80px;
-  width: 45px;
-  height: 45px;
-  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  z-index: 9999;
-  box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
-  transition: all 0.3s ease;
-  border: 2px solid #ffffff;
-}
-
-.bubble-chat-btn:hover {
-  transform: translateY(-5px) scale(1.1);
-  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.5);
-}
-
-.bubble-chat-icon {
-  font-size: 24px;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.2));
-}
-
-.bubble-notification {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: #22c55e;
-  color: white;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: pulse 2s infinite;
-  border: 2px solid #0A0C10;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
-
-/* ===== نافذة بابلوين ===== */
-.bubble-chat-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(10, 12, 16, 0.8);
-  backdrop-filter: blur(5px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-}
-
-.bubble-chat-window {
-  width: 90%;
-  max-width: 450px;
-  background: #11151C;
-  border-radius: 30px;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 2px #D4AF37;
-  animation: bubbleSlide 0.3s ease;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-}
-
-@keyframes bubbleSlide {
-  from {
-    transform: translateY(30px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.bubble-chat-header {
-  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #0A0C10;
-}
-
-.bubble-chat-title {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.bubble-avatar {
-  width: 50px;
-  height: 50px;
-  background: #0A0C10;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  color: #D4AF37;
-  border: 2px solid #D4AF37;
-}
-
-.bubble-sender {
-  font-weight: 800;
-  font-size: 18px;
-}
-
-.bubble-time {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.bubble-close-btn {
-  background: rgba(10, 12, 16, 0.2);
-  border: none;
-  color: #0A0C10;
-  cursor: pointer;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.bubble-close-btn:hover {
-  background: rgba(10, 12, 16, 0.4);
-  transform: rotate(90deg);
-}
-
-.bubble-chat-body {
-  padding: 25px;
-  max-height: 500px;
-  overflow-y: auto;
-  background: #1A1F2A;
-}
-
-.bubble-message {
-  position: relative;
   margin-bottom: 20px;
+  text-align: center;
+  position: relative;
+  padding-bottom: 10px;
 }
 
-.bubble-received {
-  text-align: right;
-}
-
-.bubble-tail {
+h2::after {
+  content: '';
   position: absolute;
-  bottom: -8px;
-  right: 10px;
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid #2A2F3A;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #D4AF37, #F6E27A, #D4AF37, transparent);
+  border-radius: 3px;
 }
 
-.bubble-content {
-  background: #2A2F3A;
-  padding: 15px 20px;
-  border-radius: 18px;
-  border-top-right-radius: 4px;
-  display: inline-block;
-  max-width: 100%;
-  text-align: right;
-  line-height: 1.6;
-  font-size: 14px;
-  color: #ffffff;
+/* ===== قسم الدعوة ===== */
+.invite-section {
+  background: #11151C;
+  border-radius: 24px;
+  padding: 25px 20px;
+  margin-bottom: 25px;
   border: 1px solid rgba(212, 175, 55, 0.2);
-}
-
-.bubble-message .bubble-time {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-  margin-top: 5px;
-  text-align: right;
-}
-
-.bubble-chat-footer {
-  padding: 20px;
-  background: #11151C;
-  border-top: 1px solid rgba(212, 175, 55, 0.2);
-}
-
-.bubble-action-btn {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   width: 100%;
-  padding: 15px;
-  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  color: #0A0C10;
-  border: none;
-  border-radius: 50px;
-  font-weight: 800;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+  box-sizing: border-box;
 }
 
-.bubble-action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
-}
-
-/* ===== قائمة اللغات ===== */
-.lang-menu {
-  position: fixed;
-  bottom: 140px;
-  right: 15px;
-  width: 220px;
-  background: #11151C;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 2px #D4AF37;
-  z-index: 9999;
-  overflow: hidden;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-}
-
-.lang-menu-header {
-  padding: 15px;
-  background: linear-gradient(135deg, #D4AF37, #F6E27A);
-  color: #0A0C10;
-  font-weight: 700;
+.ref-box {
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  margin: 15px 0;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
-.lang-menu-header i {
-  font-size: 18px;
-}
-
-.lang-item {
-  padding: 12px 15px;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #ffffff;
-  transition: all 0.2s;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-}
-
-.lang-item:last-child {
-  border-bottom: none;
-}
-
-.lang-item:hover {
-  background: #1A1F2A;
+.ref-box label {
   color: #D4AF37;
-}
-
-.lang-item.active {
-  background: rgba(212, 175, 55, 0.2);
-  color: #D4AF37;
-}
-
-.lang-name {
+  font-weight: 600;
+  min-width: 100px;
   font-size: 14px;
 }
 
-.lang-code-small {
-  font-size: 12px;
-  padding: 3px 8px;
-  background: rgba(212, 175, 55, 0.2);
-  border-radius: 20px;
-  color: #D4AF37;
+.ref-code {
+  flex: 1;
+  background: #1A1F2A;
+  padding: 12px 15px;
+  border-radius: 12px;
+  color: #ffffff;
+  font-family: monospace;
+  font-size: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  word-break: break-all;
+  min-width: 150px;
 }
 
-/* ===== إعلان Popup فاخر ===== */
-.ad-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(10, 12, 16, 0.95);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10001;
-}
-
-.ad-box {
-  background: #11151C;
-  width: 90%;
-  max-width: 500px;
-  border-radius: 30px;
-  overflow: hidden;
-  border: 2px solid #D4AF37;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(212, 175, 55, 0.3);
-}
-
-.ad-header {
+.gold-btn {
   background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #0A0C10;
-}
-
-.ad-header h2 {
-  margin: 0;
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ad-header i {
-  font-size: 24px;
-}
-
-.ad-close-btn {
-  background: rgba(10, 12, 16, 0.2);
   border: none;
   color: #0A0C10;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+}
+
+.gold-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+.share-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+  justify-content: center;
+  width: 100%;
+}
+
+.share-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 18px;
+  gap: 8px;
+  transition: all 0.3s ease;
 }
 
-.ad-close-btn:hover {
-  background: rgba(10, 12, 16, 0.4);
-  transform: rotate(90deg);
+.share-btn.whatsapp {
+  background: #25D366;
+  color: white;
 }
 
-.ad-content {
-  padding: 25px;
-  max-height: 60vh;
-  overflow-y: auto;
-  color: #ffffff;
-  scrollbar-width: thin;
-  scrollbar-color: #D4AF37 #1A1F2A;
+.share-btn.telegram {
+  background: #0088cc;
+  color: white;
 }
 
-.ad-content::-webkit-scrollbar {
-  width: 6px;
+.share-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
 }
 
-.ad-content::-webkit-scrollbar-track {
-  background: #1A1F2A;
+/* ===== إحصائيات الفريق ===== */
+.team-stats-box {
+  background: #11151C;
+  border-radius: 24px;
+  padding: 25px 20px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.ad-content::-webkit-scrollbar-thumb {
-  background: #D4AF37;
-  border-radius: 10px;
-}
-
-.ad-welcome {
-  background: rgba(212, 175, 55, 0.1);
-  padding: 15px;
-  border-radius: 16px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-right: 4px solid #D4AF37;
-}
-
-.ad-welcome i {
-  color: #D4AF37;
-  font-size: 20px;
-}
-
-.ad-highlight {
-  background: #1A1F2A;
-  padding: 15px;
-  border-radius: 16px;
-  margin: 15px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-}
-
-.ad-stats {
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin: 15px 0;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  width: 100%;
 }
 
 .stat-item {
   background: #1A1F2A;
-  padding: 10px;
-  border-radius: 12px;
+  padding: 15px 10px;
+  border-radius: 16px;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-item:hover {
+  border-color: #D4AF37;
+  transform: translateY(-3px);
+}
+
+.stat-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.stat-title {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  margin-bottom: 5px;
+  white-space: nowrap;
+}
+
+.stat-value {
+  color: #D4AF37;
+  font-size: 16px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+/* ===== المستويات ===== */
+.levels-container {
+  background: #11151C;
+  border-radius: 24px;
+  padding: 25px 20px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.level-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  width: 100%;
+}
+
+.level-card {
+  background: #1A1F2A;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.level-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.2);
+}
+
+.level-header {
+  background: linear-gradient(135deg, #D4AF37, #C5A028);
+  padding: 12px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #0A0C10;
+}
+
+.level-badge {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.commission-rate {
+  background: rgba(10, 12, 16, 0.2);
+  padding: 4px 6px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.level-body {
+  padding: 15px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.level-count, .level-earnings {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: #ffffff;
   font-size: 13px;
 }
 
-.stat-item i {
+.level-count i, .level-earnings i {
   color: #D4AF37;
+  width: 18px;
+  font-size: 14px;
 }
 
-.vip-table {
-  background: #1A1F2A;
-  border-radius: 16px;
+.level1 .level-header { background: linear-gradient(135deg, #D4AF37, #F6E27A); }
+.level2 .level-header { background: linear-gradient(135deg, #C5A028, #D4AF37); }
+.level3 .level-header { background: linear-gradient(135deg, #B8962E, #C5A028); }
+
+/* ===== صندوق المعلومات ===== */
+.info-box {
+  background: rgba(212, 175, 55, 0.1);
+  border-right: 4px solid #D4AF37;
   padding: 15px;
-  margin: 20px 0;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-}
-
-.vip-table h3 {
-  color: #D4AF37;
-  text-align: center;
-  margin-bottom: 15px;
-}
-
-.vip-row {
+  border-radius: 12px;
+  margin-bottom: 20px;
   display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-  font-size: 13px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.vip-level {
+.info-box i {
   color: #D4AF37;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.info-box p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ===== زر العودة ===== */
+.btn-back {
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: 2px solid #D4AF37;
+  color: #D4AF37;
+  border-radius: 16px;
+  font-size: 18px;
   font-weight: 700;
-}
-
-.vip-recharge {
-  color: #F6E27A;
-}
-
-.vip-daily {
-  color: #ffffff;
-}
-
-.commission-box {
-  background: linear-gradient(135deg, #1A1F2A, #11151C);
-  border-radius: 16px;
-  padding: 15px;
-  text-align: center;
-}
-
-.commission-box h4 {
-  color: #D4AF37;
-  margin-bottom: 10px;
-}
-
-.commission-row {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  color: #ffffff;
-}
-
-.ad-btn {
-  width: calc(100% - 40px);
-  margin: 0 20px 25px 20px;
-  padding: 15px;
-  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  color: #0A0C10;
-  border: none;
-  border-radius: 50px;
-  font-weight: 800;
-  font-size: 16px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: 0 5px 20px rgba(212, 175, 55, 0.3);
+  margin-top: 10px;
+  box-sizing: border-box;
 }
 
-.ad-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+.btn-back:hover {
+  background: #D4AF37;
+  color: #0A0C10;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
 }
 
-/* حركات */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
+/* ===== حالات التحميل والخطأ ===== */
+.loading-box, .error-box {
+  background: #11151C;
+  border-radius: 24px;
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  max-width: 400px;
+  margin: 50px auto;
+  width: 90%;
 }
 
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
+.gold-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(212, 175, 55, 0.1);
+  border-top: 4px solid #D4AF37;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  animation: spin 1s linear infinite;
 }
 
-/* تكييفات للهواتف */
-@media (max-width: 768px) {
-  .circle-btn,
-  .bubble-chat-btn {
-    bottom: 70px;
-    width: 40px;
-    height: 40px;
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-box i {
+  font-size: 48px;
+  color: #ff6b6b;
+  margin-bottom: 15px;
+}
+
+.error-box strong {
+  color: #ff6b6b;
+  display: block;
+  margin: 10px 0;
+}
+
+.retry-btn {
+  background: #D4AF37;
+  border: none;
+  color: #0A0C10;
+  padding: 12px 30px;
+  border-radius: 12px;
+  font-weight: 700;
+  margin-top: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #F6E27A;
+  transform: translateY(-2px);
+}
+
+/* ===== تحسينات للجوال ===== */
+@media (max-width: 600px) {
+  .team-page {
+    padding: 12px;
+    padding-bottom: 90px;
+  }
+
+  .ref-box {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .ref-box label {
+    min-width: auto;
+    margin-bottom: 5px;
+  }
+
+  .ref-code {
+    width: 100%;
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  .gold-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-item {
+    padding: 12px 8px;
+  }
+
+  .stat-icon {
+    font-size: 24px;
+  }
+
+  .stat-title {
+    font-size: 11px;
+  }
+
+  .stat-value {
+    font-size: 14px;
+  }
+
+  .level-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .level-card {
+    width: 100%;
+  }
+
+  .level-header {
+    padding: 10px;
+  }
+
+  .level-badge {
+    font-size: 13px;
+  }
+
+  .commission-rate {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .level-body {
+    padding: 12px;
+    flex-direction: row;
+    justify-content: space-around;
+  }
+
+  .level-count, .level-earnings {
+    font-size: 14px;
+  }
+
+  .share-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .share-btn {
+    width: 100%;
+  }
+
+  .info-box {
+    padding: 12px;
+  }
+
+  .info-box i {
     font-size: 18px;
   }
-  
-  .lang-btn { right: 10px; }
-  .support-btn { right: 60px; }
-  .instagram-btn { right: 110px; }
-  .bubble-chat-btn { right: 160px; }
-  
-  .lang-menu {
-    bottom: 130px;
-    right: 10px;
-    width: 200px;
+
+  .info-box p {
+    font-size: 12px;
   }
-  
-  .bubble-chat-window {
-    width: 95%;
-  }
-  
-  .ad-box {
-    width: 95%;
+
+  .btn-back {
+    padding: 14px;
+    font-size: 16px;
   }
 }
 
-@media (max-width: 480px) {
-  .lang-btn { right: 5px; }
-  .support-btn { right: 50px; }
-  .instagram-btn { right: 95px; }
-  .bubble-chat-btn { right: 140px; }
-  
-  .circle-btn,
-  .bubble-chat-btn {
-    width: 38px;
-    height: 38px;
-    font-size: 16px;
+@media (max-width: 350px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .bubble-chat-icon {
-    font-size: 20px;
+
+  .stat-item {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: right;
+    padding: 10px 15px;
+  }
+
+  .stat-icon {
+    margin-bottom: 0;
+    margin-left: 10px;
+  }
+
+  .stat-title, .stat-value {
+    display: inline-block;
   }
 }
 </style>
