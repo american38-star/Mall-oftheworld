@@ -24,51 +24,53 @@
         <div class="ref-code">{{ inviteLink || "غير متوفر" }}</div>
         <button @click="copyText(inviteLink)">نسخ</button>
       </div>
+
+      <!-- أزرار المشاركة - واتساب وتليجرام -->
+      <div class="share-buttons">
+        <button class="share-btn whatsapp" @click="shareViaWhatsApp">
+          <i class="fab fa-whatsapp"></i>
+          مشاركة عبر واتساب
+        </button>
+        <button class="share-btn telegram" @click="shareViaTelegram">
+          <i class="fab fa-telegram"></i>
+          مشاركة عبر تليجرام
+        </button>
+      </div>
     </div>
 
-    <!-- إحصائيات الفريق - مربعات مصغرة -->
+    <!-- إحصائيات الفريق -->
     <div class="team-stats-box" v-if="!loading && !error">
-      <h2>📊 إحصائيات الفريق</h2>
-      
-      <!-- الصف الأول -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-icon">💰</div>
-          <div class="stat-value">{{ teamStats.recharge }} USDT</div>
-          <div class="stat-label">إجمالي الشحن</div>
+      <div class="stat-row">
+        <div class="stat-item">
+          <div class="stat-title">انسحاب الفريق</div>
+          <div class="stat-value">${{ teamStats.withdraw }}</div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">💸</div>
-          <div class="stat-value">{{ teamStats.withdraw }} USDT</div>
-          <div class="stat-label">إجمالي السحب</div>
+        <div class="stat-item">
+          <div class="stat-title">إعادة شحن الفريق</div>
+          <div class="stat-value">${{ teamStats.recharge }}</div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">👥</div>
+        <div class="stat-item">
+          <div class="stat-title">حجم الفريق</div>
           <div class="stat-value">{{ teamStats.totalMembers }}</div>
-          <div class="stat-label">حجم الفريق</div>
         </div>
       </div>
 
-      <!-- الصف الثاني -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-icon">🆕</div>
-          <div class="stat-value">{{ teamStats.newMembers }}</div>
-          <div class="stat-label">أعضاء جدد</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon">💳</div>
-          <div class="stat-value">{{ teamStats.firstRecharge }}</div>
-          <div class="stat-label">أول شحن</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon">🏧</div>
+      <div class="stat-row">
+        <div class="stat-item">
+          <div class="stat-title">الانسحاب الأول</div>
           <div class="stat-value">{{ teamStats.firstWithdraw }}</div>
-          <div class="stat-label">أول سحب</div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-title">الشحن لأول مرة</div>
+          <div class="stat-value">{{ teamStats.firstRecharge }}</div>
+        </div>
+
+        <div class="stat-item">
+          <div class="stat-title">فريق جديد</div>
+          <div class="stat-value">{{ teamStats.newMembers }}</div>
         </div>
       </div>
     </div>
@@ -188,6 +190,20 @@ export default {
         .writeText(text)
         .then(() => alert("تم النسخ"))
         .catch(() => alert("فشل النسخ — انسخ يدويًا"));
+    },
+
+    // دالة مشاركة عبر واتساب
+    shareViaWhatsApp() {
+      const message = `انضم إلى فريقي في Mall of the World باستخدام رابط الدعوة الخاص بي: ${this.inviteLink}`;
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+    },
+
+    // دالة مشاركة عبر تليجرام
+    shareViaTelegram() {
+      const message = `انضم إلى فريقي في Mall of the World باستخدام رابط الدعوة الخاص بي: ${this.inviteLink}`;
+      const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(this.inviteLink)}&text=${encodeURIComponent(message)}`;
+      window.open(telegramUrl, '_blank');
     },
 
     chunkArray(arr, size = 10) {
@@ -367,53 +383,47 @@ export default {
 <style scoped>
 .team-page {
   direction: rtl;
-  padding: 15px;
+  padding: 12px;
   background: #0A0C10;
   min-height: 100vh;
-  padding-bottom: 90px;
-  color: #fff;
-  font-family: 'Cairo', sans-serif;
+  padding-bottom: 100px; /* مساحة للشريط السفلي */
 }
 
-h2 {
-  color: #D4AF37;
-  font-size: 20px;
-  margin-bottom: 15px;
+.invite-section {
+  background: #11151C;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  margin-bottom: 20px;
   text-align: center;
 }
 
-/* قسم الدعوة */
-.invite-section {
-  background: #11151C;
-  padding: 20px;
-  border-radius: 16px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  margin-bottom: 20px;
+.invite-section h2 {
+  color: #D4AF37;
+  margin-bottom: 15px;
 }
 
 .ref-box {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 10px 0;
-  flex-wrap: wrap;
+  justify-content: center;
+  margin: 8px 0;
 }
 
 .ref-box label {
   color: #D4AF37;
-  min-width: 90px;
-  font-size: 14px;
+  margin-left: 10px;
 }
 
 .ref-code {
-  flex: 1;
   background: #1A1F2A;
-  padding: 10px 12px;
-  border-radius: 10px;
-  color: #fff;
-  font-size: 13px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 0 8px;
+  flex: 1;
   word-break: break-all;
+  color: #fff;
+  border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .ref-box button {
@@ -421,126 +431,148 @@ h2 {
   color: #0A0C10;
   border: none;
   padding: 8px 15px;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 14px;
 }
 
-/* إحصائيات الفريق - مربعات صغيرة */
+/* أزرار المشاركة */
+.share-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: center;
+}
+
+.share-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.share-btn.whatsapp {
+  background: #25D366;
+  color: white;
+}
+
+.share-btn.telegram {
+  background: #0088cc;
+  color: white;
+}
+
+.share-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.share-btn i {
+  font-size: 18px;
+}
+
 .team-stats-box {
   background: #11151C;
-  padding: 20px;
-  border-radius: 16px;
+  padding: 15px;
+  border-radius: 14px;
   border: 1px solid rgba(212, 175, 55, 0.2);
   margin-bottom: 20px;
 }
 
-.stats-row {
+.stat-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 10px;
 }
 
-.stats-row:last-child {
-  margin-bottom: 0;
-}
-
-.stat-card {
+.stat-item {
+  text-align: center;
   flex: 1;
   background: #1A1F2A;
-  border-radius: 12px;
   padding: 10px 5px;
-  text-align: center;
-  border: 1px solid rgba(212, 175, 55, 0.15);
-  min-width: 0; /* لمنع تمدد المربعات */
+  border-radius: 10px;
+  border: 1px solid rgba(212, 175, 55, 0.1);
 }
 
-.stat-icon {
-  font-size: 20px;
-  margin-bottom: 5px;
-  color: #D4AF37;
+.stat-title {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: bold;
   color: #D4AF37;
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.stat-label {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
-  white-space: nowrap;
-}
-
-/* المستويات */
 .levels-container {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
   margin-bottom: 20px;
 }
 
 .level-card {
   border-radius: 14px;
+  color: white;
   padding: 12px;
+  min-height: 140px;
   border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .level1 {
   background: linear-gradient(135deg, #D4AF37, #C5A028);
 }
+
 .level2 {
   background: linear-gradient(135deg, #C5A028, #B8962E);
 }
+
 .level3 {
   background: linear-gradient(135deg, #B8962E, #A47C1E);
 }
 
 .lvl-header {
-  font-weight: 700;
-  font-size: 15px;
-  margin-bottom: 8px;
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 10px;
   color: #0A0C10;
   border-bottom: 1px solid rgba(0,0,0,0.1);
-  padding-bottom: 4px;
-  text-align: center;
+  padding-bottom: 5px;
 }
 
 .lvl-body {
-  font-size: 12px;
+  font-size: 13px;
   color: #0A0C10;
 }
 
 .lvl-body div {
-  margin: 4px 0;
-  display: flex;
-  justify-content: space-between;
+  margin: 5px 0;
 }
 
 .lvl-body strong {
   color: #0A0C10;
-  font-weight: 700;
 }
 
-/* زر العودة */
 .btn-back {
+  margin-top: 20px;
   width: 100%;
-  padding: 14px;
-  border-radius: 14px;
+  padding: 12px;
+  border-radius: 12px;
   border: 2px solid #D4AF37;
   background: transparent;
   color: #D4AF37;
   font-size: 16px;
-  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
-  margin-top: 10px;
 }
 
 .btn-back:hover {
@@ -548,67 +580,30 @@ h2 {
   color: #0A0C10;
 }
 
-/* حالات التحميل */
-.loading-box, .error-box {
+.loading-box,
+.error-box {
   background: #11151C;
-  padding: 20px;
-  border-radius: 16px;
+  margin: 16px;
+  padding: 14px;
+  border-radius: 12px;
   text-align: center;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  margin: 20px auto;
-  max-width: 300px;
+  color: #fff;
 }
 
 .error-box {
   color: #ff6b6b;
 }
 
-/* تحسينات للشاشات الصغيرة */
+/* تحسينات للهواتف */
 @media (max-width: 480px) {
-  .stats-row {
-    gap: 5px;
+  .share-buttons {
+    flex-direction: column;
+    gap: 8px;
   }
   
-  .stat-card {
-    padding: 8px 3px;
-  }
-  
-  .stat-icon {
-    font-size: 18px;
-  }
-  
-  .stat-value {
-    font-size: 12px;
-  }
-  
-  .stat-label {
-    font-size: 9px;
-  }
-  
-  .levels-container {
-    gap: 6px;
-  }
-  
-  .level-card {
-    padding: 8px 5px;
-  }
-  
-  .lvl-header {
-    font-size: 13px;
-  }
-  
-  .lvl-body {
-    font-size: 10px;
-  }
-}
-
-@media (max-width: 350px) {
-  .stats-row {
-    flex-wrap: wrap;
-  }
-  
-  .stat-card {
-    flex: 0 0 calc(50% - 5px);
+  .share-btn {
+    width: 100%;
   }
 }
 </style>
