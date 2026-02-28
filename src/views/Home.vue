@@ -55,10 +55,7 @@
       </div>
     </div>
 
-    <!-- البانر -->
-    <div class="banner">
-      <img src="https://i.ibb.co/H7J3mpm/amazon-banner.jpg" alt="Amazon Banner" />
-    </div>
+    <!-- تم إزالة البانر بالكامل -->
 
     <!-- إعلان Popup فاخر -->
     <div id="companyAd" class="ad-overlay" v-if="showAd" @click.self="closeAd">
@@ -203,6 +200,7 @@ export default {
   min-height: 100vh;
   color: #ffffff;
   font-family: 'Cairo', sans-serif;
+  padding-bottom: 80px; /* إضافة مساحة للشريط السفلي */
 }
 
 /* الشريط العلوي */
@@ -318,7 +316,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 18px;
-  margin-bottom: 25px;
+  margin-bottom: 20px; /* تقليل المسافة بعد إزالة البانر */
 }
 
 .item {
@@ -361,25 +359,7 @@ export default {
   border: 1px solid #D4AF37;
 }
 
-/* البانر */
-.banner {
-  margin-top: 20px;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(212, 175, 55, 0.3);
-}
-
-.banner img {
-  width: 100%;
-  height: auto;
-  display: block;
-  transition: transform 0.5s ease;
-}
-
-.banner:hover img {
-  transform: scale(1.05);
-}
+/* تم إزالة قسم البانر بالكامل */
 
 /* ===== إعلان فاخر ===== */
 .ad-overlay {
@@ -568,6 +548,7 @@ export default {
 @media (max-width: 480px) {
   .home-container {
     padding: 12px;
+    padding-bottom: 70px;
   }
   
   .grid-menu {
