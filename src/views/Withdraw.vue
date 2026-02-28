@@ -1,39 +1,133 @@
 <template>
   <div class="withdraw-page">
-    <h2 class="title">سحب الأرباح</h2>
-    <p class="sub">قم بإدخال معلومات السحب الخاصة بك</p>
+    <div class="card">
+      <div class="card-header">
+        <h2 class="title">
+          <i class="fas fa-hand-holding-usd"></i>
+          سحب الأرباح
+          <span class="title-glow">USDT</span>
+        </h2>
+        <div class="header-glow"></div>
+        <p class="sub">قم بإدخال معلومات السحب الخاصة بك</p>
+      </div>
 
-    <!-- رصيد المستخدم -->
-    <div class="balance-box">
-      <p>رصيدك الحالي:</p>
-      <h2>{{ balance }} USDT</h2>
+      <!-- رصيد المستخدم -->
+      <div class="balance-box">
+        <div class="balance-icon">
+          <i class="fas fa-wallet"></i>
+        </div>
+        <div class="balance-info">
+          <span class="balance-label">رصيدك الحالي</span>
+          <span class="balance-value">{{ balance }} <span class="balance-currency">USDT</span></span>
+        </div>
+      </div>
+
+      <!-- مبلغ السحب -->
+      <div class="input-group">
+        <label>
+          <i class="fas fa-coins"></i>
+          المبلغ
+        </label>
+        <div class="amount-input-wrapper">
+          <input 
+            type="number" 
+            v-model="amount" 
+            placeholder="0.00" 
+            class="gold-input"
+            min="0"
+            step="0.01"
+          />
+          <span class="input-currency">USDT</span>
+        </div>
+        <div class="input-hint" v-if="amount > balance">
+          <i class="fas fa-exclamation-triangle"></i>
+          المبلغ أكبر من الرصيد المتاح
+        </div>
+      </div>
+
+      <!-- الشبكة -->
+      <div class="input-group">
+        <label>
+          <i class="fas fa-network-wired"></i>
+          اختر الشبكة
+        </label>
+        <div class="select-wrapper">
+          <select v-model="selectedNetwork" class="gold-select">
+            <option disabled value="">اختر الشبكة المناسبة</option>
+            <option v-for="net in networks" :key="net" :value="net">
+              {{ net }}
+            </option>
+          </select>
+          <i class="fas fa-chevron-down select-arrow"></i>
+        </div>
+      </div>
+
+      <!-- عنوان المحفظة -->
+      <div class="input-group">
+        <label>
+          <i class="fas fa-qrcode"></i>
+          عنوان المحفظة
+        </label>
+        <input 
+          type="text" 
+          v-model="wallet" 
+          placeholder="أدخل عنوان محفظتك USDT" 
+          class="gold-input"
+        />
+        <div class="input-hint" v-if="wallet && wallet.length < 20">
+          <i class="fas fa-info-circle"></i>
+          تأكد من صحة العنوان (يفضل النسخ واللصق)
+        </div>
+      </div>
+
+      <!-- ملخص السحب -->
+      <div class="summary-box" v-if="amount && selectedNetwork && wallet">
+        <h3>📋 ملخص الطلب</h3>
+        <div class="summary-item">
+          <span>المبلغ:</span>
+          <span class="summary-value">{{ Number(amount).toFixed(2) }} USDT</span>
+        </div>
+        <div class="summary-item">
+          <span>الشبكة:</span>
+          <span class="summary-value">{{ selectedNetwork }}</span>
+        </div>
+        <div class="summary-item">
+          <span>العنوان:</span>
+          <span class="summary-value address">{{ wallet.substring(0, 15) }}...</span>
+        </div>
+        <div class="summary-item total">
+          <span>سيتم خصم:</span>
+          <span class="summary-value">{{ Number(amount).toFixed(2) }} USDT</span>
+        </div>
+      </div>
+
+      <!-- تحذيرات -->
+      <div class="warning-box">
+        <i class="fas fa-shield-alt"></i>
+        <div class="warning-text">
+          <p>يرجى التأكد من صحة المعلومات قبل الإرسال</p>
+          <p class="small">سيتم خصم المبلغ من رصيدك فوراً عند تقديم الطلب</p>
+        </div>
+      </div>
+
+      <!-- زر السحب -->
+      <button 
+        class="gold-button" 
+        @click="submitWithdraw"
+        :disabled="!canWithdraw"
+      >
+        <i class="fas fa-paper-plane"></i>
+        {{ isProcessing ? 'جاري المعالجة...' : 'سحب الآن' }}
+      </button>
+
+      <!-- رسائل الخطأ/النجاح -->
+      <transition name="fade">
+        <div v-if="message" class="message" :class="messageType">
+          <i :class="messageType === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle'"></i>
+          {{ message }}
+        </div>
+      </transition>
     </div>
-
-    <!-- مبلغ السحب -->
-    <div class="input-box">
-      <label>المبلغ</label>
-      <input type="number" v-model="amount" placeholder="أدخل المبلغ" />
-    </div>
-
-    <!-- الشبكة -->
-    <div class="input-box">
-      <label>اختر الشبكة</label>
-      <select v-model="selectedNetwork">
-        <option disabled value="">اختر الشبكة</option>
-        <option v-for="net in networks" :key="net">{{ net }}</option>
-      </select>
-    </div>
-
-    <!-- عنوان المحفظة -->
-    <div class="input-box">
-      <label>عنوان المحفظة</label>
-      <input type="text" v-model="wallet" placeholder="USDT عنوان محفظتك" />
-    </div>
-
-    <!-- زر السحب -->
-    <button class="submit-btn" @click="submitWithdraw">
-      سحب الآن
-    </button>
   </div>
 </template>
 
@@ -57,8 +151,24 @@ export default {
       amount: "",
       wallet: "",
       selectedNetwork: "",
-      networks: ["TRC20", "ERC20", "BEP20"],
+      networks: ["TRC20", "ERC20", "BEP20", "SOL"],
+      isProcessing: false,
+      message: "",
+      messageType: "info",
     };
+  },
+
+  computed: {
+    canWithdraw() {
+      return (
+        this.amount > 0 &&
+        this.amount <= this.balance &&
+        this.selectedNetwork &&
+        this.wallet &&
+        this.wallet.length >= 20 &&
+        !this.isProcessing
+      );
+    },
   },
 
   async created() {
@@ -68,7 +178,10 @@ export default {
   methods: {
     async loadBalance() {
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) {
+        this.$router.push("/login");
+        return;
+      }
 
       const ref = doc(db, "users", user.uid);
       const snap = await getDoc(ref);
@@ -79,21 +192,35 @@ export default {
     },
 
     async submitWithdraw() {
-      if (!this.amount || !this.wallet || !this.selectedNetwork) {
-        alert("⚠️ يرجى تعبئة جميع الحقول");
+      this.message = "";
+
+      if (!this.amount || this.amount <= 0) {
+        this.showMessage("الرجاء إدخال مبلغ صالح", "error");
         return;
       }
 
-      if (this.amount <= 0) {
-        alert("⚠️ المبلغ غير صالح");
+      if (this.amount > this.balance) {
+        this.showMessage("المبلغ أكبر من الرصيد المتاح", "error");
+        return;
+      }
+
+      if (!this.selectedNetwork) {
+        this.showMessage("الرجاء اختيار الشبكة", "error");
+        return;
+      }
+
+      if (!this.wallet || this.wallet.length < 20) {
+        this.showMessage("الرجاء إدخال عنوان محفظة صحيح", "error");
         return;
       }
 
       const user = auth.currentUser;
       if (!user) {
-        alert("الرجاء تسجيل الدخول من جديد");
+        this.showMessage("الرجاء تسجيل الدخول من جديد", "error");
         return;
       }
+
+      this.isProcessing = true;
 
       const userRef = doc(db, "users", user.uid);
       const withdrawRef = collection(db, "withdraw_requests");
@@ -105,7 +232,6 @@ export default {
 
           const userData = userSnap.data();
 
-          // 🔥 منع المحظور من السحب
           if (userData.blocked === true) {
             throw new Error("🚫 حسابك محظور من السحب!");
           }
@@ -114,7 +240,7 @@ export default {
           const amountNum = Number(this.amount);
 
           if (amountNum > currentBalance) {
-            throw new Error("⚠️ المبلغ أكبر من رصيدك!");
+            throw new Error("المبلغ أكبر من رصيدك!");
           }
 
           // 1️⃣ خصم الرصيد
@@ -122,11 +248,11 @@ export default {
             balance: currentBalance - amountNum
           });
 
-          // 2️⃣ إضافة طلب السحب داخل withdrawal_requests
+          // 2️⃣ إضافة طلب السحب
           const newReq = doc(withdrawRef);
           tx.set(newReq, {
             userId: user.uid,
-            email: user.email, // ⭐ تم إضافة البريد هنا
+            email: user.email,
             amount: amountNum,
             wallet: this.wallet,
             network: this.selectedNetwork,
@@ -136,97 +262,512 @@ export default {
           });
         });
 
-        // ✅ 3️⃣ أضفت هذا: حفظ المعاملة في transactions لكي تظهر في صفحة المعاملات
+        // 3️⃣ حفظ المعاملة في transactions
         await addDoc(collection(db, "transactions"), {
           userId: user.uid,
           email: user.email,
-          type: "withdraw",  // نوع المعاملة
+          type: "withdraw",
           amount: Number(this.amount),
           wallet: this.wallet,
           network: this.selectedNetwork,
-          status: "pending", // المعاملة قيد الانتظار
-          reason: "",  // لا حاجة للسبب الآن لأن المعاملة قيد الانتظار
-          adminMessage: "",  // لا حاجة لرسالة الإدارة الآن
+          status: "pending",
+          reason: "",
+          adminMessage: "",
           createdAt: serverTimestamp(),
         });
 
-        alert("✅ تم إرسال طلب السحب وخصم الرصيد بنجاح");
-        this.amount = "";
-        this.wallet = "";
-        this.selectedNetwork = "";
-
-        this.$router.push("/home");
+        this.showMessage("✅ تم إرسال طلب السحب بنجاح", "success");
+        
+        // تحديث الرصيد
+        this.balance -= Number(this.amount);
+        
+        // تفريغ الحقول بعد 2 ثانية
+        setTimeout(() => {
+          this.amount = "";
+          this.wallet = "";
+          this.selectedNetwork = "";
+          this.message = "";
+        }, 3000);
 
       } catch (e) {
-        alert("خطأ: " + e.message);
+        this.showMessage("خطأ: " + e.message, "error");
+      } finally {
+        this.isProcessing = false;
       }
+    },
+
+    showMessage(msg, type) {
+      this.message = msg;
+      this.messageType = type;
     },
   },
 };
 </script>
 
 <style scoped>
+/* الخلفية الرئيسية - أسود فاخر */
 .withdraw-page {
-  direction: rtl;
-  padding: 20px;
-  background: #f3f7ff;
   min-height: 100vh;
+  background: #0A0C10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  direction: rtl;
+  font-family: 'Cairo', sans-serif;
+}
+
+/* البطاقة الرئيسية */
+.card {
+  background: #11151C;
+  width: 100%;
+  max-width: 500px;
+  border-radius: 30px;
+  padding: 30px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(212, 175, 55, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.03) 0%, transparent 70%);
+  animation: rotate 30s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* رأس البطاقة */
+.card-header {
+  position: relative;
+  margin-bottom: 25px;
+  text-align: center;
 }
 
 .title {
-  text-align: center;
-  color: #0d6efd;
-  font-size: 26px;
-  margin-bottom: 5px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 8px;
+}
+
+.title i {
+  color: #D4AF37;
+  font-size: 32px;
+}
+
+.title-glow {
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+}
+
+.header-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+  filter: blur(30px);
+  z-index: 0;
 }
 
 .sub {
-  text-align: center;
-  color: #666;
-  margin-bottom: 25px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  margin-top: 5px;
+  position: relative;
+  z-index: 1;
 }
 
+/* صندوق الرصيد */
 .balance-box {
-  background: white;
-  padding: 15px;
-  border-radius: 15px;
-  text-align: center;
-  box-shadow: 0 2px 10px #0001;
+  background: linear-gradient(135deg, #1A1F2A, #11151C);
+  border-radius: 20px;
+  padding: 20px;
   margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.balance-box h2 {
-  color: #0d6efd;
+.balance-icon {
+  width: 50px;
+  height: 50px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #D4AF37;
 }
 
-.input-box {
+.balance-icon i {
+  font-size: 24px;
+  color: #D4AF37;
+}
+
+.balance-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.balance-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.balance-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #D4AF37;
+}
+
+.balance-currency {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-right: 5px;
+}
+
+/* مجموعات الإدخال */
+.input-group {
   margin-bottom: 20px;
 }
 
-.input-box label {
-  font-weight: bold;
-  margin-bottom: 5px;
-  display: block;
+.input-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #D4AF37;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
-.input-box input,
-.input-box select {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #ccc;
+.input-group label i {
   font-size: 16px;
 }
 
-.submit-btn {
+/* الحقول الذهبية */
+.gold-input {
   width: 100%;
-  padding: 14px;
-  background: #0d6efd;
-  color: white;
-  border: none;
-  font-weight: bold;
-  border-radius: 12px;
-  font-size: 18px;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: #1A1F2A;
+  color: #ffffff;
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+.gold-input:focus {
+  outline: none;
+  border-color: #D4AF37;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+.gold-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* حقل المبلغ مع العملة */
+.amount-input-wrapper {
+  position: relative;
+}
+
+.input-currency {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #D4AF37;
+  font-weight: 700;
+  font-size: 15px;
+  background: rgba(212, 175, 55, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+/* القائمة المنسدلة */
+.select-wrapper {
+  position: relative;
+}
+
+.gold-select {
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: #1A1F2A;
+  color: #ffffff;
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+}
+
+.gold-select:hover, .gold-select:focus {
+  border-color: #D4AF37;
+  outline: none;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+.select-arrow {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #D4AF37;
+  pointer-events: none;
+  font-size: 14px;
+}
+
+/* تلميحات الحقول */
+.input-hint {
+  margin-top: 8px;
+  color: #ef4444;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.input-hint i {
+  font-size: 13px;
+}
+
+/* صندوق الملخص */
+.summary-box {
+  background: #1A1F2A;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.summary-box h3 {
+  color: #D4AF37;
+  font-size: 16px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item.total {
   margin-top: 10px;
+  padding-top: 15px;
+  border-top: 2px solid #D4AF37;
+  font-weight: 700;
+  color: #D4AF37;
+}
+
+.summary-value {
+  font-weight: 600;
+  color: #D4AF37;
+}
+
+.summary-value.address {
+  font-family: monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* صندوق التحذير */
+.warning-box {
+  background: rgba(212, 175, 55, 0.05);
+  border-right: 4px solid #D4AF37;
+  padding: 15px;
+  border-radius: 12px;
+  margin: 20px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.warning-box i {
+  color: #D4AF37;
+  font-size: 20px;
+  margin-top: 2px;
+}
+
+.warning-text p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  margin: 0 0 5px 0;
+}
+
+.warning-text .small {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* الزر الرئيسي */
+.gold-button {
+  width: 100%;
+  padding: 16px;
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  color: #0A0C10;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 0;
+  box-shadow: 0 5px 20px rgba(212, 175, 55, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.gold-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+}
+
+.gold-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(20%);
+}
+
+/* الرسائل */
+.message {
+  margin-top: 15px;
+  padding: 15px 20px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid;
+}
+
+.message.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border-color: #22c55e;
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.message i {
+  font-size: 18px;
+}
+
+/* حركة الرسائل */
+.fade-enter-active, .fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* تحسينات للجوال */
+@media (max-width: 480px) {
+  .card {
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .title i {
+    font-size: 28px;
+  }
+
+  .balance-value {
+    font-size: 24px;
+  }
+
+  .gold-input, .gold-select {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+
+  .input-currency {
+    left: 15px;
+    padding: 3px 10px;
+    font-size: 13px;
+  }
+
+  .summary-box {
+    padding: 15px;
+  }
+
+  .warning-box {
+    padding: 12px;
+  }
+
+  .warning-box i {
+    font-size: 18px;
+  }
+
+  .warning-text p {
+    font-size: 13px;
+  }
+
+  .gold-button {
+    padding: 14px;
+    font-size: 16px;
+  }
+}
+
+/* إزالة أزرار الزيادة/النقص من input number */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
 }
 </style>
