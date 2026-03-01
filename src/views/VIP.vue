@@ -166,17 +166,34 @@ export default {
       intervalId: null,
 
       plans: [
-        { level: 1, name: "VIP 1", price: 12, tasks: 1, daily: 3, durationSeconds: 86400 },
-        { level: 2, name: "VIP 2", price: 52, tasks: 1, daily: 13, durationSeconds: 86400 },
-        { level: 3, name: "VIP 3", price: 100, tasks: 1, daily: 26, durationSeconds: 86400 },
-        { level: 4, name: "VIP 4", price: 300, tasks: 1, daily: 82, durationSeconds: 86400 },
-        { level: 5, name: "VIP 5", price: 500, tasks: 1, daily: 145, durationSeconds: 86400 },
-        { level: 6, name: "VIP 6", price: 1500, tasks: 1, daily: 479, durationSeconds: 86400 },
-        { level: 7, name: "VIP 7", price: 3000, tasks: 1, daily: 1078, durationSeconds: 86400 },
-        { level: 8, name: "VIP 8", price: 5000, tasks: 1, daily: 2000, durationSeconds: 86400 },
-        { level: 9, name: "VIP 9", price: 10000, tasks: 1, daily: 4546, durationSeconds: 86400 },
-        { level: 10, name: "VIP 10", price: 30000, tasks: 1, daily: 17699, durationSeconds: 86400 },
-        { level: 11, name: "VIP 11", price: 90000, tasks: 1, daily: 81818, durationSeconds: 86400 },
+        // المستوى 1 - مجاني
+        { level: 1, name: "VIP 1", price: 0, tasks: 1, daily: 0.30, durationSeconds: 86400 },
+        // المستوى 2
+        { level: 2, name: "VIP 2", price: 50, tasks: 1, daily: 1.60, durationSeconds: 86400 },
+        // المستوى 3
+        { level: 3, name: "VIP 3", price: 100, tasks: 1, daily: 3.25, durationSeconds: 86400 },
+        // المستوى 4
+        { level: 4, name: "VIP 4", price: 300, tasks: 1, daily: 10, durationSeconds: 86400 },
+        // المستوى 5
+        { level: 5, name: "VIP 5", price: 900, tasks: 1, daily: 33, durationSeconds: 86400 },
+        // المستوى 6
+        { level: 6, name: "VIP 6", price: 1350, tasks: 1, daily: 51, durationSeconds: 86400 },
+        // المستوى 7
+        { level: 7, name: "VIP 7", price: 1800, tasks: 1, daily: 70, durationSeconds: 86400 },
+        // المستوى 8
+        { level: 8, name: "VIP 8", price: 3600, tasks: 1, daily: 150, durationSeconds: 86400 },
+        // المستوى 9
+        { level: 9, name: "VIP 9", price: 7200, tasks: 1, daily: 330, durationSeconds: 86400 },
+        // المستوى 10
+        { level: 10, name: "VIP 10", price: 14400, tasks: 1, daily: 700, durationSeconds: 86400 },
+        // المستوى 11
+        { level: 11, name: "VIP 11", price: 18800, tasks: 1, daily: 1600, durationSeconds: 86400 },
+        // المستوى 12
+        { level: 12, name: "VIP 12", price: 37600, tasks: 1, daily: 3500, durationSeconds: 86400 },
+        // المستوى 13
+        { level: 13, name: "VIP 13", price: 75200, tasks: 1, daily: 7500, durationSeconds: 86400 },
+        // المستوى 14
+        { level: 14, name: "VIP 14", price: 150400, tasks: 1, daily: 16000, durationSeconds: 86400 },
       ],
 
       globalCycleHourUTC: 3,
@@ -476,7 +493,6 @@ export default {
     },
 
     showSuccessMessage(msg) {
-      // يمكنك استخدام مكتبة إشعارات أو alert بسيط
       alert(msg);
     },
 
@@ -979,5 +995,8 @@ export default {
 .level-8 .level-icon,
 .level-9 .level-icon,
 .level-10 .level-icon,
-.level-11 .level-icon { color: #D4AF37; } /* ذهبي فاخر */
+.level-11 .level-icon,
+.level-12 .level-icon,
+.level-13 .level-icon,
+.level-14 .level-icon { color: #D4AF37; } /* ذهبي فاخر */
 </style>
