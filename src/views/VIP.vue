@@ -20,9 +20,23 @@
             <div class="vip-name">
               <span class="vip-level-badge">VIP {{ userVip.level }}</span>
             </div>
-            <div class="vip-daily">
-              <i class="fas fa-coins"></i>
-              ربح يومي: <strong>{{ userVip.daily }} USDT</strong>
+            <div class="vip-stats">
+              <div class="stat-item">
+                <i class="fas fa-coins"></i>
+                <span>ربح يومي: <strong>{{ userVip.daily }} USDT</strong></span>
+              </div>
+              <div class="stat-item">
+                <i class="fas fa-calendar-week"></i>
+                <span>ربح أسبوعي: <strong>{{ (userVip.daily * 7).toFixed(2) }} USDT</strong></span>
+              </div>
+              <div class="stat-item">
+                <i class="fas fa-calendar-alt"></i>
+                <span>ربح شهري: <strong>{{ (userVip.daily * 30).toFixed(2) }} USDT</strong></span>
+              </div>
+              <div class="stat-item">
+                <i class="fas fa-calendar-alt"></i>
+                <span>ربح سنوي: <strong>{{ (userVip.daily * 365).toLocaleString() }} USDT</strong></span>
+              </div>
             </div>
             <div class="vip-remaining">
               <i class="fas fa-hourglass-half"></i>
@@ -74,6 +88,14 @@
                 <div class="benefit-item">
                   <i class="fas fa-check-circle"></i>
                   <span>ربح يومي: <strong>{{ plan.daily }} USDT</strong></span>
+                </div>
+                <div class="benefit-item">
+                  <i class="fas fa-calendar-week"></i>
+                  <span>ربح أسبوعي: <strong>{{ (plan.daily * 7).toFixed(2) }} USDT</strong></span>
+                </div>
+                <div class="benefit-item">
+                  <i class="fas fa-calendar-alt"></i>
+                  <span>ربح شهري: <strong>{{ (plan.daily * 30).toFixed(2) }} USDT</strong></span>
                 </div>
                 <div class="benefit-item">
                   <i class="fas fa-tasks"></i>
@@ -574,6 +596,7 @@ export default {
 .current-left {
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
 .badge-gold {
@@ -600,27 +623,46 @@ export default {
   -webkit-text-fill-color: transparent;
 }
 
-.vip-daily, .vip-remaining {
+.vip-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  background: rgba(212, 175, 55, 0.1);
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.stat-item i {
+  color: #D4AF37;
+  width: 20px;
+}
+
+.stat-item strong {
+  color: #D4AF37;
+  font-size: 15px;
+}
+
+.vip-remaining {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 8px 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: #ff6b6b;
   font-size: 16px;
 }
 
-.vip-daily i, .vip-remaining i {
-  color: #D4AF37;
-  width: 24px;
-}
-
-.vip-daily strong {
-  color: #D4AF37;
-  font-size: 18px;
-}
-
-.vip-remaining {
+.vip-remaining i {
   color: #ff6b6b;
+  width: 24px;
 }
 
 .current-right {
@@ -945,6 +987,10 @@ export default {
     flex-direction: column;
     text-align: center;
     gap: 20px;
+  }
+
+  .vip-stats {
+    grid-template-columns: 1fr;
   }
 
   .current-right {
