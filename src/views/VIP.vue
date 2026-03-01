@@ -49,10 +49,7 @@
               <i class="fas fa-info-circle"></i>
               تفاصيل
             </button>
-            <button class="btn-gold" @click="cancelVip" :disabled="processing">
-              <i class="fas fa-times-circle"></i>
-              إلغاء
-            </button>
+            <!-- زر الإلغاء تمت إزالته بالكامل -->
           </div>
         </div>
 
@@ -487,24 +484,6 @@ export default {
       } catch (err) {
         console.error("buyPlan error:", err);
         this.showErrorMessage(err.message || "فشل شراء المستوى. تأكد من الرصيد وحاول لاحقًا.");
-      } finally {
-        this.processing = false;
-      }
-    },
-
-    async cancelVip() {
-      if (!confirm("هل أنت متأكد أنك تريد إلغاء حالة VIP؟ (لن يتم رد الأموال)")) return;
-      const user = auth.currentUser;
-      if (!user) return;
-      this.processing = true;
-      try {
-        const vipDocRef = doc(db, "users", user.uid, "vip", "current");
-        await setDoc(vipDocRef, { cancelledAt: serverTimestamp(), level: null }, { merge: true });
-        await this.init();
-        this.showSuccessMessage("تم إلغاء حالة VIP بنجاح.");
-      } catch (e) {
-        console.error("cancelVip", e);
-        this.showErrorMessage("خطأ أثناء الإلغاء.");
       } finally {
         this.processing = false;
       }
