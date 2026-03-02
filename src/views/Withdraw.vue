@@ -394,6 +394,7 @@ export default {
       try {
         const userRef = doc(db, "users", user.uid);
         const withdrawAmount = Number(this.amount);
+        const transactionId = "WITHDRAW_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
 
         await runTransaction(db, async (transaction) => {
           const userDoc = await transaction.get(userRef);
@@ -416,30 +417,48 @@ export default {
             balance: userData.balance - withdrawAmount
           });
 
+          // إنشاء طلب سحب في withdraw_requests
           const withdrawRef = doc(collection(db, "withdraw_requests"));
           transaction.set(withdrawRef, {
+            transactionId: transactionId,
             userId: user.uid,
             userEmail: this.userEmail,
             amount: withdrawAmount,
             network: this.network,
             wallet: this.wallet,
+            walletAddress: this.wallet,
             status: "pending",
             createdAt: serverTimestamp(),
             vipLevel: this.userVipLevel,
-            withdrawDay: this.withdrawDay
+            withdrawDay: this.withdrawDay,
+            adminAction: "",
+            adminMessage: "",
+            userMessage: "",
+            reason: ""
           });
         });
 
+        // إنشاء معاملة في مجموعة transactions
         await addDoc(collection(db, "transactions"), {
+          transactionId: transactionId,
           userId: user.uid,
           userEmail: this.userEmail,
           type: "withdraw",
           amount: withdrawAmount,
+          currency: "USDT",
           network: this.network,
           wallet: this.wallet,
+          walletAddress: this.wallet,
           status: "pending",
+          vipLevel: this.userVipLevel,
+          withdrawDay: this.withdrawDay,
+          adminAction: "",
+          adminMessage: "",
+          userMessage: "",
+          reason: "",
           createdAt: serverTimestamp(),
-          vipLevel: this.userVipLevel
+          updatedAt: serverTimestamp(),
+          approvedAt: null
         });
 
         this.balance -= withdrawAmount;
