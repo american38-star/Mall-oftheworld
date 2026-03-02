@@ -12,6 +12,17 @@
         class="input"
       />
 
+      <!-- رقم الهاتف (إضافة جديدة) -->
+      <label class="label">رقم الهاتف (اختياري)</label>
+      <input
+        type="tel"
+        v-model="phoneNumber"
+        placeholder="رقم الهاتف"
+        class="input"
+        @input="validatePhoneNumber"
+      />
+      <span v-if="phoneError" class="error-message">{{ phoneError }}</span>
+
       <!-- كلمة المرور -->
       <label class="label">كلمة المرور</label>
       <div class="input-box">
@@ -76,10 +87,12 @@ export default {
   data() {
     return {
       email: "",
+      phoneNumber: "",
       password: "",
       inviteCode: "",
       showPassword: false,
       loading: false,
+      phoneError: "",
     };
   },
 
@@ -104,9 +117,26 @@ export default {
       return password.length >= 6;
     },
 
+    validatePhoneNumber() {
+      if (!this.phoneNumber) {
+        this.phoneError = "";
+        return true;
+      }
+      
+      // التحقق من رقم الهاتف (أرقام فقط، 10-15 رقم)
+      const phoneRegex = /^[0-9]{10,15}$/;
+      if (!phoneRegex.test(this.phoneNumber.replace(/[^0-9]/g, ''))) {
+        this.phoneError = "رقم الهاتف يجب أن يكون بين 10 و 15 رقم";
+        return false;
+      }
+      
+      this.phoneError = "";
+      return true;
+    },
+
     async registerUser() {
       if (!this.email || !this.password) {
-        alert("يرجى تعبئة جميع الحقول");
+        alert("يرجى تعبئة البريد الإلكتروني وكلمة المرور");
         return;
       }
 
@@ -117,6 +147,11 @@ export default {
 
       if (!this.validatePassword(this.password)) {
         alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+        return;
+      }
+
+      if (this.phoneNumber && !this.validatePhoneNumber()) {
+        alert("رقم الهاتف غير صالح");
         return;
       }
 
@@ -172,9 +207,13 @@ export default {
           }
         }
 
+        // تنظيف رقم الهاتف من الرموز غير الرقمية
+        const cleanPhoneNumber = this.phoneNumber ? this.phoneNumber.replace(/[^0-9]/g, '') : "";
+
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           email: this.email.trim(),
+          phoneNumber: cleanPhoneNumber || null, // إضافة رقم الهاتف
           referralCode: user.uid.substring(0, 6),
           invitedBy: inviterUID || null,
           level2: level2 || null,
@@ -318,6 +357,16 @@ export default {
   color: #F6E27A;
 }
 
+/* رسالة خطأ الهاتف */
+.error-message {
+  color: #ff6b6b;
+  font-size: 12px;
+  margin-top: -15px;
+  margin-bottom: 10px;
+  text-align: right;
+  display: block;
+}
+
 /* زر إنشاء الحساب - ذهبي متدرج */
 .btn {
   width: 100%;
@@ -399,6 +448,24 @@ export default {
   transition: background-color 5000s ease-in-out 0s;
 }
 
+/* أيقونة كود الإحالة */
+.input[placeholder="كود الإحالة"] {
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D4AF37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+}
+
+/* أيقونة رقم الهاتف */
+.input[placeholder="رقم الهاتف"] {
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D4AF37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='2' width='14' height='20' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='18' x2='12.01' y2='18'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+}
+
 /* تحسين للهواتف */
 @media (max-width: 480px) {
   .container {
@@ -428,45 +495,5 @@ export default {
     padding: 12px;
     font-size: 16px;
   }
-}
-
-/* تلميحات للحقول */
-.input[type="email"]:valid,
-.input[type="password"]:valid {
-  border-color: rgba(212, 175, 55, 0.5);
-}
-
-/* تأثير تركيز متقدم */
-.input:focus ~ .label,
-.input:not(:placeholder-shown) ~ .label {
-  transform: translateY(-25px);
-  font-size: 12px;
-  color: #F6E27A;
-}
-
-/* أيقونة كود الإحالة (اختياري) */
-.input[placeholder="كود الإحالة"] {
-  padding-right: 40px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D4AF37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 18px;
-}
-
-/* رسائل الخطأ (يمكن إضافتها لاحقاً) */
-.error-message {
-  color: #ff6b6b;
-  font-size: 12px;
-  margin-top: -15px;
-  margin-bottom: 10px;
-  text-align: right;
-}
-
-/* رسائل النجاح */
-.success-message {
-  color: #D4AF37;
-  font-size: 14px;
-  text-align: center;
-  margin: 10px 0;
 }
 </style>
