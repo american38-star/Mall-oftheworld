@@ -49,7 +49,6 @@
               <i class="fas fa-info-circle"></i>
               تفاصيل
             </button>
-            <!-- زر الإلغاء تمت إزالته بالكامل -->
           </div>
         </div>
 
@@ -66,7 +65,8 @@
           >
             <div class="card-header" :class="`level-${plan.level}`">
               <div class="level-icon">
-                <span v-if="plan.level === 1">🥉</span>
+                <!-- استبدال أيقونة 🥉 بصورة العملة العراقية القديمة للمستوى 1 -->
+                <div v-if="plan.level === 1" class="iraqi-coin"></div>
                 <span v-else-if="plan.level === 2">🥈</span>
                 <span v-else-if="plan.level === 3">🥇</span>
                 <span v-else>💎</span>
@@ -695,8 +695,111 @@ export default {
 .level-icon {
   font-size: 48px;
   margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
+/* تصميم العملة العراقية القديمة - المستوى 1 */
+.iraqi-coin {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #DAA520, #F0E68C, #B8860B);
+  border-radius: 50%;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.5), inset 0 -2px 5px rgba(0,0,0,0.3);
+  border: 3px solid #D4AF37;
+  display: inline-block;
+}
+
+.iraqi-coin::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: radial-gradient(circle at 30% 30%, #FFF8E7, #DAA520);
+  border-radius: 50%;
+  border: 2px solid #B8860B;
+}
+
+.iraqi-coin::after {
+  content: '⚘⚘⚘';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: #B8860B;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+/* نقش عربي على الجوانب */
+.iraqi-coin .arabic-text {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, transparent 0deg 15deg, rgba(184, 134, 11, 0.2) 15deg 30deg);
+}
+
+/* تأثير بارز محفور */
+.iraqi-coin .engraving {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.3), 0 0 0 2px rgba(212, 175, 55, 0.3);
+  background: radial-gradient(circle at 70% 30%, rgba(255,255,255,0.3) 0%, transparent 50%);
+}
+
+/* ثلاث نخلات في الوسط - تمثيل بثلاث خطوط */
+.iraqi-coin .palm-trees {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+}
+
+.iraqi-coin .palm-trees span {
+  width: 6px;
+  height: 20px;
+  background: linear-gradient(to top, #8B4513, #DAA520);
+  border-radius: 3px 3px 0 0;
+  margin: 0 2px;
+  position: relative;
+}
+
+.iraqi-coin .palm-trees span::before {
+  content: '🌿';
+  position: absolute;
+  top: -12px;
+  left: -5px;
+  font-size: 12px;
+  transform: rotate(10deg);
+}
+
+.iraqi-coin .palm-trees span:nth-child(2)::before {
+  transform: rotate(0deg);
+  left: -4px;
+}
+
+.iraqi-coin .palm-trees span:nth-child(3)::before {
+  transform: rotate(-10deg);
+  left: -3px;
+}
+
+/* ===== باقي الأنماط ===== */
 .level-number {
   font-size: 24px;
   font-weight: 800;
@@ -717,7 +820,6 @@ export default {
   font-weight: 700;
 }
 
-/* جسم البطاقة */
 .card-body {
   padding: 25px;
 }
@@ -778,7 +880,6 @@ export default {
   font-size: 16px;
 }
 
-/* تذييل البطاقة */
 .card-footer {
   display: flex;
   justify-content: space-between;
@@ -831,7 +932,6 @@ export default {
   cursor: default;
 }
 
-/* شريط نشط */
 .active-ribbon {
   position: absolute;
   top: 20px;
@@ -845,7 +945,6 @@ export default {
   box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
 }
 
-/* ===== أزرار ===== */
 .btn-gold {
   background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
   color: #0A0C10;
@@ -884,7 +983,6 @@ export default {
   color: #0A0C10;
 }
 
-/* ===== لوحة المعلومات ===== */
 .info-panel {
   background: #11151C;
   border-radius: 24px;
@@ -923,7 +1021,6 @@ export default {
   margin: 0;
 }
 
-/* ===== حالات التحميل ===== */
 .center {
   display: flex;
   flex-direction: column;
@@ -951,7 +1048,6 @@ export default {
   font-weight: 600;
 }
 
-/* ===== تحسينات للجوال ===== */
 @media (max-width: 768px) {
   .vip-page {
     padding: 15px;
@@ -989,9 +1085,18 @@ export default {
     padding: 10px 20px;
     font-size: 14px;
   }
+  
+  .iraqi-coin {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .iraqi-coin::before {
+    width: 32px;
+    height: 32px;
+  }
 }
 
-/* ===== تأثيرات إضافية ===== */
 .vip-card::after {
   content: '';
   position: absolute;
@@ -1009,10 +1114,9 @@ export default {
   opacity: 1;
 }
 
-/* تخصيص ألوان المستويات */
-.level-1 .level-icon { color: #CD7F32; } /* برونزي */
-.level-2 .level-icon { color: #C0C0C0; } /* فضي */
-.level-3 .level-icon { color: #FFD700; } /* ذهبي */
+.level-1 .level-icon { color: #CD7F32; }
+.level-2 .level-icon { color: #C0C0C0; }
+.level-3 .level-icon { color: #FFD700; }
 .level-4 .level-icon,
 .level-5 .level-icon,
 .level-6 .level-icon,
@@ -1023,5 +1127,5 @@ export default {
 .level-11 .level-icon,
 .level-12 .level-icon,
 .level-13 .level-icon,
-.level-14 .level-icon { color: #D4AF37; } /* ذهبي فاخر */
+.level-14 .level-icon { color: #D4AF37; }
 </style>
