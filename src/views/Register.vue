@@ -3,96 +3,120 @@
     <div class="card">
       <h2 class="title">إنشاء حساب</h2>
 
-      <!-- البريد الإلكتروني -->
-      <label class="label">البريد الإلكتروني</label>
-      <input
-        type="email"
-        v-model="email"
-        placeholder="البريد الإلكتروني"
-        class="input"
-      />
-
-      <!-- رقم الهاتف مع رمز الدولة -->
-      <label class="label">رقم الهاتف (اختياري)</label>
-      <div class="phone-input-container">
-        <select v-model="countryCode" class="country-select">
-          <option value="">اختر الرمز</option>
-          <option value="+964">🇮🇶 العراق (+964)</option>
-          <option value="+966">🇸🇦 السعودية (+966)</option>
-          <option value="+971">🇦🇪 الإمارات (+971)</option>
-          <option value="+965">🇰🇼 الكويت (+965)</option>
-          <option value="+974">🇶🇦 قطر (+974)</option>
-          <option value="+973">🇧🇭 البحرين (+973)</option>
-          <option value="+968">🇴🇲 عمان (+968)</option>
-          <option value="+962">🇯🇴 الأردن (+962)</option>
-          <option value="+20">🇪🇬 مصر (+20)</option>
-          <option value="+963">🇸🇾 سوريا (+963)</option>
-          <option value="+961">🇱🇧 لبنان (+961)</option>
-          <option value="+218">🇱🇾 ليبيا (+218)</option>
-          <option value="+216">🇹🇳 تونس (+216)</option>
-          <option value="+213">🇩🇿 الجزائر (+213)</option>
-          <option value="+212">🇲🇦 المغرب (+212)</option>
-          <option value="+222">🇲🇷 موريتانيا (+222)</option>
-          <option value="+249">🇸🇩 السودان (+249)</option>
-          <option value="+967">🇾🇪 اليمن (+967)</option>
-          <option value="+970">🇵🇸 فلسطين (+970)</option>
-          <option value="+90">🇹🇷 تركيا (+90)</option>
-          <option value="+44">🇬🇧 بريطانيا (+44)</option>
-          <option value="+1">🇺🇸 أمريكا (+1)</option>
-          <option value="+49">🇩🇪 ألمانيا (+49)</option>
-          <option value="+33">🇫🇷 فرنسا (+33)</option>
-          <option value="+39">🇮🇹 إيطاليا (+39)</option>
-          <option value="+34">🇪🇸 إسبانيا (+34)</option>
-          <option value="+31">🇳🇱 هولندا (+31)</option>
-          <option value="+46">🇸🇪 السويد (+46)</option>
-          <option value="+47">🇳🇴 النرويج (+47)</option>
-          <option value="+45">🇩🇰 الدنمارك (+45)</option>
-          <option value="+358">🇫🇮 فنلندا (+358)</option>
-          <option value="+41">🇨🇭 سويسرا (+41)</option>
-          <option value="+43">🇦🇹 النمسا (+43)</option>
-          <option value="+32">🇧🇪 بلجيكا (+32)</option>
-          <option value="+48">🇵🇱 بولندا (+48)</option>
-          <option value="+420">🇨🇿 التشيك (+420)</option>
-          <option value="+36">🇭🇺 المجر (+36)</option>
-          <option value="+40">🇷🇴 رومانيا (+40)</option>
-          <option value="+359">🇧🇬 بلغاريا (+359)</option>
-          <option value="+30">🇬🇷 اليونان (+30)</option>
-          <option value="+351">🇵🇹 البرتغال (+351)</option>
-          <option value="+7">🇷🇺 روسيا (+7)</option>
-          <option value="+380">🇺🇦 أوكرانيا (+380)</option>
-          <option value="+375">🇧🇾 بيلاروسيا (+375)</option>
-          <option value="+995">🇬🇪 جورجيا (+995)</option>
-          <option value="+994">🇦🇿 أذربيجان (+994)</option>
-          <option value="+374">🇦🇲 أرمينيا (+374)</option>
-          <option value="+998">🇺🇿 أوزبكستان (+998)</option>
-          <option value="+996">🇰🇬 قرغيزستان (+996)</option>
-          <option value="+992">🇹🇯 طاجيكستان (+992)</option>
-          <option value="+993">🇹🇲 تركمانستان (+993)</option>
-          <option value="+86">🇨🇳 الصين (+86)</option>
-          <option value="+91">🇮🇳 الهند (+91)</option>
-          <option value="+92">🇵🇰 باكستان (+92)</option>
-          <option value="+93">🇦🇫 أفغانستان (+93)</option>
-          <option value="+94">🇱🇰 سريلانكا (+94)</option>
-          <option value="+95">🇲🇲 ميانمار (+95)</option>
-          <option value="+66">🇹🇭 تايلاند (+66)</option>
-          <option value="+84">🇻🇳 فيتنام (+84)</option>
-          <option value="+60">🇲🇾 ماليزيا (+60)</option>
-          <option value="+65">🇸🇬 سنغافورة (+65)</option>
-          <option value="+62">🇮🇩 إندونيسيا (+62)</option>
-          <option value="+63">🇵🇭 الفلبين (+63)</option>
-          <option value="+82">🇰🇷 كوريا الجنوبية (+82)</option>
-          <option value="+81">🇯🇵 اليابان (+81)</option>
-        </select>
-        <input
-          type="tel"
-          v-model="phoneNumber"
-          placeholder="رقم الهاتف"
-          class="phone-input"
-          :disabled="!countryCode"
-          @input="validatePhoneNumber"
-        />
+      <!-- اختيار طريقة إنشاء الحساب -->
+      <div class="register-type-selector">
+        <button 
+          class="type-btn" 
+          :class="{ active: registerType === 'email' }"
+          @click="registerType = 'email'"
+        >
+          <i class="fas fa-envelope"></i>
+          البريد الإلكتروني
+        </button>
+        <button 
+          class="type-btn" 
+          :class="{ active: registerType === 'phone' }"
+          @click="registerType = 'phone'"
+        >
+          <i class="fas fa-phone"></i>
+          رقم الهاتف
+        </button>
       </div>
-      <span v-if="phoneError" class="error-message">{{ phoneError }}</span>
+
+      <!-- إنشاء حساب بالبريد الإلكتروني -->
+      <template v-if="registerType === 'email'">
+        <label class="label">البريد الإلكتروني</label>
+        <input
+          type="email"
+          v-model="email"
+          placeholder="البريد الإلكتروني"
+          class="input"
+        />
+      </template>
+
+      <!-- إنشاء حساب برقم الهاتف -->
+      <template v-if="registerType === 'phone'">
+        <label class="label">رقم الهاتف مع رمز الدولة</label>
+        <div class="phone-input-container">
+          <select v-model="countryCode" class="country-select">
+            <option value="">اختر الرمز</option>
+            <option value="+964">🇮🇶 العراق (+964)</option>
+            <option value="+966">🇸🇦 السعودية (+966)</option>
+            <option value="+971">🇦🇪 الإمارات (+971)</option>
+            <option value="+965">🇰🇼 الكويت (+965)</option>
+            <option value="+974">🇶🇦 قطر (+974)</option>
+            <option value="+973">🇧🇭 البحرين (+973)</option>
+            <option value="+968">🇴🇲 عمان (+968)</option>
+            <option value="+962">🇯🇴 الأردن (+962)</option>
+            <option value="+20">🇪🇬 مصر (+20)</option>
+            <option value="+963">🇸🇾 سوريا (+963)</option>
+            <option value="+961">🇱🇧 لبنان (+961)</option>
+            <option value="+218">🇱🇾 ليبيا (+218)</option>
+            <option value="+216">🇹🇳 تونس (+216)</option>
+            <option value="+213">🇩🇿 الجزائر (+213)</option>
+            <option value="+212">🇲🇦 المغرب (+212)</option>
+            <option value="+222">🇲🇷 موريتانيا (+222)</option>
+            <option value="+249">🇸🇩 السودان (+249)</option>
+            <option value="+967">🇾🇪 اليمن (+967)</option>
+            <option value="+970">🇵🇸 فلسطين (+970)</option>
+            <option value="+90">🇹🇷 تركيا (+90)</option>
+            <option value="+44">🇬🇧 بريطانيا (+44)</option>
+            <option value="+1">🇺🇸 أمريكا (+1)</option>
+            <option value="+49">🇩🇪 ألمانيا (+49)</option>
+            <option value="+33">🇫🇷 فرنسا (+33)</option>
+            <option value="+39">🇮🇹 إيطاليا (+39)</option>
+            <option value="+34">🇪🇸 إسبانيا (+34)</option>
+            <option value="+31">🇳🇱 هولندا (+31)</option>
+            <option value="+46">🇸🇪 السويد (+46)</option>
+            <option value="+47">🇳🇴 النرويج (+47)</option>
+            <option value="+45">🇩🇰 الدنمارك (+45)</option>
+            <option value="+358">🇫🇮 فنلندا (+358)</option>
+            <option value="+41">🇨🇭 سويسرا (+41)</option>
+            <option value="+43">🇦🇹 النمسا (+43)</option>
+            <option value="+32">🇧🇪 بلجيكا (+32)</option>
+            <option value="+48">🇵🇱 بولندا (+48)</option>
+            <option value="+420">🇨🇿 التشيك (+420)</option>
+            <option value="+36">🇭🇺 المجر (+36)</option>
+            <option value="+40">🇷🇴 رومانيا (+40)</option>
+            <option value="+359">🇧🇬 بلغاريا (+359)</option>
+            <option value="+30">🇬🇷 اليونان (+30)</option>
+            <option value="+351">🇵🇹 البرتغال (+351)</option>
+            <option value="+7">🇷🇺 روسيا (+7)</option>
+            <option value="+380">🇺🇦 أوكرانيا (+380)</option>
+            <option value="+375">🇧🇾 بيلاروسيا (+375)</option>
+            <option value="+995">🇬🇪 جورجيا (+995)</option>
+            <option value="+994">🇦🇿 أذربيجان (+994)</option>
+            <option value="+374">🇦🇲 أرمينيا (+374)</option>
+            <option value="+998">🇺🇿 أوزبكستان (+998)</option>
+            <option value="+996">🇰🇬 قرغيزستان (+996)</option>
+            <option value="+992">🇹🇯 طاجيكستان (+992)</option>
+            <option value="+993">🇹🇲 تركمانستان (+993)</option>
+            <option value="+86">🇨🇳 الصين (+86)</option>
+            <option value="+91">🇮🇳 الهند (+91)</option>
+            <option value="+92">🇵🇰 باكستان (+92)</option>
+            <option value="+93">🇦🇫 أفغانستان (+93)</option>
+            <option value="+94">🇱🇰 سريلانكا (+94)</option>
+            <option value="+95">🇲🇲 ميانمار (+95)</option>
+            <option value="+66">🇹🇭 تايلاند (+66)</option>
+            <option value="+84">🇻🇳 فيتنام (+84)</option>
+            <option value="+60">🇲🇾 ماليزيا (+60)</option>
+            <option value="+65">🇸🇬 سنغافورة (+65)</option>
+            <option value="+62">🇮🇩 إندونيسيا (+62)</option>
+            <option value="+63">🇵🇭 الفلبين (+63)</option>
+            <option value="+82">🇰🇷 كوريا الجنوبية (+82)</option>
+            <option value="+81">🇯🇵 اليابان (+81)</option>
+          </select>
+          <input
+            type="tel"
+            v-model="phoneNumber"
+            placeholder="رقم الهاتف"
+            class="phone-input"
+            :disabled="!countryCode"
+            @input="validatePhoneNumber"
+          />
+        </div>
+        <span v-if="phoneError" class="error-message">{{ phoneError }}</span>
+      </template>
 
       <!-- كلمة المرور -->
       <label class="label">كلمة المرور</label>
@@ -108,8 +132,23 @@
         </span>
       </div>
 
+      <!-- تأكيد كلمة المرور -->
+      <label class="label">تأكيد كلمة المرور</label>
+      <div class="input-box">
+        <input
+          :type="showConfirmPassword ? 'text' : 'password'"
+          v-model="confirmPassword"
+          placeholder="تأكيد كلمة المرور"
+          class="input"
+        />
+        <span class="toggle" @click="toggleConfirmPassword">
+          {{ showConfirmPassword ? "إخفاء" : "إظهار" }}
+        </span>
+      </div>
+      <span v-if="passwordError" class="error-message">{{ passwordError }}</span>
+
       <!-- كود الإحالة -->
-      <label class="label">كود الإحالة</label>
+      <label class="label">كود الإحالة (اختياري)</label>
       <input
         type="text"
         v-model="inviteCode"
@@ -157,15 +196,19 @@ export default {
 
   data() {
     return {
+      registerType: 'email', // 'email' أو 'phone'
       email: "",
       countryCode: "",
       phoneNumber: "",
       fullPhoneNumber: "",
       password: "",
+      confirmPassword: "",
       inviteCode: "",
       showPassword: false,
+      showConfirmPassword: false,
       loading: false,
       phoneError: "",
+      passwordError: "",
     };
   },
 
@@ -179,6 +222,10 @@ export default {
   methods: {
     togglePassword() {
       this.showPassword = !this.showPassword;
+    },
+
+    toggleConfirmPassword() {
+      this.showConfirmPassword = !this.showConfirmPassword;
     },
 
     validateEmail(email) {
@@ -206,42 +253,73 @@ export default {
         return false;
       }
 
-      // التحقق من رقم الهاتف (أرقام فقط، 7-15 رقم حسب الدولة)
       const cleanPhone = this.phoneNumber.replace(/[^0-9]/g, '');
       if (cleanPhone.length < 7 || cleanPhone.length > 15) {
         this.phoneError = "رقم الهاتف يجب أن يكون بين 7 و 15 رقم";
         return false;
       }
 
-      // تكوين رقم الهاتف الكامل
       this.fullPhoneNumber = this.countryCode + cleanPhone;
-      
       this.phoneError = "";
       return true;
     },
 
-    async registerUser() {
-      if (!this.email || !this.password) {
-        alert("يرجى تعبئة البريد الإلكتروني وكلمة المرور");
-        return;
-      }
-
-      if (!this.validateEmail(this.email)) {
-        alert("البريد الإلكتروني غير صالح");
-        return;
+    validatePasswords() {
+      if (!this.password) {
+        this.passwordError = "كلمة المرور مطلوبة";
+        return false;
       }
 
       if (!this.validatePassword(this.password)) {
-        alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
-        return;
+        this.passwordError = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+        return false;
       }
 
-      // التحقق من رقم الهاتف إذا تم إدخاله
-      if (this.phoneNumber || this.countryCode) {
-        if (!this.validatePhoneNumber()) {
-          alert("يرجى التحقق من رقم الهاتف");
+      if (this.password !== this.confirmPassword) {
+        this.passwordError = "كلمة المرور غير متطابقة";
+        return false;
+      }
+
+      this.passwordError = "";
+      return true;
+    },
+
+    async checkPhoneExists(phoneNumber) {
+      try {
+        const q = query(
+          collection(db, "users"),
+          where("phoneNumber", "==", phoneNumber)
+        );
+        const querySnapshot = await getDocs(q);
+        return !querySnapshot.empty;
+      } catch (error) {
+        console.error("خطأ في التحقق من رقم الهاتف:", error);
+        return false;
+      }
+    },
+
+    async registerUser() {
+      // التحقق من المدخلات حسب نوع التسجيل
+      if (this.registerType === 'email') {
+        if (!this.email) {
+          alert("يرجى تعبئة البريد الإلكتروني");
           return;
         }
+        if (!this.validateEmail(this.email)) {
+          alert("البريد الإلكتروني غير صالح");
+          return;
+        }
+      } else {
+        if (!this.validatePhoneNumber()) {
+          alert(this.phoneError || "يرجى تعبئة رقم الهاتف");
+          return;
+        }
+      }
+
+      // التحقق من كلمة المرور
+      if (!this.validatePasswords()) {
+        alert(this.passwordError);
+        return;
       }
 
       this.loading = true;
@@ -250,9 +328,26 @@ export default {
         const auth = getAuth();
         await auth.setPersistence(browserLocalPersistence);
 
+        let userEmail = this.email;
+
+        // إذا كان التسجيل برقم الهاتف، ننشئ بريداً وهمياً
+        if (this.registerType === 'phone') {
+          // التحقق من عدم وجود الرقم مسبقاً
+          const phoneExists = await this.checkPhoneExists(this.fullPhoneNumber);
+          if (phoneExists) {
+            alert("رقم الهاتف مستخدم بالفعل");
+            this.loading = false;
+            return;
+          }
+
+          // إنشاء بريد وهمي فريد
+          const cleanPhone = this.phoneNumber.replace(/[^0-9]/g, '');
+          userEmail = `user_${cleanPhone}_${Date.now()}@temp.com`;
+        }
+
         const userCredential = await createUserWithEmailAndPassword(
           auth,
-          this.email.trim(),
+          userEmail,
           this.password
         );
 
@@ -299,7 +394,10 @@ export default {
         // حفظ بيانات المستخدم
         const userData = {
           uid: user.uid,
-          email: this.email.trim(),
+          email: this.registerType === 'email' ? this.email.trim() : null,
+          phoneNumber: this.registerType === 'phone' ? this.fullPhoneNumber : null,
+          countryCode: this.registerType === 'phone' ? this.countryCode : null,
+          phoneNumberOnly: this.registerType === 'phone' ? this.phoneNumber.replace(/[^0-9]/g, '') : null,
           referralCode: user.uid.substring(0, 6),
           invitedBy: inviterUID || null,
           level2: level2 || null,
@@ -308,15 +406,8 @@ export default {
           vipLevel: 0,
           blocked: false,
           createdAt: serverTimestamp(),
+          registrationMethod: this.registerType, // طريقة التسجيل
         };
-
-        // إضافة رقم الهاتف إذا وجد
-        if (this.countryCode && this.phoneNumber) {
-          const cleanPhone = this.phoneNumber.replace(/[^0-9]/g, '');
-          userData.phoneNumber = this.countryCode + cleanPhone;
-          userData.countryCode = this.countryCode;
-          userData.phoneNumberOnly = cleanPhone;
-        }
 
         await setDoc(doc(db, "users", user.uid), userData);
 
@@ -324,7 +415,6 @@ export default {
       } catch (err) {
         console.error("Register error:", err);
         
-        // رسائل خطأ مفهومة
         if (err.code === 'auth/email-already-in-use') {
           alert("البريد الإلكتروني مستخدم بالفعل");
         } else if (err.code === 'auth/invalid-email') {
@@ -358,7 +448,7 @@ export default {
 .card {
   background: #11151C;
   width: 90%;
-  max-width: 380px;
+  max-width: 420px;
   padding: 35px 25px;
   border-radius: 20px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(212, 175, 55, 0.1);
@@ -391,6 +481,50 @@ export default {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
+}
+
+/* محدد نوع إنشاء الحساب */
+.register-type-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: #1A1F2A;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.type-btn i {
+  font-size: 16px;
+  color: #D4AF37;
+}
+
+.type-btn:hover {
+  border-color: #D4AF37;
+  color: #D4AF37;
+}
+
+.type-btn.active {
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  color: #0A0C10;
+  border-color: transparent;
+}
+
+.type-btn.active i {
+  color: #0A0C10;
 }
 
 /* تسميات الحقول */
@@ -497,6 +631,7 @@ export default {
 .input-box {
   position: relative;
   width: 100%;
+  margin-bottom: 20px;
 }
 
 .toggle {
@@ -518,7 +653,7 @@ export default {
   color: #F6E27A;
 }
 
-/* رسالة خطأ الهاتف */
+/* رسائل الخطأ */
 .error-message {
   color: #ff6b6b;
   font-size: 12px;
@@ -631,6 +766,10 @@ export default {
   
   .title {
     font-size: 24px;
+  }
+  
+  .register-type-selector {
+    flex-direction: column;
   }
   
   .phone-input-container {
