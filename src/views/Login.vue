@@ -29,7 +29,7 @@
         <input
           type="email"
           v-model="email"
-          placeholder="example@email.com"
+          placeholder="البريد الإلكتروني"
           class="input"
           @keyup.enter="loginUser"
         />
