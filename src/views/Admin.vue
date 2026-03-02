@@ -25,7 +25,6 @@
       <button :class="['tab', activeTab === 'withdrawLogs' ? 'active' : '']" @click="switchTab('withdrawLogs')">
         سجل السحوبات
       </button>
-      <!-- 🔥 علامة التبويب الجديدة لسجل التعبئة -->
       <button :class="['tab', activeTab === 'rechargeLogs' ? 'active' : '']" @click="switchTab('rechargeLogs')">
         سجل التعبئة
       </button>
@@ -52,10 +51,12 @@
         <div v-if="filteredWithdraws.length === 0" class="empty">لا توجد طلبات سحب حالياً.</div>
         <div class="cards">
           <div class="card withdraw-card" v-for="req in filteredWithdraws" :key="req.id">
-            <p><strong>البريد:</strong> <span class="gold-text">{{ req.email || '—' }}</span></p>
+            <p><strong>البريد:</strong> <span class="gold-text">{{ req.userEmail || req.email || '—' }}</span></p>
             <p><strong>المبلغ:</strong> <span class="gold-text">{{ req.amount }} USDT</span></p>
             <p><strong>الشبكة:</strong> {{ req.network || '—' }}</p>
-            <p><strong>المحفظة:</strong> {{ req.wallet || '—' }}</p>
+            <p><strong>المحفظة:</strong> {{ req.wallet || req.walletAddress || '—' }}</p>
+            <p><strong>مستوى VIP:</strong> {{ req.vipLevel || '—' }}</p>
+            <p><strong>يوم السحب:</strong> {{ req.withdrawDay || '—' }}</p>
             <p class="muted">تم الإنشاء: {{ formatDate(req.createdAt) }}</p>
             <div class="card-actions">
               <button class="btn gold" type="button" @click.stop="openApproveModal(req, 'withdraw')" :disabled="processingId === req.id">موافقة</button>
@@ -143,7 +144,6 @@
             <div class="card-actions">
               <button class="btn gold" type="button" @click="promptRecharge(u)">تعبئة رصيد</button>
               <button class="btn red" type="button" @click="promptDeduct(u)">سحب رصيد</button>
-              <!-- 🔥 إضافة زر التفاصيل الجديد -->
               <button class="btn details-btn" type="button" @click="viewUserDetails(u)">تفاصيل</button>
               <button class="btn blue" type="button" @click="sendResetPassword(u.email)">إعادة تعيين كلمة السر</button>
               <button class="btn black" type="button" @click="toggleBlockUser(u)">
@@ -197,16 +197,25 @@
         <div v-if="withdrawLogs.length === 0" class="empty">لا توجد سجلات.</div>
         <div class="cards">
           <div class="card log-card" v-for="l in filteredWithdrawLogs" :key="l.id">
-            <p><strong>البريد:</strong> <span class="gold-text">{{ l.email }}</span></p>
+            <p><strong>البريد:</strong> <span class="gold-text">{{ l.email || l.userEmail || '—' }}</span></p>
             <p><strong>المبلغ:</strong> <span class="gold-text">{{ l.amount }} USDT</span></p>
-            <p><strong>النوع:</strong> {{ l.type }}</p>
+            <p><strong>النوع:</strong> 
+              <span :class="{
+                'status-approved': l.type === 'approved',
+                'status-rejected': l.type === 'rejected'
+              }">
+                {{ l.type === 'approved' ? 'موافق' : l.type === 'rejected' ? 'مرفوض' : l.type }}
+              </span>
+            </p>
+            <p v-if="l.reason"><strong>السبب:</strong> {{ l.reason }}</p>
+            <p v-if="l.adminMessage"><strong>رسالة الأدمن:</strong> {{ l.adminMessage }}</p>
             <p class="muted">الوقت: {{ formatDate(l.createdAt) }}</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 🔥 سجل التعبئة الجديد -->
+    <!-- سجل التعبئة -->
     <div v-if="activeTab === 'rechargeLogs'" class="panel">
       <div class="panel-header">
         <h2>سجل تعبئة الرصيد</h2>
@@ -246,13 +255,13 @@
       </div>
     </div>
 
-    <!-- Modal رفض مع سبق -->
+    <!-- Modal رفض مع سبب -->
     <div v-if="showRejectModal" class="modal-backdrop" @click.self="closeRejectModal">
       <div class="modal">
         <h3>سبب الرفض</h3>
         <p><strong>المبلغ:</strong> <span class="gold-text">{{ rejectModalData.amount }} USDT</span></p>
-        <p><strong>المستخدم:</strong> <span class="gold-text">{{ rejectModalData.email || rejectModalData.userEmail || '—' }}</span></p>
-        <p><strong>النوع:</strong> {{ rejectModalData.type === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
+        <p><strong>المستخدم:</strong> <span class="gold-text">{{ rejectModalData.email || rejectModalData.userEmail || rejectModalData.userEmail || '—' }}</span></p>
+        <p><strong>النوع:</strong> {{ rejectType === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
         
         <div class="input-box" style="margin-top: 15px;">
           <label>سبب الرفض (مطلوب 1-500 حرف)</label>
@@ -282,7 +291,7 @@
         <h3>رسالة الموافقة</h3>
         <p><strong>المبلغ:</strong> <span class="gold-text">{{ approveModalData.amount }} USDT</span></p>
         <p><strong>المستخدم:</strong> <span class="gold-text">{{ approveModalData.email || approveModalData.userEmail || '—' }}</span></p>
-        <p><strong>النوع:</strong> {{ approveModalData.type === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
+        <p><strong>النوع:</strong> {{ approveType === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
         
         <div class="input-box" style="margin-top: 15px;">
           <label>رسالة للمستخدم (اختياري - 0-500 حرف)</label>
@@ -310,14 +319,18 @@
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
         <h3>تفاصيل الطلب</h3>
-        <p v-if="modalType === 'withdraw'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email }}</span></p>
+        <p v-if="modalType === 'withdraw'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email || modalData.userEmail }}</span></p>
         <p v-if="modalType === 'withdraw'"><strong>المبلغ:</strong> <span class="gold-text">{{ modalData.amount }} USDT</span></p>
         <p v-if="modalType === 'withdraw'"><strong>الشبكة:</strong> {{ modalData.network }}</p>
-        <p v-if="modalType === 'withdraw'"><strong>المحفظة:</strong> {{ modalData.wallet }}</p>
+        <p v-if="modalType === 'withdraw'"><strong>المحفظة:</strong> {{ modalData.wallet || modalData.walletAddress }}</p>
+        <p v-if="modalType === 'withdraw'"><strong>مستوى VIP:</strong> {{ modalData.vipLevel || '—' }}</p>
+        <p v-if="modalType === 'withdraw'"><strong>يوم السحب:</strong> {{ modalData.withdrawDay || '—' }}</p>
+        
         <p v-if="modalType === 'recharge'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email || modalData.userEmail }}</span></p>
         <p v-if="modalType === 'recharge'"><strong>المبلغ:</strong> <span class="gold-text">{{ modalData.amount }} USDT</span></p>
         <p v-if="modalType === 'recharge'"><strong>الشبكة:</strong> {{ modalData.network }}</p>
         <p v-if="modalType === 'recharge' && modalData.txid"><strong>TxID:</strong> <span class="gold-text">{{ modalData.txid }}</span></p>
+        
         <p class="muted">تم الإنشاء: {{ formatDate(modalData.createdAt) }}</p>
         <div class="modal-actions">
           <button v-if="modalType === 'withdraw'" class="btn gold" type="button" @click.stop="openApproveModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">موافقة</button>
@@ -329,7 +342,7 @@
       </div>
     </div>
 
-    <!-- 🔥 Modal جديد لتفاصيل المستخدم (الإحالات والشحن الكلي) -->
+    <!-- Modal تفاصيل المستخدم (الإحالات والشحن الكلي) -->
     <div v-if="showUserDetailsModal" class="modal-backdrop" @click.self="closeUserDetailsModal">
       <div class="modal">
         <h3>تفاصيل المستخدم</h3>
@@ -337,7 +350,6 @@
         <p><strong>عدد الإحالات (المستوى 1):</strong> <span class="gold-text">{{ userDetails.referralCount || 0 }}</span></p>
         <p><strong>مبلغ الشحن الكلي (المستوى 1):</strong> <span class="gold-text">{{ userDetails.level1RechargeTotal || 0 }} USDT</span></p>
         
-        <!-- قائمة المستخدمين المحالين للمستوى الأول فقط -->
         <div v-if="userDetails.referredUsers && userDetails.referredUsers.length > 0" class="referred-users">
           <h4>المستخدمين المحالين (المستوى 1):</h4>
           <div class="users-list">
@@ -408,7 +420,6 @@ export default {
       loadingWithdrawLogs: false,
       withdrawLogFilter: "",
       
-      // 🔥 البيانات الجديدة لسجل التعبئة
       rechargeLogs: [],
       loadingRechargeLogs: false,
       rechargeLogFilter: "",
@@ -426,21 +437,18 @@ export default {
       currentUser: null,
       processingId: null,
 
-      // بيانات لموذج الرفض
       showRejectModal: false,
       rejectModalData: {},
       rejectReason: "",
       rejectError: "",
-      rejectType: "", // 'recharge' أو 'withdraw'
+      rejectType: "",
 
-      // بيانات لموذج الموافقة مع رسالة
       showApproveModal: false,
       approveModalData: {},
       approveMessage: "",
       approveError: "",
-      approveType: "", // 'recharge' أو 'withdraw'
+      approveType: "",
 
-      // 🔥 بيانات جديدة لتفاصيل المستخدم
       showUserDetailsModal: false,
       userDetails: {
         email: "",
@@ -475,8 +483,8 @@ export default {
         const f = this.withdrawFilter.toLowerCase();
         list = list.filter(
           (r) =>
-            (r.email || "").toLowerCase().includes(f) ||
-            (r.wallet || "").toLowerCase().includes(f)
+            (r.userEmail || r.email || "").toLowerCase().includes(f) ||
+            (r.wallet || r.walletAddress || "").toLowerCase().includes(f)
         );
       }
       if (this.withdrawSort === "newest")
@@ -495,7 +503,7 @@ export default {
         const f = this.rechargeFilter.toLowerCase();
         list = list.filter(
           (r) =>
-            (r.email || "").toLowerCase().includes(f) ||
+            (r.email || r.userEmail || "").toLowerCase().includes(f) ||
             (r.network || "").toLowerCase().includes(f) ||
             (String(r.amount || "") || "").includes(f) ||
             (r.status || "").toLowerCase().includes(f)
@@ -528,32 +536,30 @@ export default {
       );
     },
     filteredWithdrawLogs() {
-      if (!this.withdrawLogFilter) return this.withdrawLogs;
-      const f = this.withdrawLogFilter.toLowerCase();
-      return this.withdrawLogs.filter(
-        (l) =>
-          String(l.amount || "").includes(f) ||
-          (l.email || "").toLowerCase().includes(f)
-      );
+      let list = [...this.withdrawLogs];
+      if (this.withdrawLogFilter) {
+        const f = this.withdrawLogFilter.toLowerCase();
+        list = list.filter(
+          (l) =>
+            String(l.amount || "").includes(f) ||
+            (l.email || l.userEmail || "").toLowerCase().includes(f)
+        );
+      }
+      return list;
     },
-    // 🔥 computed جديد لتصفية سجلات التعبئة
     filteredRechargeLogs() {
       let list = [...this.rechargeLogs];
       
-      // التصفية حسب البحث
       if (this.rechargeLogFilter) {
         const f = this.rechargeLogFilter.toLowerCase();
         list = list.filter(
           (log) =>
-            (log.email || "").toLowerCase().includes(f) ||
-            (log.userEmail || "").toLowerCase().includes(f) ||
+            (log.email || log.userEmail || "").toLowerCase().includes(f) ||
             String(log.amount || "").includes(f) ||
-            (log.type || "").toLowerCase().includes(f) ||
-            (log.status || "").toLowerCase().includes(f)
+            (log.type || log.status || "").toLowerCase().includes(f)
         );
       }
       
-      // الترتيب
       if (this.rechargeLogSort === "newest")
         list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       else if (this.rechargeLogSort === "oldest")
@@ -601,7 +607,6 @@ export default {
     }
   },
   methods: {
-    // 🔥 دالة جديدة لعرض تفاصيل المستخدم - المستوى الأول فقط
     async viewUserDetails(user) {
       try {
         this.showUserDetailsModal = true;
@@ -612,7 +617,6 @@ export default {
           referredUsers: []
         };
 
-        // 1. البحث عن الإحالات المباشرة للمستوى الأول فقط
         const directReferralsQuery = query(
           collection(db, "users"),
           where("invitedBy", "==", user.id)
@@ -624,7 +628,6 @@ export default {
           const referralData = docSnap.data();
           const referralId = docSnap.id;
           
-          // حساب إجمالي الشحن للمستخدم المحال (المستوى 1)
           let totalRecharge = 0;
           try {
             const transactionsQuery = query(
@@ -649,11 +652,9 @@ export default {
             totalRecharge: totalRecharge
           });
           
-          // إضافة مبلغ الشحن إلى المجموع الكلي للمستوى الأول
           this.userDetails.level1RechargeTotal += totalRecharge;
         }
 
-        // 2. تحديث بيانات العرض للمستوى الأول فقط
         this.userDetails.referralCount = directReferralUsers.length;
         this.userDetails.referredUsers = directReferralUsers;
 
@@ -665,7 +666,6 @@ export default {
       }
     },
 
-    // 🔥 دالة لإغلاق نافذة تفاصيل المستخدم
     closeUserDetailsModal() {
       this.showUserDetailsModal = false;
       this.userDetails = {
@@ -676,17 +676,15 @@ export default {
       };
     },
 
-    // فتح موذج الموافقة
     openApproveModal(data, type) {
       this.approveModalData = data;
       this.approveType = type;
       this.approveMessage = "";
       this.approveError = "";
       this.showApproveModal = true;
-      this.showModal = false; // إغلاق الموذج القديم
+      this.showModal = false;
     },
 
-    // إغلاق موذج الموافقة
     closeApproveModal() {
       this.showApproveModal = false;
       this.approveModalData = {};
@@ -694,7 +692,6 @@ export default {
       this.approveError = "";
     },
 
-    // التحقق من رسالة الموافقة
     validateApproveMessage() {
       if (this.approveMessage.length > 500) {
         this.approveError = "الرسالة يجب أن تكون أقل من 500 حرف";
@@ -704,7 +701,6 @@ export default {
       return true;
     },
 
-    // تأكيد الموافقة
     async confirmApprove() {
       if (!this.validateApproveMessage()) return;
 
@@ -715,17 +711,15 @@ export default {
       }
     },
 
-    // فتح موذج الرفض
     openRejectModal(data, type) {
       this.rejectModalData = data;
       this.rejectType = type;
       this.rejectReason = "";
       this.rejectError = "";
       this.showRejectModal = true;
-      this.showModal = false; // إغلاق الموذج القديم
+      this.showModal = false;
     },
 
-    // إغلاق موذج الرفض
     closeRejectModal() {
       this.showRejectModal = false;
       this.rejectModalData = {};
@@ -733,7 +727,6 @@ export default {
       this.rejectError = "";
     },
 
-    // التحقق من سبب الرفض
     validateRejectReason() {
       if (!this.rejectReason || this.rejectReason.trim() === "") {
         this.rejectError = "يجب إدخال سبب الرفض";
@@ -747,7 +740,6 @@ export default {
       return true;
     },
 
-    // تأكيد الرفض
     async confirmReject() {
       if (!this.validateRejectReason()) return;
 
@@ -777,7 +769,7 @@ export default {
       else if (tab === "recharges") {
         this.reloadRechargeRequests();
       }
-      else if (tab === "rechargeLogs") { // 🔥 تحميل سجلات التعبئة عند النقر على التبويب
+      else if (tab === "rechargeLogs") {
         this.loadRechargeLogs();
       }
     },
@@ -882,10 +874,14 @@ export default {
           return {
             id: d.id,
             userId: data.userId,
-            email: data.email,
+            userEmail: data.userEmail || data.email,
+            email: data.userEmail || data.email,
             amount: data.amount,
             network: data.network,
             wallet: data.wallet,
+            walletAddress: data.walletAddress || data.wallet,
+            vipLevel: data.vipLevel,
+            withdrawDay: data.withdrawDay,
             oldBalance: data.oldBalance ?? null,
             createdAt,
           };
@@ -924,7 +920,6 @@ export default {
       }
     },
     
-    // ✅ دالة تحديث المعاملة في collection transactions
     async updateTransactionDirectly(transactionId, updateData) {
       try {
         const transactionRef = doc(db, "transactions", transactionId);
@@ -940,14 +935,13 @@ export default {
       }
     },
 
-    // ✅ دالة إنشاء معاملة جديدة
-    async createTransactionForUser(userId, email, type, amount, status, reason = "", adminMessage = "") {
+    async createTransactionForUser(userId, email, type, amount, status, reason = "", adminMessage = "", network = "", wallet = "", vipLevel = "", withdrawDay = "") {
       try {
         const transactionData = {
-          transactionId: "TRX" + Date.now(),
+          transactionId: "TRX" + Date.now() + Math.random().toString(36).substring(2, 9),
           userId: userId,
           email: email,
-          type: type, // 'withdraw' أو 'recharge'
+          type: type,
           amount: amount,
           currency: "USDT",
           status: status,
@@ -956,10 +950,20 @@ export default {
                       status === "rejected" ? "تم رفض طلبك" : "",
           reason: reason,
           adminMessage: adminMessage,
+          network: network,
+          wallet: wallet,
+          walletAddress: wallet,
+          vipLevel: vipLevel,
+          withdrawDay: withdrawDay,
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          [status === "approved" ? "approvedAt" : status === "rejected" ? "rejectedAt" : ""]: serverTimestamp()
+          updatedAt: serverTimestamp()
         };
+
+        if (status === "approved") {
+          transactionData.approvedAt = serverTimestamp();
+        } else if (status === "rejected") {
+          transactionData.rejectedAt = serverTimestamp();
+        }
 
         await addDoc(collection(db, "transactions"), transactionData);
         console.log("✅ تم إنشاء معاملة جديدة للمستخدم:", userId);
@@ -970,7 +974,6 @@ export default {
       }
     },
 
-    // دالة للموافقة على السحب مع رسالة
     async approveWithdrawWithMessage(req, message = "") {
       if (!req || !req.id) return;
       const allowed = await this.ensureAdmin();
@@ -978,30 +981,35 @@ export default {
       if (!confirm(`تأكيد الموافقة على ${req.amount} USDT؟`)) return;
       this.processingId = req.id;
       try {
-        // 1. تحديث أو إنشاء المعاملة في transactions مع الرسالة
         if (req.userId) {
           await this.createTransactionForUser(
             req.userId,
-            req.email,
+            req.userEmail || req.email,
             "withdraw",
             req.amount,
             "approved",
             "",
-            message || "تمت الموافقة على طلب السحب"
+            message || "تمت الموافقة على طلب السحب",
+            req.network,
+            req.wallet || req.walletAddress,
+            req.vipLevel,
+            req.withdrawDay
           );
         }
 
-        // 2. إضافة سجل
         await addDoc(collection(db, "withdraw_logs"), {
           userId: req.userId || null,
-          email: req.email || null,
+          email: req.userEmail || req.email || null,
           amount: req.amount || 0,
           type: "approved",
           adminMessage: message || "",
+          network: req.network,
+          wallet: req.wallet || req.walletAddress,
+          vipLevel: req.vipLevel,
+          withdrawDay: req.withdrawDay,
           createdAt: serverTimestamp(),
         });
         
-        // 3. إرسال إشعار للمستخدم مع الرسالة
         if (req.userId) {
           const notificationMessage = message 
             ? `تم تحويل ${req.amount} USDT. ${message}`
@@ -1018,7 +1026,6 @@ export default {
           );
         }
         
-        // 4. حذف الطلب من withdraw_requests
         const r = doc(db, "withdraw_requests", req.id);
         const ex = await getDoc(r);
         if (ex.exists()) await deleteDoc(r);
@@ -1036,15 +1043,13 @@ export default {
       }
     },
     
-    // دالة للموافقة على التعبئة مع رسالة
     async approveRechargeWithMessage(r, message = "") {
       if (!r || !r.id) return;
       const allowed = await this.ensureAdmin();
       if (!allowed) return alert("غير مصرح لك");
-      if (!confirm(`تأكيد الموافقة على تعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.userId || ''}?`)) return;
+      if (!confirm(`تأكيد الموافقة على تعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.email || r.userId || ''}?`)) return;
       this.processingId = r.id;
       try {
-        // 1. تحديث حالة الطلب في payments
         const pRef = doc(db, "payments", r.id);
         await updateDoc(pRef, { 
           status: "approved", 
@@ -1052,30 +1057,33 @@ export default {
           adminMessage: message || ""
         });
 
-        // 2. إنشاء معاملة في transactions مع الرسالة
         if (r.userId) {
           await this.createTransactionForUser(
             r.userId,
-            r.userEmail,
+            r.userEmail || r.email,
             "recharge",
             r.amount,
             "approved",
             "",
-            message || "تمت الموافقة على طلب التعبئة"
+            message || "تمت الموافقة على طلب التعبئة",
+            r.network,
+            "",
+            "",
+            ""
           );
         }
 
-        // 3. إضافة سجل مع الرسالة
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
-          email: r.userEmail || null,
+          email: r.userEmail || r.email || null,
           amount: r.amount || 0,
           type: "approved",
           adminMessage: message || "",
+          network: r.network,
+          txid: r.txid,
           createdAt: serverTimestamp(),
         });
 
-        // 4. إرسال إشعار للمستخدم مع الرسالة
         if (r.userId) {
           const notificationMessage = message 
             ? `تمت إضافة ${r.amount} USDT إلى حسابك. ${message}`
@@ -1088,14 +1096,12 @@ export default {
             createdAt: serverTimestamp(),
           });
 
-          // 5. تحديث رصيد المستخدم
           try {
             const userRef = doc(db, "users", r.userId);
             const uSnap = await getDoc(userRef);
             const cur = uSnap.exists() ? Number(uSnap.data().balance || 0) : 0;
             await updateDoc(userRef, { balance: cur + Number(r.amount || 0) });
 
-            // 6. حساب أرباح الإحالة
             await this.calculateAndAddReferralEarnings(r.userId, r.amount, r.id);
 
           } catch (err) {
@@ -1114,11 +1120,9 @@ export default {
       }
     },
 
-    // ✅ دالة لرفض السحب مع سبب
     async rejectWithdraw(req, reason = "") {
       if (!req || !req.id) return;
       
-      // إذا لم يتم إرسال السبب، نفتح الموذج
       if (!reason) {
         this.openRejectModal(req, 'withdraw');
         return;
@@ -1129,20 +1133,22 @@ export default {
       if (!confirm(`تأكيد رفض سحب ${req.amount}؟`)) return;
       this.processingId = req.id;
       try {
-        // 1. إنشاء معاملة مرفوضة في transactions
         if (req.userId) {
           await this.createTransactionForUser(
             req.userId,
-            req.email,
+            req.userEmail || req.email,
             "withdraw",
             req.amount,
             "rejected",
             reason,
-            "تم رفض طلب السحب"
+            "تم رفض طلب السحب",
+            req.network,
+            req.wallet || req.walletAddress,
+            req.vipLevel,
+            req.withdrawDay
           );
         }
 
-        // 2. إعادة الرصيد إذا كان هناك oldBalance
         if (req.userId && typeof req.oldBalance === "number") {
           try {
             await updateDoc(doc(db, "users", req.userId), {
@@ -1151,17 +1157,19 @@ export default {
           } catch { }
         }
 
-        // 3. إضافة سجل الرفض
         await addDoc(collection(db, "withdraw_logs"), {
           userId: req.userId || null,
-          email: req.email || null,
+          email: req.userEmail || req.email || null,
           amount: req.amount || 0,
           type: "rejected",
           reason: reason,
+          network: req.network,
+          wallet: req.wallet || req.walletAddress,
+          vipLevel: req.vipLevel,
+          withdrawDay: req.withdrawDay,
           createdAt: serverTimestamp(),
         });
 
-        // 4. إرسال إشعار للمستخدم مع السبب
         if (req.userId) {
           await addDoc(
             collection(db, "users", req.userId, "notifications"),
@@ -1174,7 +1182,6 @@ export default {
           );
         }
 
-        // 5. حذف الطلب
         const r = doc(db, "withdraw_requests", req.id);
         const ex = await getDoc(r);
         if (ex.exists()) await deleteDoc(r);
@@ -1229,10 +1236,15 @@ export default {
       try {
         this.loadingWithdrawLogs = true;
         const snap = await getDocs(collection(db, "withdraw_logs"));
-        this.withdrawLogs = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
+        this.withdrawLogs = snap.docs.map((d) => {
+          const data = d.data() || {};
+          return {
+            id: d.id,
+            ...data,
+            email: data.email || data.userEmail,
+            userEmail: data.userEmail || data.email,
+          };
+        });
       } catch (e) {
         this.withdrawLogs = [];
       } finally {
@@ -1240,12 +1252,10 @@ export default {
       }
     },
     
-    // 🔥 دالة جديدة لتحميل سجلات التعبئة
     async loadRechargeLogs() {
       try {
         this.loadingRechargeLogs = true;
         
-        // محاولة جلب البيانات من collection recharge_logs أولاً
         try {
           const rechargeLogsSnap = await getDocs(query(
             collection(db, "recharge_logs"),
@@ -1262,11 +1272,12 @@ export default {
               userEmail: data.userEmail || data.email || '',
               reason: data.reason || '',
               adminMessage: data.adminMessage || '',
+              network: data.network || '',
+              txid: data.txid || '',
               createdAt: data.createdAt,
             };
           });
           
-          // إذا وجدنا سجلات في recharge_logs، نوقف هنا
           if (this.rechargeLogs.length > 0) {
             console.log(`✅ تم تحميل ${this.rechargeLogs.length} سجل تعبئة من recharge_logs`);
             return;
@@ -1275,7 +1286,6 @@ export default {
           console.log("⚠ لا يوجد collection recharge_logs، جارٍ البحث في transactions...");
         }
         
-        // إذا لم توجد سجلات في recharge_logs، نبحث في transactions
         try {
           const transactionsSnap = await getDocs(query(
             collection(db, "transactions"),
@@ -1294,6 +1304,8 @@ export default {
               userEmail: data.email || '',
               reason: data.reason || '',
               adminMessage: data.adminMessage || '',
+              network: data.network || '',
+              txid: data.txid || '',
               createdAt: data.createdAt,
             };
           });
@@ -1317,7 +1329,7 @@ export default {
       if (!ts) return "-";
       try {
         if (ts.toMillis) ts = ts.toMillis();
-        return new Date(Number(ts)).toLocaleString();
+        return new Date(Number(ts)).toLocaleString("ar-EG");
       } catch {
         return String(ts);
       }
@@ -1342,6 +1354,7 @@ export default {
               id: d.id,
               userId: data.userId || null,
               userEmail: data.email || data.userEmail || "",
+              email: data.email || data.userEmail || "",
               amount: data.amount || 0,
               network: data.network || "",
               txid: data.txid || "",
@@ -1381,6 +1394,7 @@ export default {
             id: d.id,
             userId: data.userId || null,
             userEmail: data.email || data.userEmail || "",
+            email: data.email || data.userEmail || "",
             amount: data.amount || 0,
             network: data.network || "",
             txid: data.txid || "",
@@ -1406,7 +1420,6 @@ export default {
       alert("تم وضع إشعارات التعبئة كمقروءة (محلياً).");
     },
 
-    // ✅ دالة لحساب وإضافة أرباح الإحالة تلقائياً
     async calculateAndAddReferralEarnings(userId, amount, rechargeId) {
       try {
         console.log(`🔗 بدء حساب أرباح الإحالة للمستخدم: ${userId}, المبلغ: ${amount}`);
@@ -1422,14 +1435,12 @@ export default {
         const userData = userSnap.data();
         const userEmail = userData.email || "";
         
-        // نسبة العمولات لكل مستوى
         const commissionRates = {
-          level1: 5,   // 5% للمستوى الأول (invitedBy)
-          level2: 2,   // 2% للمستوى الثاني (level2)
-          level3: 1,   // 1% للمستوى الثالث (level3)
+          level1: 5,
+          level2: 2,
+          level3: 1,
         };
         
-        // المستوى الأول: invitedBy
         if (userData.invitedBy) {
           try {
             const level1Ref = doc(db, "users", userData.invitedBy);
@@ -1440,10 +1451,8 @@ export default {
               const level1Amount = (amount * commissionRates.level1) / 100;
               const newBalance = (level1Data.balance || 0) + level1Amount;
               
-              // تحديث رصيد المحيل بالمستوى الأول
               await updateDoc(level1Ref, { balance: newBalance });
               
-              // إنشاء معاملة الإحالة للمستوى الأول
               await addDoc(collection(db, "transactions"), {
                 transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 5),
                 userId: userData.invitedBy,
@@ -1464,7 +1473,6 @@ export default {
                 updatedAt: serverTimestamp(),
               });
               
-              // إرسال إشعار للمحيل بالمستوى الأول
               await addDoc(collection(db, "users", userData.invitedBy, "notifications"), {
                 title: "💰 عمولة إحالة جديدة",
                 message: `لقد حصلت على عمولة إحالة بقيمة ${level1Amount} USDT (${commissionRates.level1}%) من ${userEmail}`,
@@ -1479,7 +1487,6 @@ export default {
           }
         }
         
-        // المستوى الثاني: level2
         if (userData.level2) {
           try {
             const level2Ref = doc(db, "users", userData.level2);
@@ -1490,10 +1497,8 @@ export default {
               const level2Amount = (amount * commissionRates.level2) / 100;
               const newBalance = (level2Data.balance || 0) + level2Amount;
               
-              // تحديث رصيد المحيل بالمستوى الثاني
               await updateDoc(level2Ref, { balance: newBalance });
               
-              // إنشاء معاملة الإحالة للمستوى الثاني
               await addDoc(collection(db, "transactions"), {
                 transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 6),
                 userId: userData.level2,
@@ -1514,7 +1519,6 @@ export default {
                 updatedAt: serverTimestamp(),
               });
               
-              // إرسال إشعار للمحيل بالمستوى الثاني
               await addDoc(collection(db, "users", userData.level2, "notifications"), {
                 title: "💰 عمولة إحالة جديدة",
                 message: `لقد حصلت على عمولة إحالة بقيمة ${level2Amount} USDT (${commissionRates.level2}%) من ${userEmail}`,
@@ -1529,7 +1533,6 @@ export default {
           }
         }
         
-        // المستوى الثالث: level3
         if (userData.level3) {
           try {
             const level3Ref = doc(db, "users", userData.level3);
@@ -1540,10 +1543,8 @@ export default {
               const level3Amount = (amount * commissionRates.level3) / 100;
               const newBalance = (level3Data.balance || 0) + level3Amount;
               
-              // تحديث رصيد المحيل بالمستوى الثالث
               await updateDoc(level3Ref, { balance: newBalance });
               
-              // إنشاء معاملة الإحالة للمستوى الثالث
               await addDoc(collection(db, "transactions"), {
                 transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 7),
                 userId: userData.level3,
@@ -1564,7 +1565,6 @@ export default {
                 updatedAt: serverTimestamp(),
               });
               
-              // إرسال إشعار للمحيل بالمستوى الثالث
               await addDoc(collection(db, "users", userData.level3, "notifications"), {
                 title: "💰 عمولة إحالة جديدة",
                 message: `لقد حصلت على عمولة إحالة بقيمة ${level3Amount} USDT (${commissionRates.level3}%) من ${userEmail}`,
@@ -1587,11 +1587,9 @@ export default {
       }
     },
 
-    // ✅ دالة لرفض التعبئة مع سبب
     async rejectRecharge(r, reason = "") {
       if (!r || !r.id) return;
       
-      // إذا لم يتم إرسال السبب، نفتح الموذج
       if (!reason) {
         this.openRejectModal(r, 'recharge');
         return;
@@ -1599,37 +1597,39 @@ export default {
       
       const allowed = await this.ensureAdmin();
       if (!allowed) return alert("غير مصرح لك");
-      if (!confirm(`تأكيد رفض طلب التعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.userId || ''}?`)) return;
+      if (!confirm(`تأكيد رفض طلب التعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.email || r.userId || ''}?`)) return;
       this.processingId = r.id;
       try {
-        // 1. تحديث حالة الطلب في payments
         const pRef = doc(db, "payments", r.id);
         await updateDoc(pRef, { status: "rejected", processedAt: serverTimestamp() });
 
-        // 2. إنشاء معاملة مرفوضة في transactions
         if (r.userId) {
           await this.createTransactionForUser(
             r.userId,
-            r.userEmail,
+            r.userEmail || r.email,
             "recharge",
             r.amount,
             "rejected",
             reason,
-            "تم رفض طلب التعبئة"
+            "تم رفض طلب التعبئة",
+            r.network,
+            "",
+            "",
+            ""
           );
         }
 
-        // 3. إضافة سجل الرفض
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
-          email: r.userEmail || null,
+          email: r.userEmail || r.email || null,
           amount: r.amount || 0,
           type: "rejected",
           reason: reason,
+          network: r.network,
+          txid: r.txid,
           createdAt: serverTimestamp(),
         });
 
-        // 4. إرسال إشعار للمستخدم مع السبب
         if (r.userId) {
           await addDoc(collection(db, "users", r.userId, "notifications"), {
             title: "تم رفض طلب التعبئة",
@@ -1660,9 +1660,11 @@ export default {
         await deleteDoc(doc(db, "payments", r.id));
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
-          email: r.userEmail || null,
+          email: r.userEmail || r.email || null,
           amount: r.amount || 0,
           type: "deleted",
+          network: r.network,
+          txid: r.txid,
           createdAt: serverTimestamp(),
         });
         alert("تم حذف الطلب");
@@ -1689,7 +1691,6 @@ export default {
 </script>
 
 <style scoped>
-/* تحسينات التصغير والضغط */
 .header-row {
   display: flex;
   justify-content: space-between;
@@ -1895,7 +1896,6 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* 🔥 لون جديد لزر التفاصيل */
 .details-btn {
   background: #6c757d;
 }
@@ -1992,7 +1992,6 @@ export default {
   justify-content: flex-end;
 }
 
-/* 🔥 أنماط جديدة لحالات السجلات */
 .status-approved {
   color: #28a745;
   font-weight: bold;
@@ -2008,7 +2007,6 @@ export default {
   font-weight: bold;
 }
 
-/* 🔥 أنماط جديدة لقائمة المستخدمين المحالين */
 .referred-users {
   margin-top: 15px;
   border-top: 1px solid rgba(212, 175, 55, 0.2);
@@ -2046,7 +2044,6 @@ export default {
   padding: 10px;
 }
 
-/* تحسينات للعرض على الشاشات الصغيرة */
 @media (max-width: 768px) {
   .admin-page {
     padding: 8px;
