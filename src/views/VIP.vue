@@ -1,6 +1,30 @@
 <template>
   <div class="vip-page">
     <div class="container">
+      <!-- الهيدر مع أيقونات -->
+      <div class="header-icons">
+        <div class="icon-item active">
+          <i class="fas fa-home"></i>
+          <span>الرئيسية</span>
+        </div>
+        <div class="icon-item">
+          <i class="fas fa-crown"></i>
+          <span>VIP</span>
+        </div>
+        <div class="icon-item">
+          <i class="fas fa-phone"></i>
+          <span>الهاتف</span>
+        </div>
+        <div class="icon-item">
+          <i class="fas fa-road"></i>
+          <span>الطريق</span>
+        </div>
+        <div class="icon-item">
+          <i class="fas fa-user"></i>
+          <span>حسابي</span>
+        </div>
+      </div>
+
       <h1 class="page-title">
         <span class="title-glow">💎</span>
         مستويات VIP الفاخرة
@@ -65,11 +89,20 @@
           >
             <div class="card-header" :class="`level-${plan.level}`">
               <div class="level-icon">
-                <!-- استبدال أيقونة 🥉 بصورة العملة العراقية القديمة للمستوى 1 -->
-                <div v-if="plan.level === 1" class="iraqi-coin"></div>
-                <span v-else-if="plan.level === 2">🥈</span>
-                <span v-else-if="plan.level === 3">🥇</span>
-                <span v-else>💎</span>
+                <!-- العملة العراقية القديمة للمستوى 1 -->
+                <div v-if="plan.level === 1" class="iraqi-coin">
+                  <div class="coin-inner">
+                    <div class="palm-trees">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <div class="arabic-text"></div>
+                  </div>
+                </div>
+                <span v-else-if="plan.level === 2" class="medal-icon silver">🥈</span>
+                <span v-else-if="plan.level === 3" class="medal-icon gold">🥇</span>
+                <span v-else class="diamond-icon">💎</span>
               </div>
               <div class="level-number">VIP {{ plan.level }}</div>
               <div class="level-badge" v-if="plan.level >= 10">🏆 النخبة</div>
@@ -83,23 +116,19 @@
 
               <div class="benefits-list">
                 <div class="benefit-item">
-                  <i class="fas fa-check-circle"></i>
+                  <i class="fas fa-heart" style="color: #ff4d4d;"></i>
                   <span>ربح يومي: <strong>{{ plan.daily }} USDT</strong></span>
                 </div>
                 <div class="benefit-item">
-                  <i class="fas fa-calendar-week"></i>
+                  <i class="fas fa-gift" style="color: #ff9800;"></i>
                   <span>ربح أسبوعي: <strong>{{ (plan.daily * 7).toFixed(2) }} USDT</strong></span>
                 </div>
                 <div class="benefit-item">
-                  <i class="fas fa-calendar-alt"></i>
+                  <i class="fas fa-moon" style="color: #4a90e2;"></i>
                   <span>ربح شهري: <strong>{{ (plan.daily * 30).toFixed(2) }} USDT</strong></span>
                 </div>
                 <div class="benefit-item">
-                  <i class="fas fa-tasks"></i>
-                  <span>مهام يومية: {{ plan.tasks }}</span>
-                </div>
-                <div class="benefit-item">
-                  <i class="fas fa-calendar-alt"></i>
+                  <i class="fas fa-clock"></i>
                   <span>المدة: 24 ساعة</span>
                 </div>
                 <div class="benefit-item total-earnings">
@@ -170,7 +199,6 @@ import {
   collection,
   serverTimestamp,
   Timestamp,
-  setDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -185,34 +213,34 @@ export default {
       intervalId: null,
 
       plans: [
-        // المستوى 1 - مجاني
-        { level: 1, name: "VIP 1", price: 0, tasks: 1, daily: 0.30, durationSeconds: 86400 },
+        // المستوى 1
+        { level: 1, name: "VIP 1", price: 0, daily: 0.30, durationSeconds: 86400 },
         // المستوى 2
-        { level: 2, name: "VIP 2", price: 50, tasks: 1, daily: 1.60, durationSeconds: 86400 },
+        { level: 2, name: "VIP 2", price: 50, daily: 1.60, durationSeconds: 86400 },
         // المستوى 3
-        { level: 3, name: "VIP 3", price: 100, tasks: 1, daily: 3.25, durationSeconds: 86400 },
+        { level: 3, name: "VIP 3", price: 100, daily: 3.25, durationSeconds: 86400 },
         // المستوى 4
-        { level: 4, name: "VIP 4", price: 300, tasks: 1, daily: 10, durationSeconds: 86400 },
+        { level: 4, name: "VIP 4", price: 300, daily: 10, durationSeconds: 86400 },
         // المستوى 5
-        { level: 5, name: "VIP 5", price: 900, tasks: 1, daily: 33, durationSeconds: 86400 },
+        { level: 5, name: "VIP 5", price: 900, daily: 33, durationSeconds: 86400 },
         // المستوى 6
-        { level: 6, name: "VIP 6", price: 1350, tasks: 1, daily: 51, durationSeconds: 86400 },
+        { level: 6, name: "VIP 6", price: 1350, daily: 51, durationSeconds: 86400 },
         // المستوى 7
-        { level: 7, name: "VIP 7", price: 1800, tasks: 1, daily: 70, durationSeconds: 86400 },
+        { level: 7, name: "VIP 7", price: 1800, daily: 70, durationSeconds: 86400 },
         // المستوى 8
-        { level: 8, name: "VIP 8", price: 3600, tasks: 1, daily: 150, durationSeconds: 86400 },
+        { level: 8, name: "VIP 8", price: 3600, daily: 150, durationSeconds: 86400 },
         // المستوى 9
-        { level: 9, name: "VIP 9", price: 7200, tasks: 1, daily: 330, durationSeconds: 86400 },
+        { level: 9, name: "VIP 9", price: 7200, daily: 330, durationSeconds: 86400 },
         // المستوى 10
-        { level: 10, name: "VIP 10", price: 14400, tasks: 1, daily: 700, durationSeconds: 86400 },
+        { level: 10, name: "VIP 10", price: 14400, daily: 700, durationSeconds: 86400 },
         // المستوى 11
-        { level: 11, name: "VIP 11", price: 18800, tasks: 1, daily: 1600, durationSeconds: 86400 },
+        { level: 11, name: "VIP 11", price: 18800, daily: 1600, durationSeconds: 86400 },
         // المستوى 12
-        { level: 12, name: "VIP 12", price: 37600, tasks: 1, daily: 3500, durationSeconds: 86400 },
+        { level: 12, name: "VIP 12", price: 37600, daily: 3500, durationSeconds: 86400 },
         // المستوى 13
-        { level: 13, name: "VIP 13", price: 75200, tasks: 1, daily: 7500, durationSeconds: 86400 },
+        { level: 13, name: "VIP 13", price: 75200, daily: 7500, durationSeconds: 86400 },
         // المستوى 14
-        { level: 14, name: "VIP 14", price: 150400, tasks: 1, daily: 16000, durationSeconds: 86400 },
+        { level: 14, name: "VIP 14", price: 150400, daily: 16000, durationSeconds: 86400 },
       ],
 
       globalCycleHourUTC: 3,
@@ -505,7 +533,7 @@ export default {
 </script>
 
 <style scoped>
-/* الخلفية الرئيسية - أسود فاخر */
+/* الخلفية الرئيسية */
 .vip-page {
   min-height: 100vh;
   background: #0A0C10;
@@ -518,6 +546,52 @@ export default {
 .container {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+/* الهيدر مع الأيقونات - مثل الصورة */
+.header-icons {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: #11151C;
+  padding: 15px;
+  border-radius: 50px;
+  margin-bottom: 30px;
+  border: 1px solid #D4AF37;
+  box-shadow: 0 5px 20px rgba(212, 175, 55, 0.2);
+}
+
+.icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 5px 15px;
+  border-radius: 30px;
+}
+
+.icon-item i {
+  font-size: 24px;
+  color: #D4AF37;
+}
+
+.icon-item.active {
+  background: rgba(212, 175, 55, 0.2);
+  color: #D4AF37;
+}
+
+.icon-item.active i {
+  color: #D4AF37;
+  text-shadow: 0 0 10px #D4AF37;
+}
+
+.icon-item:hover {
+  color: #D4AF37;
+  transform: translateY(-2px);
 }
 
 /* العنوان الرئيسي */
@@ -541,7 +615,7 @@ export default {
   filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.5));
 }
 
-/* ===== بطاقة VIP الحالية ===== */
+/* بطاقة VIP الحالية */
 .current-vip {
   background: linear-gradient(135deg, #11151C, #1A1F2A);
   border-radius: 24px;
@@ -651,7 +725,7 @@ export default {
   z-index: 1;
 }
 
-/* ===== شبكة بطاقات VIP ===== */
+/* شبكة بطاقات VIP */
 .vip-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -700,43 +774,69 @@ export default {
   align-items: center;
 }
 
-/* تصميم العملة العراقية القديمة - المستوى 1 */
+/* تصميم العملة العراقية القديمة - مطابقة للصورة */
 .iraqi-coin {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #DAA520, #F0E68C, #B8860B);
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(145deg, #C5A028, #F6E27A, #B8860B);
   border-radius: 50%;
   position: relative;
-  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.5), inset 0 -2px 5px rgba(0,0,0,0.3);
-  border: 3px solid #D4AF37;
-  display: inline-block;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 0 3px #D4AF37, inset 0 -3px 8px rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.iraqi-coin::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
-  background: radial-gradient(circle at 30% 30%, #FFF8E7, #DAA520);
+.coin-inner {
+  width: 55px;
+  height: 55px;
+  background: radial-gradient(circle at 30% 30%, #FFE68F, #C5A028);
   border-radius: 50%;
   border: 2px solid #B8860B;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
-.iraqi-coin::after {
-  content: '⚘⚘⚘';
+/* ثلاث نخلات في الوسط */
+.palm-trees {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.palm-trees span {
+  width: 8px;
+  height: 25px;
+  background: linear-gradient(to top, #8B4513, #CD7F32);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+}
+
+.palm-trees span::before {
+  content: '🌿';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: -14px;
+  left: -6px;
   font-size: 14px;
-  color: #B8860B;
-  font-weight: bold;
-  text-shadow: 0 1px 2px rgba(255,255,255,0.5);
-  letter-spacing: 2px;
-  white-space: nowrap;
+  transform: rotate(5deg);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+}
+
+.palm-trees span:nth-child(2)::before {
+  transform: rotate(0deg);
+  left: -5px;
+  top: -15px;
+}
+
+.palm-trees span:nth-child(3)::before {
+  transform: rotate(-5deg);
+  left: -4px;
+  top: -14px;
 }
 
 /* نقش عربي على الجوانب */
@@ -745,61 +845,34 @@ export default {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: repeating-conic-gradient(from 0deg, transparent 0deg 15deg, rgba(184, 134, 11, 0.2) 15deg 30deg);
+  background: repeating-conic-gradient(from 0deg, transparent 0deg 30deg, rgba(184, 134, 11, 0.2) 30deg 60deg);
 }
 
-/* تأثير بارز محفور */
-.iraqi-coin .engraving {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.3), 0 0 0 2px rgba(212, 175, 55, 0.3);
-  background: radial-gradient(circle at 70% 30%, rgba(255,255,255,0.3) 0%, transparent 50%);
+/* أيقونات الميداليات */
+.medal-icon {
+  font-size: 60px;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
 }
 
-/* ثلاث نخلات في الوسط - تمثيل بثلاث خطوط */
-.iraqi-coin .palm-trees {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 30px;
-  height: 30px;
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-end;
+.medal-icon.silver {
+  filter: drop-shadow(0 5px 10px rgba(192, 192, 192, 0.5));
 }
 
-.iraqi-coin .palm-trees span {
-  width: 6px;
-  height: 20px;
-  background: linear-gradient(to top, #8B4513, #DAA520);
-  border-radius: 3px 3px 0 0;
-  margin: 0 2px;
-  position: relative;
+.medal-icon.gold {
+  filter: drop-shadow(0 5px 10px rgba(255, 215, 0, 0.5));
 }
 
-.iraqi-coin .palm-trees span::before {
-  content: '🌿';
-  position: absolute;
-  top: -12px;
-  left: -5px;
-  font-size: 12px;
-  transform: rotate(10deg);
+.diamond-icon {
+  font-size: 60px;
+  filter: drop-shadow(0 5px 10px rgba(212, 175, 55, 0.5));
+  animation: sparkle 2s infinite;
 }
 
-.iraqi-coin .palm-trees span:nth-child(2)::before {
-  transform: rotate(0deg);
-  left: -4px;
+@keyframes sparkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.1); filter: drop-shadow(0 0 20px #D4AF37); }
 }
 
-.iraqi-coin .palm-trees span:nth-child(3)::before {
-  transform: rotate(-10deg);
-  left: -3px;
-}
-
-/* ===== باقي الأنماط ===== */
 .level-number {
   font-size: 24px;
   font-weight: 800;
@@ -820,6 +893,7 @@ export default {
   font-weight: 700;
 }
 
+/* جسم البطاقة */
 .card-body {
   padding: 25px;
 }
@@ -846,6 +920,7 @@ export default {
   color: #D4AF37;
 }
 
+/* قائمة الفوائد */
 .benefits-list {
   margin-bottom: 20px;
 }
@@ -857,6 +932,7 @@ export default {
   padding: 10px 0;
   border-bottom: 1px solid rgba(212, 175, 55, 0.1);
   color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
 }
 
 .benefit-item:last-child {
@@ -864,8 +940,13 @@ export default {
 }
 
 .benefit-item i {
+  width: 24px;
+  font-size: 18px;
+}
+
+.benefit-item strong {
   color: #D4AF37;
-  width: 20px;
+  font-size: 15px;
 }
 
 .benefit-item.total-earnings {
@@ -876,10 +957,10 @@ export default {
 }
 
 .benefit-item.total-earnings strong {
-  color: #D4AF37;
   font-size: 16px;
 }
 
+/* تذييل البطاقة */
 .card-footer {
   display: flex;
   justify-content: space-between;
@@ -932,6 +1013,7 @@ export default {
   cursor: default;
 }
 
+/* شريط نشط */
 .active-ribbon {
   position: absolute;
   top: 20px;
@@ -945,25 +1027,7 @@ export default {
   box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
 }
 
-.btn-gold {
-  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  color: #0A0C10;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-gold:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
-}
-
+/* أزرار */
 .btn-gold-outline {
   background: transparent;
   border: 2px solid #D4AF37;
@@ -983,6 +1047,7 @@ export default {
   color: #0A0C10;
 }
 
+/* لوحة المعلومات */
 .info-panel {
   background: #11151C;
   border-radius: 24px;
@@ -1021,6 +1086,7 @@ export default {
   margin: 0;
 }
 
+/* حالات التحميل */
 .center {
   display: flex;
   flex-direction: column;
@@ -1048,9 +1114,25 @@ export default {
   font-weight: 600;
 }
 
+/* تحسينات للجوال */
 @media (max-width: 768px) {
   .vip-page {
     padding: 15px;
+  }
+
+  .header-icons {
+    padding: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .icon-item {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .icon-item i {
+    font-size: 20px;
   }
 
   .page-title {
@@ -1080,40 +1162,24 @@ export default {
   .info-panel {
     grid-template-columns: 1fr;
   }
-
-  .btn-gold, .btn-gold-outline {
-    padding: 10px 20px;
-    font-size: 14px;
-  }
   
   .iraqi-coin {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
   }
   
-  .iraqi-coin::before {
-    width: 32px;
-    height: 32px;
+  .coin-inner {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .palm-trees span {
+    width: 6px;
+    height: 20px;
   }
 }
 
-.vip-card::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.vip-card:hover::after {
-  opacity: 1;
-}
-
+/* تخصيص ألوان المستويات */
 .level-1 .level-icon { color: #CD7F32; }
 .level-2 .level-icon { color: #C0C0C0; }
 .level-3 .level-icon { color: #FFD700; }
