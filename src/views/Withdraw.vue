@@ -206,7 +206,9 @@ export default {
       if (!this.wallet || this.wallet.length < 20) return false;
       if (!this.amount || this.amount <= 0) return false;
       if (this.isProcessing) return false;
-      if (!this.checkWithdrawConditions()) return false;
+      if (this.balance < this.getWithdrawLimit) return false;
+      if (Number(this.amount) !== this.getWithdrawLimit) return false;
+      if (!this.isAllowedDay) return false;
       
       return true;
     },
