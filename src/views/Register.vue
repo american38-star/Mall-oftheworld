@@ -239,100 +239,24 @@ export default {
     },
 
     validatePhoneNumber() {
-      // إذا لم يتم إدخال رقم هاتف، نعتبره صحيح (اختياري)
       if (!this.phoneNumber && !this.countryCode) {
         this.phoneError = "";
         return true;
       }
 
-      // التحقق من اختيار رمز الدولة
       if (!this.countryCode) {
         this.phoneError = "الرجاء اختيار رمز الدولة";
         return false;
       }
 
-      // التحقق من إدخال رقم الهاتف
       if (!this.phoneNumber) {
         this.phoneError = "الرجاء إدخال رقم الهاتف";
         return false;
       }
 
-      // تنظيف الرقم من الرموز غير الرقمية
       const cleanPhone = this.phoneNumber.replace(/[^0-9]/g, '');
-      
-      // التحقق من طول الرقم (يختلف حسب الدولة)
-      const phoneLengths = {
-        '+964': [10, 11], // العراق: 10-11 رقم
-        '+966': [9, 10],  // السعودية: 9-10 أرقام
-        '+971': [9, 10],  // الإمارات: 9-10 أرقام
-        '+965': [8, 8],   // الكويت: 8 أرقام
-        '+974': [8, 8],   // قطر: 8 أرقام
-        '+973': [8, 8],   // البحرين: 8 أرقام
-        '+968': [8, 8],   // عمان: 8 أرقام
-        '+962': [9, 10],  // الأردن: 9-10 أرقام
-        '+20': [10, 11],  // مصر: 10-11 رقم
-        '+963': [9, 10],  // سوريا: 9-10 أرقام
-        '+961': [7, 8],   // لبنان: 7-8 أرقام
-        '+218': [9, 10],  // ليبيا: 9-10 أرقام
-        '+216': [8, 8],   // تونس: 8 أرقام
-        '+213': [9, 10],  // الجزائر: 9-10 أرقام
-        '+212': [9, 10],  // المغرب: 9-10 أرقام
-        '+222': [7, 8],   // موريتانيا: 7-8 أرقام
-        '+249': [9, 10],  // السودان: 9-10 أرقام
-        '+967': [9, 10],  // اليمن: 9-10 أرقام
-        '+970': [9, 10],  // فلسطين: 9-10 أرقام
-        '+90': [10, 11],  // تركيا: 10-11 رقم
-        '+44': [10, 11],  // بريطانيا: 10-11 رقم
-        '+1': [10, 10],   // أمريكا: 10 أرقام
-        '+49': [10, 11],  // ألمانيا: 10-11 رقم
-        '+33': [9, 10],   // فرنسا: 9-10 أرقام
-        '+39': [9, 10],   // إيطاليا: 9-10 أرقام
-        '+34': [9, 10],   // إسبانيا: 9-10 أرقام
-        '+31': [9, 10],   // هولندا: 9-10 أرقام
-        '+46': [9, 10],   // السويد: 9-10 أرقام
-        '+47': [8, 8],    // النرويج: 8 أرقام
-        '+45': [8, 8],    // الدنمارك: 8 أرقام
-        '+358': [9, 10],  // فنلندا: 9-10 أرقام
-        '+41': [9, 10],   // سويسرا: 9-10 أرقام
-        '+43': [9, 10],   // النمسا: 9-10 أرقام
-        '+32': [8, 9],    // بلجيكا: 8-9 أرقام
-        '+48': [9, 9],    // بولندا: 9 أرقام
-        '+420': [9, 9],   // التشيك: 9 أرقام
-        '+36': [8, 9],    // المجر: 8-9 أرقام
-        '+40': [9, 10],   // رومانيا: 9-10 أرقام
-        '+359': [8, 9],   // بلغاريا: 8-9 أرقام
-        '+30': [10, 10],  // اليونان: 10 أرقام
-        '+351': [9, 9],   // البرتغال: 9 أرقام
-        '+7': [10, 11],   // روسيا: 10-11 رقم
-        '+380': [9, 10],  // أوكرانيا: 9-10 أرقام
-        '+375': [9, 9],   // بيلاروسيا: 9 أرقام
-        '+995': [9, 9],   // جورجيا: 9 أرقام
-        '+994': [9, 9],   // أذربيجان: 9 أرقام
-        '+374': [8, 8],   // أرمينيا: 8 أرقام
-        '+998': [9, 9],   // أوزبكستان: 9 أرقام
-        '+996': [9, 9],   // قرغيزستان: 9 أرقام
-        '+992': [9, 9],   // طاجيكستان: 9 أرقام
-        '+993': [8, 8],   // تركمانستان: 8 أرقام
-        '+86': [11, 11],  // الصين: 11 رقم
-        '+91': [10, 10],  // الهند: 10 أرقام
-        '+92': [10, 11],  // باكستان: 10-11 رقم
-        '+93': [9, 9],    // أفغانستان: 9 أرقام
-        '+94': [9, 9],    // سريلانكا: 9 أرقام
-        '+95': [7, 9],    // ميانمار: 7-9 أرقام
-        '+66': [9, 9],    // تايلاند: 9 أرقام
-        '+84': [9, 10],   // فيتنام: 9-10 أرقام
-        '+60': [9, 10],   // ماليزيا: 9-10 أرقام
-        '+65': [8, 8],    // سنغافورة: 8 أرقام
-        '+62': [10, 12],  // إندونيسيا: 10-12 رقم
-        '+63': [10, 10],  // الفلبين: 10 أرقام
-        '+82': [9, 10],   // كوريا الجنوبية: 9-10 أرقام
-        '+81': [10, 11],  // اليابان: 10-11 رقم
-      };
-
-      const [minLength, maxLength] = phoneLengths[this.countryCode] || [7, 15];
-      
-      if (cleanPhone.length < minLength || cleanPhone.length > maxLength) {
-        this.phoneError = `رقم الهاتف يجب أن يكون بين ${minLength} و ${maxLength} رقم لهذه الدولة`;
+      if (cleanPhone.length < 7 || cleanPhone.length > 15) {
+        this.phoneError = "رقم الهاتف يجب أن يكون بين 7 و 15 رقم";
         return false;
       }
 
@@ -376,7 +300,6 @@ export default {
     },
 
     async registerUser() {
-      // التحقق من المدخلات حسب نوع التسجيل
       if (this.registerType === 'email') {
         if (!this.email) {
           alert("يرجى تعبئة البريد الإلكتروني");
@@ -393,7 +316,6 @@ export default {
         }
       }
 
-      // التحقق من كلمة المرور
       if (!this.validatePasswords()) {
         alert(this.passwordError);
         return;
@@ -407,9 +329,7 @@ export default {
 
         let userEmail = this.email;
 
-        // إذا كان التسجيل برقم الهاتف، ننشئ بريداً وهمياً
         if (this.registerType === 'phone') {
-          // التحقق من عدم وجود الرقم مسبقاً
           const phoneExists = await this.checkPhoneExists(this.fullPhoneNumber);
           if (phoneExists) {
             alert("رقم الهاتف مستخدم بالفعل");
@@ -417,7 +337,6 @@ export default {
             return;
           }
 
-          // إنشاء بريد وهمي فريد
           const cleanPhone = this.phoneNumber.replace(/[^0-9]/g, '');
           userEmail = `user_${cleanPhone}_${Date.now()}@temp.com`;
         }
@@ -468,7 +387,6 @@ export default {
           }
         }
 
-        // حفظ بيانات المستخدم
         const userData = {
           uid: user.uid,
           email: this.registerType === 'email' ? this.email.trim() : null,
@@ -487,13 +405,6 @@ export default {
         };
 
         await setDoc(doc(db, "users", user.uid), userData);
-
-        // ✅ تخزين رقم الهاتف في displayName للتسجيل برقم الهاتف
-        if (this.registerType === 'phone') {
-          await updateProfile(user, {
-            displayName: this.fullPhoneNumber
-          });
-        }
 
         router.push("/home");
       } catch (err) {
@@ -517,7 +428,6 @@ export default {
 </script>
 
 <style scoped>
-/* الخلفية الرئيسية - أسود فاخر */
 .container {
   display: flex;
   justify-content: center;
@@ -528,7 +438,6 @@ export default {
   direction: rtl;
 }
 
-/* كرت إنشاء الحساب - رمادي غامق */
 .card {
   background: #11151C;
   width: 90%;
@@ -540,7 +449,6 @@ export default {
   position: relative;
 }
 
-/* تأثير الحدود الذهبية */
 .card::before {
   content: '';
   position: absolute;
@@ -554,7 +462,6 @@ export default {
   opacity: 0.3;
 }
 
-/* العنوان - ذهبي فاخر */
 .title {
   text-align: center;
   margin-bottom: 25px;
@@ -567,7 +474,6 @@ export default {
   text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
 }
 
-/* محدد نوع إنشاء الحساب */
 .register-type-selector {
   display: flex;
   gap: 10px;
@@ -611,7 +517,6 @@ export default {
   color: #0A0C10;
 }
 
-/* تسميات الحقول */
 .label {
   display: block;
   margin-bottom: 8px;
@@ -621,14 +526,12 @@ export default {
   letter-spacing: 0.5px;
 }
 
-/* حاوية رقم الهاتف */
 .phone-input-container {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
 }
 
-/* اختيار رمز الدولة */
 .country-select {
   width: 40%;
   padding: 14px 10px;
@@ -658,7 +561,6 @@ export default {
   padding: 10px;
 }
 
-/* حقل رقم الهاتف */
 .phone-input {
   width: 60%;
   padding: 14px 12px;
@@ -686,7 +588,6 @@ export default {
   color: rgba(255, 255, 255, 0.3);
 }
 
-/* حقول الإدخال العادية */
 .input {
   width: 100%;
   padding: 14px 12px;
@@ -711,7 +612,6 @@ export default {
   color: rgba(255, 255, 255, 0.3);
 }
 
-/* حقل كلمة المرور مع زر الإظهار/الإخفاء */
 .input-box {
   position: relative;
   width: 100%;
@@ -737,7 +637,6 @@ export default {
   color: #F6E27A;
 }
 
-/* رسائل الخطأ */
 .error-message {
   color: #ff6b6b;
   font-size: 12px;
@@ -747,7 +646,6 @@ export default {
   display: block;
 }
 
-/* زر إنشاء الحساب - ذهبي متدرج */
 .btn {
   width: 100%;
   padding: 14px;
@@ -780,7 +678,6 @@ export default {
   filter: grayscale(20%);
 }
 
-/* رابط تسجيل الدخول */
 .link {
   text-align: center;
   margin-top: 20px;
@@ -802,7 +699,6 @@ export default {
   border-bottom-color: #D4AF37;
 }
 
-/* Loader - ذهبي */
 .loader {
   width: 22px;
   height: 22px;
@@ -819,7 +715,6 @@ export default {
   }
 }
 
-/* تأثيرات إضافية للحقول */
 .input:-webkit-autofill,
 .input:-webkit-autofill:hover,
 .input:-webkit-autofill:focus {
@@ -828,7 +723,6 @@ export default {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* أيقونة كود الإحالة */
 .input[placeholder="كود الإحالة"] {
   padding-right: 40px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23D4AF37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E");
@@ -837,7 +731,6 @@ export default {
   background-size: 18px;
 }
 
-/* تحسين للهواتف */
 @media (max-width: 480px) {
   .container {
     padding: 20px;
