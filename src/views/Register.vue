@@ -488,6 +488,13 @@ export default {
 
         await setDoc(doc(db, "users", user.uid), userData);
 
+        // ✅ تخزين رقم الهاتف في displayName للتسجيل برقم الهاتف
+        if (this.registerType === 'phone') {
+          await updateProfile(user, {
+            displayName: this.fullPhoneNumber
+          });
+        }
+
         router.push("/home");
       } catch (err) {
         console.error("Register error:", err);
