@@ -51,6 +51,7 @@
         <div v-if="filteredWithdraws.length === 0" class="empty">لا توجد طلبات سحب حالياً.</div>
         <div class="cards">
           <div class="card withdraw-card" v-for="req in filteredWithdraws" :key="req.id">
+            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ req.userPhone || '—' }}</span></p>
             <p><strong>البريد:</strong> <span class="gold-text">{{ req.userEmail || req.email || '—' }}</span></p>
             <p><strong>المبلغ:</strong> <span class="gold-text">{{ req.amount }} USDT</span></p>
             <p><strong>الشبكة:</strong> {{ req.network || '—' }}</p>
@@ -93,6 +94,7 @@
         <div v-if="filteredRechargeRequests.length === 0" class="empty">لا توجد طلبات تعبئة حالياً.</div>
         <div class="cards">
           <div class="card recharge-card" v-for="r in filteredRechargeRequests" :key="r.id">
+            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ r.userPhone || r.phoneNumber || '—' }}</span></p>
             <p><strong>البريد:</strong> <span class="gold-text">{{ r.email || r.userEmail || '—' }}</span></p>
             <p><strong>المبلغ:</strong> <span class="gold-text">{{ r.amount }} USDT</span></p>
             <p><strong>الشبكة:</strong> {{ r.network || '—' }}</p>
@@ -207,6 +209,7 @@
         <div v-if="withdrawLogs.length === 0" class="empty">لا توجد سجلات.</div>
         <div class="cards">
           <div class="card log-card" v-for="l in filteredWithdrawLogs" :key="l.id">
+            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ l.userPhone || l.phoneNumber || '—' }}</span></p>
             <p><strong>البريد:</strong> <span class="gold-text">{{ l.email || l.userEmail || '—' }}</span></p>
             <p><strong>المبلغ:</strong> <span class="gold-text">{{ l.amount }} USDT</span></p>
             <p><strong>النوع:</strong> 
@@ -246,6 +249,7 @@
         <div v-if="rechargeLogs.length === 0" class="empty">لا توجد سجلات تعبئة.</div>
         <div class="cards">
           <div class="card log-card" v-for="log in filteredRechargeLogs" :key="log.id">
+            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ log.userPhone || log.phoneNumber || '—' }}</span></p>
             <p><strong>البريد:</strong> <span class="gold-text">{{ log.email || log.userEmail || '—' }}</span></p>
             <p><strong>المبلغ:</strong> <span class="gold-text">{{ log.amount }} USDT</span></p>
             <p><strong>الحالة:</strong> 
@@ -270,7 +274,8 @@
       <div class="modal">
         <h3>سبب الرفض</h3>
         <p><strong>المبلغ:</strong> <span class="gold-text">{{ rejectModalData.amount }} USDT</span></p>
-        <p><strong>المستخدم:</strong> <span class="gold-text">{{ rejectModalData.email || rejectModalData.userEmail || rejectModalData.userEmail || '—' }}</span></p>
+        <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ rejectModalData.userPhone || rejectModalData.phoneNumber || '—' }}</span></p>
+        <p><strong>البريد:</strong> <span class="gold-text">{{ rejectModalData.email || rejectModalData.userEmail || '—' }}</span></p>
         <p><strong>النوع:</strong> {{ rejectType === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
         
         <div class="input-box" style="margin-top: 15px;">
@@ -300,7 +305,8 @@
       <div class="modal">
         <h3>رسالة الموافقة</h3>
         <p><strong>المبلغ:</strong> <span class="gold-text">{{ approveModalData.amount }} USDT</span></p>
-        <p><strong>المستخدم:</strong> <span class="gold-text">{{ approveModalData.email || approveModalData.userEmail || '—' }}</span></p>
+        <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ approveModalData.userPhone || approveModalData.phoneNumber || '—' }}</span></p>
+        <p><strong>البريد:</strong> <span class="gold-text">{{ approveModalData.email || approveModalData.userEmail || '—' }}</span></p>
         <p><strong>النوع:</strong> {{ approveType === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
         
         <div class="input-box" style="margin-top: 15px;">
@@ -329,6 +335,7 @@
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
         <h3>تفاصيل الطلب</h3>
+        <p v-if="modalType === 'withdraw'"><strong>رقم الهاتف:</strong> <span class="gold-text">{{ modalData.userPhone || modalData.phoneNumber || '—' }}</span></p>
         <p v-if="modalType === 'withdraw'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email || modalData.userEmail }}</span></p>
         <p v-if="modalType === 'withdraw'"><strong>المبلغ:</strong> <span class="gold-text">{{ modalData.amount }} USDT</span></p>
         <p v-if="modalType === 'withdraw'"><strong>الشبكة:</strong> {{ modalData.network }}</p>
@@ -336,6 +343,7 @@
         <p v-if="modalType === 'withdraw'"><strong>مستوى VIP:</strong> {{ modalData.vipLevel || '—' }}</p>
         <p v-if="modalType === 'withdraw'"><strong>يوم السحب:</strong> {{ modalData.withdrawDay || '—' }}</p>
         
+        <p v-if="modalType === 'recharge'"><strong>رقم الهاتف:</strong> <span class="gold-text">{{ modalData.userPhone || modalData.phoneNumber || '—' }}</span></p>
         <p v-if="modalType === 'recharge'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email || modalData.userEmail }}</span></p>
         <p v-if="modalType === 'recharge'"><strong>المبلغ:</strong> <span class="gold-text">{{ modalData.amount }} USDT</span></p>
         <p v-if="modalType === 'recharge'"><strong>الشبكة:</strong> {{ modalData.network }}</p>
@@ -499,6 +507,7 @@ export default {
         const f = this.withdrawFilter.toLowerCase();
         list = list.filter(
           (r) =>
+            (r.userPhone || "").toLowerCase().includes(f) ||
             (r.userEmail || r.email || "").toLowerCase().includes(f) ||
             (r.wallet || r.walletAddress || "").toLowerCase().includes(f)
         );
@@ -519,6 +528,7 @@ export default {
         const f = this.rechargeFilter.toLowerCase();
         list = list.filter(
           (r) =>
+            (r.userPhone || "").toLowerCase().includes(f) ||
             (r.email || r.userEmail || "").toLowerCase().includes(f) ||
             (r.network || "").toLowerCase().includes(f) ||
             (String(r.amount || "") || "").includes(f) ||
@@ -558,6 +568,7 @@ export default {
         list = list.filter(
           (l) =>
             String(l.amount || "").includes(f) ||
+            (l.userPhone || "").toLowerCase().includes(f) ||
             (l.email || l.userEmail || "").toLowerCase().includes(f)
         );
       }
@@ -570,6 +581,7 @@ export default {
         const f = this.rechargeLogFilter.toLowerCase();
         list = list.filter(
           (log) =>
+            (log.userPhone || "").toLowerCase().includes(f) ||
             (log.email || log.userEmail || "").toLowerCase().includes(f) ||
             String(log.amount || "").includes(f) ||
             (log.type || log.status || "").toLowerCase().includes(f)
@@ -895,6 +907,7 @@ export default {
           return {
             id: d.id,
             userId: data.userId,
+            userPhone: data.userPhone || null,
             userEmail: data.userEmail || data.email,
             email: data.userEmail || data.email,
             amount: data.amount,
@@ -956,12 +969,13 @@ export default {
       }
     },
 
-    async createTransactionForUser(userId, email, type, amount, status, reason = "", adminMessage = "", network = "", wallet = "", vipLevel = "", withdrawDay = "") {
+    async createTransactionForUser(userId, email, phoneNumber, type, amount, status, reason = "", adminMessage = "", network = "", wallet = "", vipLevel = "", withdrawDay = "") {
       try {
         const transactionData = {
           transactionId: "TRX" + Date.now() + Math.random().toString(36).substring(2, 9),
           userId: userId,
-          email: email,
+          userPhone: phoneNumber || null,
+          userEmail: email || null,
           type: type,
           amount: amount,
           currency: "USDT",
@@ -1006,6 +1020,7 @@ export default {
           await this.createTransactionForUser(
             req.userId,
             req.userEmail || req.email,
+            req.userPhone,
             "withdraw",
             req.amount,
             "approved",
@@ -1020,6 +1035,7 @@ export default {
 
         await addDoc(collection(db, "withdraw_logs"), {
           userId: req.userId || null,
+          userPhone: req.userPhone || null,
           email: req.userEmail || req.email || null,
           amount: req.amount || 0,
           type: "approved",
@@ -1079,9 +1095,23 @@ export default {
         });
 
         if (r.userId) {
+          // البحث عن رقم الهاتف من بيانات المستخدم إذا لم يكن موجوداً في الطلب
+          let userPhone = r.userPhone || r.phoneNumber;
+          if (!userPhone) {
+            try {
+              const userSnap = await getDoc(doc(db, "users", r.userId));
+              if (userSnap.exists()) {
+                userPhone = userSnap.data().phoneNumber || null;
+              }
+            } catch (err) {
+              console.warn("Failed to get user phone:", err);
+            }
+          }
+
           await this.createTransactionForUser(
             r.userId,
             r.userEmail || r.email,
+            userPhone,
             "recharge",
             r.amount,
             "approved",
@@ -1096,6 +1126,7 @@ export default {
 
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
+          userPhone: r.userPhone || r.phoneNumber || null,
           email: r.userEmail || r.email || null,
           amount: r.amount || 0,
           type: "approved",
@@ -1158,6 +1189,7 @@ export default {
           await this.createTransactionForUser(
             req.userId,
             req.userEmail || req.email,
+            req.userPhone,
             "withdraw",
             req.amount,
             "rejected",
@@ -1180,6 +1212,7 @@ export default {
 
         await addDoc(collection(db, "withdraw_logs"), {
           userId: req.userId || null,
+          userPhone: req.userPhone || null,
           email: req.userEmail || req.email || null,
           amount: req.amount || 0,
           type: "rejected",
@@ -1262,6 +1295,7 @@ export default {
           return {
             id: d.id,
             ...data,
+            userPhone: data.userPhone || null,
             email: data.email || data.userEmail,
             userEmail: data.userEmail || data.email,
           };
@@ -1289,6 +1323,7 @@ export default {
               id: d.id,
               type: data.type || '',
               amount: data.amount || 0,
+              userPhone: data.userPhone || null,
               email: data.email || data.userEmail || '',
               userEmail: data.userEmail || data.email || '',
               reason: data.reason || '',
@@ -1321,8 +1356,9 @@ export default {
               type: data.status || '',
               status: data.status || '',
               amount: data.amount || 0,
-              email: data.email || '',
-              userEmail: data.email || '',
+              userPhone: data.userPhone || null,
+              email: data.userEmail || '',
+              userEmail: data.userEmail || '',
               reason: data.reason || '',
               adminMessage: data.adminMessage || '',
               network: data.network || '',
@@ -1374,6 +1410,7 @@ export default {
             return {
               id: d.id,
               userId: data.userId || null,
+              userPhone: data.userPhone || data.phoneNumber || null,
               userEmail: data.email || data.userEmail || "",
               email: data.email || data.userEmail || "",
               amount: data.amount || 0,
@@ -1414,6 +1451,7 @@ export default {
           return {
             id: d.id,
             userId: data.userId || null,
+            userPhone: data.userPhone || data.phoneNumber || null,
             userEmail: data.email || data.userEmail || "",
             email: data.email || data.userEmail || "",
             amount: data.amount || 0,
@@ -1455,6 +1493,7 @@ export default {
         
         const userData = userSnap.data();
         const userEmail = userData.email || "";
+        const userPhone = userData.phoneNumber || "";
         
         const commissionRates = {
           level1: 5,
@@ -1477,7 +1516,8 @@ export default {
               await addDoc(collection(db, "transactions"), {
                 transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 5),
                 userId: userData.invitedBy,
-                email: level1Data.email || "",
+                userPhone: userPhone,
+                userEmail: userEmail,
                 type: "referral_commission",
                 amount: level1Amount,
                 currency: "USDT",
@@ -1485,6 +1525,7 @@ export default {
                 details: {
                   fromUserId: userId,
                   fromEmail: userEmail,
+                  fromPhone: userPhone,
                   level: 1,
                   percentage: commissionRates.level1,
                   baseAmount: amount,
@@ -1496,7 +1537,7 @@ export default {
               
               await addDoc(collection(db, "users", userData.invitedBy, "notifications"), {
                 title: "💰 عمولة إحالة جديدة",
-                message: `لقد حصلت على عمولة إحالة بقيمة ${level1Amount} USDT (${commissionRates.level1}%) من ${userEmail}`,
+                message: `لقد حصلت على عمولة إحالة بقيمة ${level1Amount} USDT (${commissionRates.level1}%) من ${userPhone || userEmail}`,
                 read: false,
                 createdAt: serverTimestamp(),
               });
@@ -1523,7 +1564,8 @@ export default {
               await addDoc(collection(db, "transactions"), {
                 transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 6),
                 userId: userData.level2,
-                email: level2Data.email || "",
+                userPhone: userPhone,
+                userEmail: userEmail,
                 type: "referral_commission",
                 amount: level2Amount,
                 currency: "USDT",
@@ -1531,6 +1573,7 @@ export default {
                 details: {
                   fromUserId: userId,
                   fromEmail: userEmail,
+                  fromPhone: userPhone,
                   level: 2,
                   percentage: commissionRates.level2,
                   baseAmount: amount,
@@ -1542,7 +1585,7 @@ export default {
               
               await addDoc(collection(db, "users", userData.level2, "notifications"), {
                 title: "💰 عمولة إحالة جديدة",
-                message: `لقد حصلت على عمولة إحالة بقيمة ${level2Amount} USDT (${commissionRates.level2}%) من ${userEmail}`,
+                message: `لقد حصلت على عمولة إحالة بقيمة ${level2Amount} USDT (${commissionRates.level2}%) من ${userPhone || userEmail}`,
                 read: false,
                 createdAt: serverTimestamp(),
               });
@@ -1569,7 +1612,8 @@ export default {
               await addDoc(collection(db, "transactions"), {
                 transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 7),
                 userId: userData.level3,
-                email: level3Data.email || "",
+                userPhone: userPhone,
+                userEmail: userEmail,
                 type: "referral_commission",
                 amount: level3Amount,
                 currency: "USDT",
@@ -1577,6 +1621,7 @@ export default {
                 details: {
                   fromUserId: userId,
                   fromEmail: userEmail,
+                  fromPhone: userPhone,
                   level: 3,
                   percentage: commissionRates.level3,
                   baseAmount: amount,
@@ -1588,7 +1633,7 @@ export default {
               
               await addDoc(collection(db, "users", userData.level3, "notifications"), {
                 title: "💰 عمولة إحالة جديدة",
-                message: `لقد حصلت على عمولة إحالة بقيمة ${level3Amount} USDT (${commissionRates.level3}%) من ${userEmail}`,
+                message: `لقد حصلت على عمولة إحالة بقيمة ${level3Amount} USDT (${commissionRates.level3}%) من ${userPhone || userEmail}`,
                 read: false,
                 createdAt: serverTimestamp(),
               });
@@ -1625,9 +1670,23 @@ export default {
         await updateDoc(pRef, { status: "rejected", processedAt: serverTimestamp() });
 
         if (r.userId) {
+          // البحث عن رقم الهاتف من بيانات المستخدم إذا لم يكن موجوداً في الطلب
+          let userPhone = r.userPhone || r.phoneNumber;
+          if (!userPhone) {
+            try {
+              const userSnap = await getDoc(doc(db, "users", r.userId));
+              if (userSnap.exists()) {
+                userPhone = userSnap.data().phoneNumber || null;
+              }
+            } catch (err) {
+              console.warn("Failed to get user phone:", err);
+            }
+          }
+
           await this.createTransactionForUser(
             r.userId,
             r.userEmail || r.email,
+            userPhone,
             "recharge",
             r.amount,
             "rejected",
@@ -1642,6 +1701,7 @@ export default {
 
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
+          userPhone: r.userPhone || r.phoneNumber || null,
           email: r.userEmail || r.email || null,
           amount: r.amount || 0,
           type: "rejected",
@@ -1681,6 +1741,7 @@ export default {
         await deleteDoc(doc(db, "payments", r.id));
         await addDoc(collection(db, "recharge_logs"), {
           userId: r.userId || null,
+          userPhone: r.userPhone || r.phoneNumber || null,
           email: r.userEmail || r.email || null,
           amount: r.amount || 0,
           type: "deleted",
