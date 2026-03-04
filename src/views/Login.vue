@@ -96,7 +96,7 @@
             <option value="+91">🇮🇳 الهند (+91)</option>
             <option value="+92">🇵🇰 باكستان (+92)</option>
             <option value="+93">🇦🇫 أفغانستان (+93)</option>
-            <option value="+94">🇱🇰 سريلانكا (+94)</option>
+            <option value="+94">🇱🇰 سريلانكา (+94)</option>
             <option value="+95">🇲🇲 ميانمار (+95)</option>
             <option value="+66">🇹🇭 تايلاند (+66)</option>
             <option value="+84">🇻🇳 فيتنام (+84)</option>
@@ -175,7 +175,7 @@
 
 <script>
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import router from "../router";
 
@@ -239,42 +239,16 @@ export default {
       return true;
     },
 
-    async findUserByPhone(phoneNumber) {
-      try {
-        // البحث عن المستخدم برقم الهاتف الكامل
-        const q = query(
-          collection(db, "users"),
-          where("phoneNumber", "==", phoneNumber)
-        );
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          return querySnapshot.docs[0].data().email;
-        }
-
-        // البحث بدون الصفر الأول بعد رمز الدولة
-        const phoneWithoutZero = phoneNumber.replace(/^(\+\d+)0(\d+)$/, '$1$2');
-        if (phoneWithoutZero !== phoneNumber) {
-          const q2 = query(
-            collection(db, "users"),
-            where("phoneNumber", "==", phoneWithoutZero)
-          );
-          const querySnapshot2 = await getDocs(q2);
-          if (!querySnapshot2.empty) {
-            return querySnapshot2.docs[0].data().email;
-          }
-        }
-
-        return null;
-      } catch (error) {
-        console.error("خطأ في البحث عن رقم الهاتف:", error);
-        return null;
-      }
+    // توليد البريد الثابت من رقم الهاتف (مطابق لطريقة التسجيل)
+    generatePhoneEmail(phoneNumber) {
+      // إزالة رمز + من البداية
+      const cleanPhone = phoneNumber.replace(/\+/g, '');
+      return `${cleanPhone}@phone.app`;
     },
 
     getErrorMessage(error) {
       const errorMessages = {
-        'auth/user-not-found': 'البريد الإلكتروني أو رقم الهاتف غير مسجل',
+        'auth/user-not-found': 'رقم الهاتف أو البريد الإلكتروني غير مسجل',
         'auth/wrong-password': 'كلمة المرور غير صحيحة',
         'auth/invalid-email': 'البريد الإلكتروني غير صالح',
         'auth/user-disabled': 'هذا الحساب معطل'
@@ -297,6 +271,7 @@ export default {
         if (!this.validateEmail(this.email)) {
           return alert("البريد الإلكتروني غير صالح");
         }
+        var loginEmail = this.email;
       } else {
         if (!this.validatePhoneNumber()) {
           return alert(this.phoneError || "يرجى تعبئة رقم الهاتف وكلمة المرور");
@@ -304,26 +279,16 @@ export default {
         if (!this.password) {
           return alert("يرجى تعبئة كلمة المرور");
         }
+        // توليد البريد الثابت من رقم الهاتف (نفس الطريقة المستخدمة في التسجيل)
+        loginEmail = this.generatePhoneEmail(this.fullPhoneNumber);
       }
 
       this.loading = true;
 
       try {
         const auth = getAuth();
-        let loginEmail = this.email;
 
-        // إذا كان تسجيل الدخول برقم الهاتف، نبحث عن البريد الإلكتروني المرتبط به
-        if (this.loginType === 'phone') {
-          const foundEmail = await this.findUserByPhone(this.fullPhoneNumber);
-          if (!foundEmail) {
-            alert("رقم الهاتف غير مسجل");
-            this.loading = false;
-            return;
-          }
-          loginEmail = foundEmail;
-        }
-
-        // محاولة تسجيل الدخول
+        // محاولة تسجيل الدخول مباشرة باستخدام البريد الثابت
         await signInWithEmailAndPassword(auth, loginEmail, this.password);
 
         const user = auth.currentUser;
