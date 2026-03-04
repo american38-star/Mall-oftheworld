@@ -27,9 +27,10 @@
           <i class="fas fa-crown"></i>
           مستوى VIP {{ userVipLevel }}
         </div>
-        <div class="user-email">
-          <i class="fas fa-envelope"></i>
-          {{ userEmail }}
+        <div class="user-contact">
+          <i class="fas fa-phone" v-if="userPhone"></i>
+          <i class="fas fa-envelope" v-else></i>
+          {{ userContact }}
         </div>
         <div class="withdraw-condition">
           <i class="fas fa-check-circle" :class="{ 'condition-met': balance >= minWithdrawAmount }"></i>
@@ -113,8 +114,8 @@
         <h3>📋 ملخص طلب السحب</h3>
         
         <div class="summary-item">
-          <span>البريد الإلكتروني:</span>
-          <span class="summary-value">{{ userEmail }}</span>
+          <span>معلومات الاتصال:</span>
+          <span class="summary-value">{{ userContact }}</span>
         </div>
         
         <div class="summary-item">
@@ -198,6 +199,7 @@ export default {
       message: "",
       messageType: "info",
       userVipLevel: null,
+      userPhone: "",
       userEmail: "",
       minWithdrawAmount: 5,
       
@@ -262,6 +264,16 @@ export default {
 
     showSummary() {
       return this.amount && this.network && this.wallet && this.userVipLevel;
+    },
+
+    userContact() {
+      if (this.userPhone) {
+        return this.userPhone;
+      } else if (this.userEmail) {
+        return this.userEmail;
+      } else {
+        return "لا يوجد";
+      }
     }
   },
 
@@ -295,15 +307,15 @@ export default {
       }
 
       try {
-        // حفظ البريد الإلكتروني
-        this.userEmail = user.email || "لا يوجد بريد";
-        
-        // تحميل رصيد المستخدم
+        // تحميل بيانات المستخدم من Firestore
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         
         if (userSnap.exists()) {
-          this.balance = userSnap.data().balance || 0;
+          const userData = userSnap.data();
+          this.balance = userData.balance || 0;
+          this.userPhone = userData.phoneNumber || "";
+          this.userEmail = userData.email || "";
         }
 
         // تحميل مستوى VIP
@@ -422,7 +434,8 @@ export default {
           transaction.set(withdrawRef, {
             transactionId: transactionId,
             userId: user.uid,
-            userEmail: this.userEmail,
+            userPhone: this.userPhone || null,
+            userEmail: this.userEmail || null,
             amount: withdrawAmount,
             network: this.network,
             wallet: this.wallet,
@@ -442,7 +455,8 @@ export default {
         await addDoc(collection(db, "transactions"), {
           transactionId: transactionId,
           userId: user.uid,
-          userEmail: this.userEmail,
+          userPhone: this.userPhone || null,
+          userEmail: this.userEmail || null,
           type: "withdraw",
           amount: withdrawAmount,
           currency: "USDT",
@@ -643,7 +657,7 @@ export default {
   margin-left: 5px;
 }
 
-.user-email {
+.user-contact {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -656,7 +670,7 @@ export default {
   border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
-.user-email i {
+.user-contact i {
   color: #D4AF37;
   font-size: 14px;
 }
