@@ -114,7 +114,7 @@
               type="range" 
               v-model.number="diceChance" 
               min="1" 
-              max="95" 
+              max="30" 
               step="1"
               class="gold-slider"
               :disabled="diceStarted"
@@ -168,8 +168,8 @@
             <input 
               type="range" 
               v-model.number="minesCount" 
-              min="1" 
-              max="10" 
+              min="5" 
+              max="15" 
               step="1"
               class="gold-slider"
               :disabled="minesStarted"
@@ -249,7 +249,8 @@
                 placeholder="السحب عند"
                 class="gold-input"
                 step="0.1"
-                min="1.1"
+                min="1.2"
+                max="10"
               />
               <span class="input-currency">x</span>
             </div>
@@ -306,7 +307,8 @@
                 placeholder="المضاعف المستهدف"
                 class="gold-input"
                 step="0.1"
-                min="1.01"
+                min="1.2"
+                max="10"
               />
               <span class="input-currency">x</span>
             </div>
@@ -844,19 +846,23 @@ export default {
       chickenPosition: 0,
       chickenSteps: [
         { multiplier: 1.0 },
-        { multiplier: 1.1 },
-        { multiplier: 1.3 },
+        { multiplier: 1.2 },
         { multiplier: 1.5 },
         { multiplier: 2.0 },
+        { multiplier: 2.5 },
         { multiplier: 3.0 },
+        { multiplier: 4.0 },
         { multiplier: 5.0 },
+        { multiplier: 6.0 },
+        { multiplier: 8.0 },
+        { multiplier: 10.0 }
       ],
       
       /* Dice */
       diceBet: null,
       diceStarted: false,
       diceRolling: false,
-      diceChance: 50,
+      diceChance: 10,
       diceRoll: null,
       diceResultText: "",
       diceWon: false,
@@ -864,7 +870,7 @@ export default {
       /* Mines */
       minesBet: null,
       minesStarted: false,
-      minesCount: 3,
+      minesCount: 8,
       minesCells: [],
       minesGameOver: false,
       minesRevealed: 0,
@@ -971,8 +977,8 @@ export default {
     
     minesProfit() {
       if (!this.minesBet) return 0;
-      let multiplier = 1 + (this.minesRevealed * 0.5);
-      return this.minesBet * multiplier;
+      let multiplier = 1 + (this.minesRevealed * 0.3);
+      return this.minesBet * Math.min(multiplier, 5);
     },
     
     playerScore() {
@@ -1051,7 +1057,7 @@ export default {
     chickenNext() {
       if (this.chickenGameOver) return;
       
-      const loseChance = 0.4 + this.chickenPosition * 0.07;
+      const loseChance = 0.5 + (this.chickenPosition * 0.05);
       if (Math.random() < loseChance) {
         this.chickenGameOver = true;
         this.result = "💥 للأسف خسرت الرهان";
@@ -1217,13 +1223,13 @@ export default {
       this.crashMultiplier = 1.0;
       this.crashProgress = 0;
       
-      const crashPoint = 1 + Math.random() * 8; // نقطة الانفجار بين 1 و 9
+      const crashPoint = 1.2 + (Math.random() * 8); // نقطة الانفجار بين 1.2 و 9.2
       
       this.crashInterval = setInterval(() => {
         if (this.crashCrashed) return;
         
-        this.crashMultiplier += 0.05;
-        this.crashProgress = ((this.crashMultiplier - 1) / 8) * 100;
+        this.crashMultiplier += 0.03;
+        this.crashProgress = ((this.crashMultiplier - 1) / 9) * 100;
         
         if (this.crashMultiplier >= crashPoint) {
           this.crashCrashed = true;
@@ -1273,7 +1279,7 @@ export default {
       
       // تأثير الانتظار
       setTimeout(() => {
-        this.limboResult = 1 + Math.random() * 10;
+        this.limboResult = 1.2 + (Math.random() * 9);
         this.limboWon = this.limboResult >= this.limboTarget;
         
         if (this.limboWon) {
@@ -1439,7 +1445,7 @@ export default {
         ];
         spins++;
         
-        if (spins >= 15) {
+        if (spins >= 20) {
           clearInterval(spinInterval);
           this.slotSpinning = false;
           this.checkSlotWin();
@@ -1453,9 +1459,9 @@ export default {
       
       if (this.slotWon) {
         let multiplier = 1;
-        if (a === '7️⃣') multiplier = 10;
-        else if (a === '💎') multiplier = 8;
-        else if (a === '🔔') multiplier = 5;
+        if (a === '7️⃣') multiplier = 8;
+        else if (a === '💎') multiplier = 6;
+        else if (a === '🔔') multiplier = 4;
         else multiplier = 3;
         
         const profit = this.slotBet * multiplier;
@@ -1501,7 +1507,7 @@ export default {
         this.coinflipFlipping = false;
         
         if (this.coinflipWon) {
-          const profit = this.coinflipBet * 2;
+          const profit = this.coinflipBet * 1.9;
           this.balance += profit;
           this.updateBalance(this.balance);
           this.result = `🎉 فوز! ربحت ${profit.toFixed(2)} USDT`;
@@ -1583,7 +1589,7 @@ export default {
       
       const index = this.kenoSelected.indexOf(n);
       if (index === -1) {
-        if (this.kenoSelected.length < 10) {
+        if (this.kenoSelected.length < 5) {
           this.kenoSelected.push(n);
         }
       } else {
@@ -1615,7 +1621,7 @@ export default {
     async calculateKenoResult() {
       this.kenoMatches = this.kenoSelected.filter(n => this.kenoDrawn.includes(n)).length;
       
-      const multipliers = [0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
+      const multipliers = [0, 1, 2, 5, 10, 20];
       this.kenoMultiplier = multipliers[this.kenoMatches] || 0;
       
       if (this.kenoMultiplier > 0) {
@@ -1648,7 +1654,7 @@ export default {
       this.bowlingKnocked = [];
       
       setTimeout(() => {
-        const knocked = Math.floor(Math.random() * 11);
+        const knocked = Math.floor(Math.random() * 10);
         
         // تأثير سقوط القوارير
         let knockInterval = setInterval(() => {
@@ -1667,10 +1673,11 @@ export default {
     },
     
     async calculateBowlingResult(knocked) {
-      let multiplier = 1;
+      let multiplier = 0.5;
       if (knocked === 10) multiplier = 3;
       else if (knocked >= 8) multiplier = 2;
       else if (knocked >= 5) multiplier = 1.5;
+      else if (knocked >= 3) multiplier = 1;
       
       const profit = this.bowlingBet * multiplier;
       this.balance += profit;
@@ -1727,7 +1734,7 @@ export default {
       
       if (JSON.stringify(this.puzzlePieces) === JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, null])) {
         this.puzzleSolved = true;
-        const profit = this.puzzleBet * 5;
+        const profit = this.puzzleBet * 3;
         this.balance += profit;
         this.updateBalance(this.balance);
         this.result = `🧩 أحسنت! حللت اللغز وربحت ${profit.toFixed(2)} USDT`;
@@ -1759,7 +1766,7 @@ export default {
     },
     
     async shootTarget(score) {
-      const hit = Math.random() < 0.7;
+      const hit = Math.random() < 0.4;
       
       if (hit) {
         this.targetScore += score;
@@ -1768,8 +1775,8 @@ export default {
         this.targetResult = "😢 أخطأت الهدف";
       }
       
-      if (this.targetScore >= 20) {
-        const multiplier = 2 + (this.targetScore / 10);
+      if (this.targetScore >= 30) {
+        const multiplier = 1.5 + (this.targetScore / 50);
         const profit = this.targetBet * multiplier;
         this.balance += profit;
         await this.updateBalance(this.balance);
@@ -1809,12 +1816,12 @@ export default {
         this.luckyDrawn = Math.floor(Math.random() * 100) + 1;
         rolls++;
         
-        if (rolls >= 15) {
+        if (rolls >= 20) {
           clearInterval(interval);
           this.luckyWon = this.luckyDrawn === this.luckyNumber;
           
           if (this.luckyWon) {
-            const profit = this.luckyBet * 50;
+            const profit = this.luckyBet * 25;
             this.balance += profit;
             this.updateBalance(this.balance);
             this.result = `🎉 رقم محظوظ! ربحت ${profit.toFixed(2)} USDT`;
@@ -1855,12 +1862,12 @@ export default {
       
       // تأثير الانتظار
       setTimeout(async () => {
-        const prizes = [0.5, 1, 1.5, 2, 3, 5, 10];
-        const weights = [0.2, 0.3, 0.2, 0.15, 0.1, 0.04, 0.01];
+        const prizes = [0.3, 0.5, 0.8, 1, 1.2, 1.5, 2, 2.5, 3, 5];
+        const weights = [0.25, 0.2, 0.15, 0.12, 0.1, 0.08, 0.05, 0.03, 0.01, 0.01];
         
         let random = Math.random();
         let cumulative = 0;
-        let multiplier = 1;
+        let multiplier = 0.3;
         
         for (let i = 0; i < weights.length; i++) {
           cumulative += weights[i];
@@ -2019,6 +2026,8 @@ export default {
 .game-container {
   max-width: 500px;
   margin: 0 auto;
+  display: block;
+  width: 100%;
 }
 
 .card {
@@ -2030,6 +2039,8 @@ export default {
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(10px);
+  display: block;
+  width: 100%;
 }
 
 .card::before {
@@ -2150,10 +2161,12 @@ export default {
   border-radius: 20px;
   gap: 5px;
   border: 1px solid rgba(212, 175, 55, 0.2);
+  flex-wrap: wrap;
 }
 
 .step {
   flex: 1;
+  min-width: 40px;
   background: linear-gradient(145deg, #1E2430, #151A24);
   border-radius: 12px;
   padding: 10px 2px;
@@ -2242,11 +2255,13 @@ export default {
   flex-direction: column;
   gap: 15px;
   align-items: center;
+  width: 100%;
 }
 
 .input-gold-wrapper {
   position: relative;
-  width: 200px;
+  width: 100%;
+  max-width: 250px;
 }
 
 .gold-input {
@@ -2290,8 +2305,11 @@ export default {
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4), inset 0 2px 5px rgba(255, 255, 255, 0.5);
+  width: 100%;
+  max-width: 250px;
 }
 
 .gold-button.pulse {
@@ -2319,12 +2337,14 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  width: 100%;
 }
 
 .game-controls-full {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
 }
 
 .profit-display {
@@ -2352,10 +2372,11 @@ export default {
   justify-content: center;
   gap: 15px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .action-btn {
-  padding: 12px 25px;
+  padding: 12px 20px;
   border-radius: 50px;
   border: none;
   font-weight: 700;
@@ -2364,8 +2385,11 @@ export default {
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  flex: 1;
+  min-width: 120px;
 }
 
 .action-btn.gold {
@@ -3299,7 +3323,8 @@ export default {
 /* Target */
 .target-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   margin: 20px 0;
   padding: 20px;
   background: linear-gradient(145deg, #1A1F2A, #11151C);
@@ -3311,6 +3336,7 @@ export default {
   position: relative;
   width: 250px;
   height: 250px;
+  margin: 0 auto;
 }
 
 .target-circle {
