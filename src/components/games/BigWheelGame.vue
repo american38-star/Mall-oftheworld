@@ -1,84 +1,111 @@
 <template>
+<div class="bigwheel-container">
 
-<div class="wheel-container">
+<h2 class="title">Big Wheel Bonus</h2>
 
-<h2 class="game-title">Big Wheel Bonus</h2>
+<div class="balance-box">
+💰 Balance: {{ balance }} $
+</div>
 
-<div class="wheel-box">
+<div class="wheel-area">
 
 <img
 src="@/assets/bigwheel.jpg"
-class="wheel-image"
-:class="{ spinning: spinning }"
+class="wheel"
+:style="{ transform: 'rotate(' + rotation + 'deg)' }"
 />
+
+<div class="pointer"></div>
 
 </div>
 
+<div class="controls">
+
+<input
+type="number"
+v-model.number="bet"
+class="bet-input"
+min="1"
+/>
+
 <button
-class="spin-button"
+class="spin-btn"
 @click="spinWheel"
 :disabled="spinning"
 >
-
-Spin Wheel
-
+Spin
 </button>
 
-<div class="result" v-if="result">
+</div>
 
-<p>You Won: {{ result }}</p>
-
+<div class="result">
+{{ resultMessage }}
 </div>
 
 </div>
-
 </template>
 
 <script>
-
 export default {
 
 name: "BigWheelGame",
 
 data(){
-
 return{
+
+balance:1000,
+
+bet:10,
+
+rotation:0,
 
 spinning:false,
 
-result:null,
-
-rewards:[
-"10 Coins",
-"20 Coins",
-"50 Coins",
-"100 Coins",
-"200 Coins",
-"500 Coins"
-]
+resultMessage:""
 
 }
-
 },
 
 methods:{
 
 spinWheel(){
 
-if(this.spinning) return
+if(this.bet > this.balance){
+this.resultMessage = "Not enough balance"
+return
+}
+
+this.balance -= this.bet
 
 this.spinning = true
 
-this.result = null
+const prizes = [0,2,3,5,10]
+
+const randomIndex = Math.floor(Math.random()*prizes.length)
+
+const winMultiplier = prizes[randomIndex]
+
+const winAmount = this.bet * winMultiplier
+
+const spinDeg = 3600 + (randomIndex * 72)
+
+this.rotation += spinDeg
 
 setTimeout(()=>{
 
-const random =
-Math.floor(Math.random() * this.rewards.length)
-
-this.result = this.rewards[random]
-
 this.spinning = false
+
+this.balance += winAmount
+
+if(winAmount > 0){
+
+this.resultMessage = "You won " + winAmount + " $ 🎉"
+
+}else{
+
+this.resultMessage = "No win 😢"
+
+}
 
 },3000)
 
@@ -87,107 +114,84 @@ this.spinning = false
 }
 
 }
-
 </script>
 
 <style scoped>
 
-.wheel-container{
-
+.bigwheel-container{
 text-align:center;
-
-padding:30px;
-
-background:#0e0e0e;
-
-border-radius:12px;
-
 color:white;
-
+background:#121212;
+padding:20px;
+min-height:100vh;
 }
 
-.game-title{
-
-margin-bottom:20px;
-
+.title{
 font-size:28px;
-
-}
-
-.wheel-box{
-
-display:flex;
-
-justify-content:center;
-
 margin-bottom:20px;
-
 }
 
-.wheel-image{
-
-width:300px;
-
-transition:transform 3s;
-
+.balance-box{
+font-size:20px;
+margin-bottom:20px;
+background:#1f1f1f;
+padding:10px;
+border-radius:10px;
 }
 
-.spinning{
-
-animation: spin 3s linear;
-
+.wheel-area{
+position:relative;
+width:260px;
+margin:auto;
 }
 
-@keyframes spin{
-
-0%{
-
-transform:rotate(0deg);
-
+.wheel{
+width:260px;
+transition:transform 3s ease-out;
 }
 
-100%{
-
-transform:rotate(1080deg);
-
+.pointer{
+position:absolute;
+top:-10px;
+left:50%;
+transform:translateX(-50%);
+width:0;
+height:0;
+border-left:15px solid transparent;
+border-right:15px solid transparent;
+border-bottom:30px solid red;
 }
 
+.controls{
+margin-top:20px;
 }
 
-.spin-button{
-
-background:#00c853;
-
+.bet-input{
+padding:8px;
+width:80px;
+text-align:center;
+border-radius:5px;
 border:none;
-
-padding:12px 25px;
-
-font-size:18px;
-
-border-radius:8px;
-
-cursor:pointer;
-
-color:white;
-
 }
 
-.spin-button:disabled{
+.spin-btn{
+padding:10px 20px;
+margin-left:10px;
+background:#00c853;
+border:none;
+border-radius:6px;
+color:white;
+font-size:16px;
+cursor:pointer;
+}
 
-background:gray;
-
-cursor:not-allowed;
-
+.spin-btn:disabled{
+background:#777;
 }
 
 .result{
-
 margin-top:20px;
-
-font-size:20px;
-
-color:#ffd700;
-
+font-size:18px;
 }
 
 </style>
