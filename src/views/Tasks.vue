@@ -1,48 +1,41 @@
 <template>
+
 <div class="games-page">
 
-<!-- top bar -->
+<!-- شريط الرصيد -->
 <div class="top-bar">
 
 <div class="balance">
-رصيدك :
-<strong>{{ balance.toFixed(2) }} $</strong>
+💰 Balance : ${{ balance.toFixed(2) }}
 </div>
 
 </div>
 
-<!-- games grid -->
-<div class="games-grid">
+<!-- قائمة الألعاب -->
+<div v-if="!currentGame" class="games-grid">
 
-<div
-v-for="game in games"
-:key="game.id"
-class="game-card"
-@click="openGame(game.id)"
->
+<div class="game-card" @click="openGame('bigwheel')">
+<img src="@/assets/bigwheel.jpg">
+<p>Big Wheel</p>
+</div>
 
-<img :src="game.image" class="game-image"/>
-
-<div class="game-name">
-{{ game.name }}
+<div class="game-card" @click="openGame('chicken')">
+<img src="@/assets/chicken.jpg">
+<p>Chicken Crash</p>
 </div>
 
 </div>
 
-</div>
-
-<!-- game screen -->
-<div v-if="currentGame" class="game-screen">
+<!-- زر الرجوع -->
+<div v-if="currentGame" class="back-bar">
 
 <button class="back-btn" @click="closeGame">
-رجوع
+⬅ Back
 </button>
 
-<ChickenRoadGame
-v-if="currentGame === 'chickenroad'"
-:balance="balance"
-@updateBalance="updateBalance"
-/>
+</div>
+
+<!-- الألعاب -->
 
 <BigWheelGame
 v-if="currentGame === 'bigwheel'"
@@ -50,63 +43,55 @@ v-if="currentGame === 'bigwheel'"
 @updateBalance="updateBalance"
 />
 
-</div>
+<ChickenCrashGame
+v-if="currentGame === 'chicken'"
+:balance="balance"
+@updateBalance="updateBalance"
+/>
 
 </div>
+
 </template>
 
 <script>
 
-import ChickenRoadGame from "@/components/games/ChickenRoadGame.vue"
 import BigWheelGame from "@/components/games/BigWheelGame.vue"
+import ChickenCrashGame from "@/components/games/ChickenCrashGame.vue"
 
 export default {
 
-name:"Tasks",
-
 components:{
-ChickenRoadGame,
-BigWheelGame
+BigWheelGame,
+ChickenCrashGame
 },
 
 data(){
 return{
 
-balance:1000,
-
-currentGame:null,
-
-games:[
-
-{
-id:"chickenroad",
-name:"Chicken Crash",
-image:"/games/chicken.jpg"
-},
-
-{
-id:"bigwheel",
-name:"Big Wheel",
-image:"/games/bigwheel.jpg"
-}
-
-]
+balance:100,
+currentGame:null
 
 }
 },
 
 methods:{
 
-openGame(id){
-this.currentGame=id
+openGame(game){
+
+this.currentGame = game
+
 },
 
 closeGame(){
-this.currentGame=null
+
+this.currentGame = null
+
 },
 
-updateBalance(newBalance){
-this.balance=newBalance
+updateBalance(amount){
+
+this.balance += amount
+
 }
 
 }
@@ -118,57 +103,88 @@ this.balance=newBalance
 <style scoped>
 
 .games-page{
-padding:15px;
-background:#111;
+
+background:#0e0e0e;
 min-height:100vh;
 color:white;
+padding-bottom:40px;
+
 }
 
 .top-bar{
+
 display:flex;
-justify-content:space-between;
-margin-bottom:15px;
+justify-content:flex-end;
+padding:15px;
+background:#1b1b1b;
+
 }
 
 .balance{
+
 font-size:18px;
+font-weight:bold;
+color:#00ff88;
+
 }
 
 .games-grid{
+
 display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:10px;
+grid-template-columns:repeat(2,1fr);
+gap:15px;
+padding:20px;
+
 }
 
 .game-card{
-background:#222;
-border-radius:10px;
-padding:5px;
+
+background:#1e1e1e;
+border-radius:12px;
+overflow:hidden;
 text-align:center;
 cursor:pointer;
+transition:0.2s;
+
 }
 
-.game-image{
+.game-card:hover{
+
+transform:scale(1.05);
+
+}
+
+.game-card img{
+
 width:100%;
-border-radius:8px;
+height:140px;
+object-fit:cover;
+
 }
 
-.game-name{
-margin-top:5px;
-font-size:14px;
+.game-card p{
+
+padding:10px;
+font-weight:bold;
+
 }
 
-.game-screen{
-margin-top:10px;
+.back-bar{
+
+padding:15px;
+
 }
 
 .back-btn{
-background:#333;
-color:white;
+
+background:#ff4444;
 border:none;
-padding:10px;
-margin-bottom:10px;
+padding:10px 20px;
+color:white;
+font-size:16px;
 border-radius:8px;
+cursor:pointer;
+
 }
 
 </style>
