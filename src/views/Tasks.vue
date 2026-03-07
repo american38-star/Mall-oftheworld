@@ -1,760 +1,390 @@
-<!-- src/views/Tasks.vue -->
 <template>
-  <div class="games-page">
+  <div class="game-page">
     <!-- الرصيد -->
-    <div class="balance-container">
-      <div class="balance-card">
+    <div class="top-bar">
+      <div class="balance-gold">
         <i class="fas fa-coins"></i>
-        <span>Balance: ${{ balance.toFixed(2) }}</span>
+        <span>رصيدك: <strong>{{ balance.toFixed(2) }} USDT</strong></span>
       </div>
     </div>
 
-    <!-- رسالة النتيجة -->
-    <transition name="fade">
-      <div v-if="resultMessage.show" class="result-message" :class="resultMessage.type">
-        <i :class="resultMessage.icon"></i>
-        <span>{{ resultMessage.text }}</span>
+    <!-- رسالة الفوز/الخسارة -->
+    <transition name="slide-fade">
+      <div v-if="showResultMessage" class="result-message" :class="resultType">
+        <i :class="resultIcon"></i>
+        <span>{{ resultText }}</span>
       </div>
     </transition>
 
-    <!-- تحميل الألعاب -->
-    <div v-if="loading" class="loading">
-      <i class="fas fa-spinner fa-spin"></i>
-      <span>جاري تحميل الألعاب...</span>
+    <!-- زر الرجوع عندما تكون اللعبة مفتوحة -->
+    <div v-if="gameOpened" class="back-button-container">
+      <button @click="closeGame" class="back-button">
+        <i class="fas fa-arrow-right"></i>
+        رجوع إلى الألعاب
+      </button>
     </div>
 
-    <!-- عرض الألعاب -->
-    <div v-else class="games-container">
-      <!-- الصف الأول: Chicken Crash و Big Wheel -->
-      <div class="featured-row">
-        <!-- لعبة Chicken Crash -->
-        <div 
-          v-if="chickenGame" 
-          class="featured-card chicken-card"
-          @click="openGame(chickenGame)"
-        >
-          <div class="game-image-container featured">
-            <img 
-              v-if="chickenGame.image" 
-              :src="chickenGame.image" 
-              :alt="chickenGame.name"
-              class="game-image"
-              @error="handleImageError($event, chickenGame)"
-            >
-            <div v-else class="game-icon featured">{{ chickenGame.icon || '🐔' }}</div>
-          </div>
-          <div class="game-info">
-            <h3 class="game-name featured">{{ chickenGame.name }}</h3>
-            <div class="game-stats">
-              <span class="stat-value">0.000</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- لعبة Big Wheel -->
-        <div 
-          v-if="bigWheelGame" 
-          class="featured-card wheel-card"
-          @click="openGame(bigWheelGame)"
-        >
-          <div class="game-image-container featured">
-            <img 
-              v-if="bigWheelGame.image" 
-              :src="bigWheelGame.image" 
-              :alt="bigWheelGame.name"
-              class="game-image"
-              @error="handleImageError($event, bigWheelGame)"
-            >
-            <div v-else class="game-icon featured">{{ bigWheelGame.icon || '🎡' }}</div>
-          </div>
-          <div class="game-info">
-            <h3 class="game-name featured">{{ bigWheelGame.name }}</h3>
-            <p class="game-subtitle">BIG WHEEL BONUS</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- باقي الألعاب في شبكة -->
-      <div v-if="otherGames.length > 0" class="games-grid">
-        <div 
-          v-for="game in otherGames" 
-          :key="game.id"
-          class="game-card"
-          @click="openGame(game)"
-        >
-          <div class="game-image-container">
-            <img 
-              v-if="game.image" 
-              :src="game.image" 
-              :alt="game.name"
-              class="game-image"
-              @error="handleImageError($event, game)"
-            >
-            <div v-else class="game-icon">{{ game.icon || '🎮' }}</div>
-          </div>
-          <h3 class="game-name">{{ game.name }}</h3>
-          <p class="game-description">{{ game.description || 'اضغط للعب' }}</p>
-        </div>
-      </div>
+    <!-- التبويبات - تظهر فقط عندما لا تكون اللعبة مفتوحة -->
+    <div v-if="!gameOpened" class="tabs">
+      <button 
+        v-for="tab in gamesList" 
+        :key="tab.id"
+        :class="{active: selectedGame === tab.id}" 
+        @click="openGame(tab.id)"
+      >
+        <span class="tab-icon">{{ tab.icon }}</span>
+        <span class="tab-text">{{ tab.name }}</span>
+      </button>
     </div>
 
-    <!-- نافذة اللعبة -->
-    <transition name="slide-up">
-      <div v-if="selectedGame" class="game-modal">
-        <div class="game-modal-header">
-          <button class="close-button" @click="closeGame">
-            <i class="fas fa-times"></i>
-          </button>
-          <h2>{{ selectedGame.name }}</h2>
-        </div>
-        <div class="game-modal-content">
-          <component 
-            :is="selectedGame.component"
-            :balance="balance"
-            @update-balance="updateBalance"
-            @show-result="showResult"
-          />
-        </div>
-      </div>
-    </transition>
+    <!-- عرض اللعبة المختارة - تظهر بملء الشاشة -->
+    <div v-if="gameOpened" class="game-fullscreen">
+      <!-- اللعبة الجديدة فقط -->
+      <ChickenRoadGame 
+        v-if="selectedGame === 'chicken-game'"
+        :balance="balance"
+        @update-balance="updateBalance"
+        @show-result="showResult"
+      />
+    </div>
   </div>
 </template>
 
 <script>
-import { auth, getUserBalance, updateUserBalance, addTransaction } from "../firebase"
-import { shallowRef, computed } from 'vue'
+import { auth, db } from "../firebase"
+import { doc, getDoc, updateDoc } from "firebase/firestore"
+
+// استيراد اللعبة الجديدة فقط
+import ChickenRoadGame from './components/games/ChickenRoadGame.vue'
 
 export default {
-  name: "Tasks",
+  name: "Games",
   
-  setup() {
-    // استيراد جميع الألعاب تلقائياً من مجلد games
-    const gameModules = import.meta.glob('../components/games/*.vue', { eager: true })
-    
-    // استيراد جميع الصور من مجلد assets
-    const assetImages = import.meta.glob('../assets/*.{png,jpg,jpeg,svg,gif,webp}', { 
-      eager: true,
-      as: 'url'
-    })
-    
-    console.log("📸 الصور الموجودة في assets:", Object.keys(assetImages))
-    
-    const gamesComponents = []
-    
-    // تحويل الملفات المستوردة إلى مصفوفة من الكائنات
-    for (const path in gameModules) {
-      const component = gameModules[path].default
-      const fileName = path.split('/').pop().replace('.vue', '')
-      const fileNameLower = fileName.toLowerCase()
-      
-      // البحث عن صورة بنفس اسم اللعبة في مجلد assets
-      let gameImage = null
-      
-      // البحث عن صورة تطابق اسم اللعبة
-      for (const imagePath in assetImages) {
-        const imageFileName = imagePath.split('/').pop().toLowerCase()
-        
-        // التحقق مما إذا كان اسم الصورة يحتوي على اسم اللعبة
-        if (imageFileName.includes(fileNameLower) || 
-            fileNameLower.includes(imageFileName.replace(/\.[^/.]+$/, ""))) {
-          gameImage = assetImages[imagePath]
-          console.log(`✅ تم العثور على صورة للعبة ${fileName}: ${imagePath}`)
-          break
-        }
-      }
-      
-      // إذا لم يتم العثور على صورة، حاول استخدام صورة افتراضية
-      if (!gameImage) {
-        for (const imagePath in assetImages) {
-          if (imagePath.endsWith('.jpg') || imagePath.endsWith('.png')) {
-            gameImage = assetImages[imagePath]
-            console.log(`⚠️ استخدام صورة افتراضية للعبة ${fileName}: ${imagePath}`)
-            break
-          }
-        }
-      }
-      
-      // استخراج اسم اللعبة من الملف أو استخدام اسم الملف
-      let gameName = fileName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
-      let gameIcon = '🎮'
-      let gameDescription = 'اضغط للعب'
-      
-      // إذا كان المكون يحتوي على خصائص meta، استخدمها
-      if (component.meta) {
-        gameName = component.meta.name || gameName
-        gameIcon = component.meta.icon || gameIcon
-        gameDescription = component.meta.description || gameDescription
-      }
-      
-      gamesComponents.push({
-        id: fileName,
-        name: gameName,
-        icon: gameIcon,
-        image: gameImage,
-        description: gameDescription,
-        component: shallowRef(component)
-      })
-    }
-    
-    return {
-      gamesComponents
-    }
+  components: {
+    ChickenRoadGame
   },
-
+  
   data() {
     return {
-      balance: 0,
-      loading: true,
-      selectedGame: null,
-      resultMessage: {
-        show: false,
-        type: '',
-        icon: '',
-        text: ''
-      },
+      gameOpened: false,
+      selectedGame: "chicken-game",
+      showResultMessage: false,
+      resultType: '',
+      resultIcon: '',
+      resultText: '',
       resultTimeout: null,
-      failedImages: new Set()
-    }
-  },
-
-  computed: {
-    // البحث عن لعبة Chicken Crash
-    chickenGame() {
-      return this.gamesComponents.find(game => 
-        game.name.toLowerCase().includes('chicken') || 
-        game.id.toLowerCase().includes('chicken')
-      )
-    },
-    
-    // البحث عن لعبة Big Wheel
-    bigWheelGame() {
-      return this.gamesComponents.find(game => 
-        game.name.toLowerCase().includes('wheel') || 
-        game.name.toLowerCase().includes('big') ||
-        game.id.toLowerCase().includes('wheel') ||
-        game.id.toLowerCase().includes('big')
-      )
-    },
-    
-    // باقي الألعاب
-    otherGames() {
-      const featuredIds = []
-      if (this.chickenGame) featuredIds.push(this.chickenGame.id)
-      if (this.bigWheelGame) featuredIds.push(this.bigWheelGame.id)
       
-      return this.gamesComponents.filter(game => !featuredIds.includes(game.id))
+      gamesList: [
+        { id: 'chicken-game', name: 'Chicken Road Game', icon: '🐔' }
+      ],
+      
+      balance: 0,
+      gameError: ""
     }
   },
-
+  
   async created() {
-    await this.fetchUserBalance()
+    const user = auth.currentUser
+    if (!user) {
+      console.log("لا يوجد مستخدم مسجل")
+      return
+    }
+    
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid))
+      if (snap.exists()) {
+        this.balance = Number(snap.data().balance || 0)
+        console.log("تم جلب الرصيد:", this.balance)
+      } else {
+        console.log("المستخدم ليس لديه رصيد")
+        this.balance = 0
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الرصيد:", error)
+    }
   },
-
+  
   methods: {
-    async fetchUserBalance() {
-      this.loading = true
-      const user = auth.currentUser
-      
-      if (!user) {
-        console.log("⚠️ لا يوجد مستخدم مسجل الدخول")
-        this.loading = false
-        return
-      }
-
-      try {
-        this.balance = await getUserBalance(user.uid)
-        console.log("✅ تم جلب الرصيد:", this.balance)
-      } catch (error) {
-        console.error("❌ خطأ في جلب الرصيد:", error)
-      } finally {
-        this.loading = false
-      }
+    openGame(gameId) {
+      this.selectedGame = gameId
+      this.gameOpened = true
+      this.gameError = ""
+      console.log("تم فتح اللعبة:", gameId)
     },
-
-    async updateBalance(newBalance, gameName = '', betAmount = 0, won = false) {
-      const oldBalance = this.balance
+    
+    closeGame() {
+      this.gameOpened = false
+      console.log("تم إغلاق اللعبة")
+    },
+    
+    async updateBalance(newBalance) {
+      console.log("تحديث الرصيد من:", this.balance, "إلى:", newBalance)
       this.balance = newBalance
       
       const user = auth.currentUser
-      if (!user) return
-
-      try {
-        const success = await updateUserBalance(user.uid, newBalance)
-        
-        if (success) {
-          console.log(`✅ تم تحديث الرصيد: ${oldBalance} -> ${newBalance}`)
-          
-          if (gameName && betAmount > 0) {
-            await addTransaction(user.uid, {
-              gameName,
-              betAmount,
-              won,
-              oldBalance,
-              newBalance,
-              profit: newBalance - oldBalance
-            })
-          }
-        } else {
-          this.balance = oldBalance
-          this.showResult('فشل تحديث الرصيد!', false)
+      if (user) {
+        try {
+          await updateDoc(doc(db, "users", user.uid), {
+            balance: this.balance
+          })
+          console.log("تم تحديث الرصيد في Firebase:", this.balance)
+        } catch (error) {
+          console.error("خطأ في تحديث الرصيد:", error)
         }
-      } catch (error) {
-        console.error("❌ خطأ في تحديث الرصيد:", error)
-        this.balance = oldBalance
       }
     },
-
-    openGame(game) {
-      this.selectedGame = game
-    },
-
-    closeGame() {
-      this.selectedGame = null
-    },
-
+    
     showResult(message, isWin) {
-      if (this.resultTimeout) {
-        clearTimeout(this.resultTimeout)
-      }
-
-      this.resultMessage = {
-        show: true,
-        type: isWin ? 'win' : 'lose',
-        icon: isWin ? 'fas fa-trophy' : 'fas fa-skull',
-        text: message
-      }
-
+      if (this.resultTimeout) clearTimeout(this.resultTimeout)
+      
+      this.resultText = message
+      this.resultType = isWin ? 'win-message' : 'lose-message'
+      this.resultIcon = isWin ? 'fas fa-trophy' : 'fas fa-skull'
+      this.showResultMessage = true
+      
       this.resultTimeout = setTimeout(() => {
-        this.resultMessage.show = false
+        this.showResultMessage = false
       }, 2000)
-    },
-
-    handleImageError(event, game) {
-      if (this.failedImages.has(game.id)) return
-      
-      this.failedImages.add(game.id)
-      console.warn(`⚠️ فشل تحميل صورة اللعبة: ${game.name}`)
-      
-      event.target.style.display = 'none'
-      const iconDiv = document.createElement('div')
-      iconDiv.className = 'game-icon'
-      iconDiv.textContent = game.icon || '🎮'
-      event.target.parentNode.appendChild(iconDiv)
-    }
-  },
-
-  beforeUnmount() {
-    if (this.resultTimeout) {
-      clearTimeout(this.resultTimeout)
     }
   }
 }
 </script>
 
 <style scoped>
-.games-page {
+/* ===== التصميم العام ===== */
+.game-page {
+  background: linear-gradient(135deg, #0a0f1e 0%, #1a1f2f 100%);
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1f2e 0%, #2a2f3f 100%);
-  padding: 20px;
-  font-family: 'Arial', sans-serif;
   color: #ffffff;
-}
-
-/* حاوية الرصيد */
-.balance-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 30px;
-  position: sticky;
-  top: 20px;
-  z-index: 100;
-}
-
-.balance-card {
-  background: #2a2f42;
-  padding: 15px 40px;
-  border-radius: 50px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  font-size: 24px;
-  color: #ffffff;
-  border: 1px solid #3a4055;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.balance-card i {
-  color: #ffd700;
-  font-size: 28px;
-}
-
-.balance-card span {
-  color: #ffffff;
-}
-
-/* حاوية الألعاب */
-.games-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-/* الصف المميز */
-.featured-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 25px;
-  margin-bottom: 40px;
-}
-
-/* البطاقات المميزة */
-.featured-card {
-  background: #2a2f42;
-  border-radius: 15px;
-  padding: 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-  text-align: center;
-}
-
-.featured-card:hover {
-  transform: translateY(-5px);
-  border-color: #ffd700;
-  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
-}
-
-.chicken-card {
-  background: #2a2f42;
-}
-
-.wheel-card {
-  background: #252a3c;
-}
-
-.game-image-container.featured {
-  width: 100%;
-  height: 220px;
-  margin-bottom: 15px;
-  border-radius: 10px;
-  overflow: hidden;
-  background: #1e2335;
-}
-
-.game-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.featured-card:hover .game-image {
-  transform: scale(1.05);
-}
-
-.game-icon.featured {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 80px;
-  background: linear-gradient(135deg, #ffd700, #ffa500);
-  color: #1e2335;
-}
-
-.game-info {
-  margin-top: 10px;
-}
-
-.game-name.featured {
-  font-size: 24px;
-  color: #ffffff;
-  margin-bottom: 10px;
-  font-weight: bold;
-}
-
-.game-stats {
-  padding: 10px;
-  background: #1e2335;
-  border-radius: 8px;
-  display: inline-block;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #ffd700;
-}
-
-.game-subtitle {
-  font-size: 18px;
-  color: #ffd700;
-  margin: 10px 0 0;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-/* شبكة الألعاب */
-.games-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
-  margin-top: 20px;
-}
-
-.game-card {
-  background: #2a2f42;
-  border-radius: 12px;
   padding: 15px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
   text-align: center;
+  direction: rtl;
+  font-family: 'Montserrat', 'Cairo', sans-serif;
+  position: relative;
+  overflow-x: hidden;
 }
 
-.game-card:hover {
-  transform: translateY(-3px);
-  border-color: #ffd700;
-  box-shadow: 0 5px 20px rgba(255, 215, 0, 0.2);
+/* ===== الشريط العلوي ===== */
+.top-bar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  z-index: 10;
+  position: relative;
 }
 
-.game-image-container {
-  width: 100%;
-  height: 150px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #1e2335;
-  margin-bottom: 10px;
-}
-
-.game-icon {
-  width: 100%;
-  height: 100%;
+.balance-gold {
+  background: linear-gradient(145deg, #1e2333, #131826);
+  padding: 12px 30px;
+  border-radius: 100px;
+  border: 1px solid #ffd700;
+  box-shadow: 0 5px 20px rgba(255, 215, 0, 0.2), inset 0 0 10px rgba(255, 215, 0, 0.1);
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 50px;
-  background: linear-gradient(135deg, #3a4055, #2a2f42);
+  gap: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.balance-gold i {
   color: #ffd700;
+  font-size: 22px;
+  filter: drop-shadow(0 0 8px #ffd700);
 }
 
-.game-name {
-  font-size: 18px;
-  color: #ffffff;
-  margin-bottom: 5px;
-  font-weight: 600;
+.balance-gold strong {
+  color: #ffd700;
+  font-size: 20px;
+  margin-right: 5px;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
 }
 
-.game-description {
-  color: #a0a0a0;
-  font-size: 13px;
-  margin: 0;
-}
-
-/* رسالة النتيجة */
+/* ===== رسالة النتيجة ===== */
 .result-message {
   position: fixed;
-  top: 100px;
+  top: 80px;
   left: 50%;
   transform: translateX(-50%);
   padding: 15px 30px;
-  border-radius: 10px;
+  border-radius: 50px;
   display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  z-index: 9999;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 1px solid;
+  backdrop-filter: blur(10px);
+  min-width: 280px;
+  justify-content: center;
+}
+
+.win-message {
+  background: linear-gradient(145deg, #1a2f1a, #0f1f0f);
+  border-color: #4caf50;
+  box-shadow: 0 0 30px rgba(76, 175, 80, 0.3);
+  color: #4caf50;
+}
+
+.win-message i {
+  color: #4caf50;
+  filter: drop-shadow(0 0 8px #4caf50);
+}
+
+.lose-message {
+  background: linear-gradient(145deg, #2f1a1a, #1f0f0f);
+  border-color: #f44336;
+  box-shadow: 0 0 30px rgba(244, 67, 54, 0.3);
+  color: #f44336;
+}
+
+.lose-message i {
+  color: #f44336;
+  filter: drop-shadow(0 0 8px #f44336);
+}
+
+.slide-fade-enter-active {
+  transition: all 0.3s ease;
+}
+.slide-fade-leave-active {
+  transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+}
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateX(-50%) translateY(-20px);
+  opacity: 0;
+}
+
+/* ===== زر الرجوع ===== */
+.back-button-container {
+  margin-bottom: 20px;
+  text-align: right;
+}
+
+.back-button {
+  background: linear-gradient(145deg, #1e2333, #131826);
+  color: #ffd700;
+  border: 1px solid #ffd700;
+  padding: 10px 25px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 18px;
-  font-weight: bold;
-  z-index: 1000;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-  animation: slideDown 0.3s ease;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.result-message.win {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-  color: white;
+.back-button:hover {
+  background: linear-gradient(135deg, #ffd700, #ffed4a);
+  color: #0a0f1e;
+  transform: translateX(-5px);
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
 }
 
-.result-message.lose {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white;
-}
-
-@keyframes slideDown {
-  from {
-    top: 50px;
-    opacity: 0;
-  }
-  to {
-    top: 100px;
-    opacity: 1;
-  }
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-20px);
-}
-
-/* التحميل */
-.loading {
+/* ===== التبويبات ===== */
+.tabs {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-wrap: wrap;
   justify-content: center;
-  min-height: 300px;
-  color: #ffffff;
-  font-size: 18px;
-  gap: 15px;
-}
-
-.loading i {
-  font-size: 40px;
-  color: #ffd700;
-}
-
-/* نافذة اللعبة */
-.game-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: transform 0.3s ease;
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  transform: translateY(100%);
-}
-
-.game-modal-header {
-  background: #1e2335;
-  padding: 15px 20px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  color: white;
-  border-bottom: 2px solid #ffd700;
-}
-
-.close-button {
-  background: #2a2f42;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #ffd700;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-}
-
-.close-button:hover {
-  background: #ffd700;
-  color: #1e2335;
-  transform: rotate(90deg);
-}
-
-.game-modal-header h2 {
-  margin: 0;
-  font-size: 20px;
-  flex: 1;
-  color: #ffd700;
-}
-
-.game-modal-content {
-  flex: 1;
+  gap: 10px;
+  margin-bottom: 25px;
+  max-height: 200px;
   overflow-y: auto;
-  padding: 20px;
+  padding: 15px;
+  background: rgba(30, 35, 51, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  scrollbar-width: thin;
+  scrollbar-color: #ffd700 #1e2333;
 }
 
-/* تحسينات الجوال */
-@media (max-width: 768px) {
-  .games-page {
+.tabs::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tabs::-webkit-scrollbar-track {
+  background: #1e2333;
+  border-radius: 10px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 10px;
+  box-shadow: inset 0 0 5px #ffed4a;
+}
+
+.tabs button {
+  padding: 12px 20px;
+  border-radius: 50px;
+  background: linear-gradient(145deg, #1e2333, #131826);
+  color: #ffffff;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.tabs button:hover {
+  border-color: #ffd700;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
+}
+
+.tabs .active {
+  background: linear-gradient(135deg, #ffd700, #ffed4a, #ffd700);
+  color: #0a0f1e;
+  border: none;
+  box-shadow: 0 5px 25px rgba(255, 215, 0, 0.5);
+}
+
+.tab-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.tab-text {
+  font-size: 12px;
+}
+
+/* ===== وضع ملء الشاشة ===== */
+.game-fullscreen {
+  min-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px 0;
+}
+
+/* ===== تحسينات الجوال ===== */
+@media (max-width: 480px) {
+  .game-page {
     padding: 10px;
   }
 
-  .balance-card {
-    font-size: 18px;
-    padding: 12px 25px;
-  }
-
-  .featured-row {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  .game-image-container.featured {
-    height: 180px;
-  }
-
-  .game-name.featured {
-    font-size: 20px;
-  }
-
-  .game-subtitle {
-    font-size: 16px;
-  }
-
-  .games-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-  }
-}
-
-@media (max-width: 480px) {
-  .balance-card {
-    font-size: 16px;
-    padding: 10px 20px;
-  }
-
-  .game-image-container.featured {
-    height: 150px;
-  }
-
-  .game-icon.featured {
-    font-size: 60px;
-  }
-
-  .games-grid {
-    grid-template-columns: 1fr;
+  .tabs button {
+    padding: 10px 15px;
+    font-size: 12px;
   }
 
   .result-message {
     font-size: 14px;
-    padding: 10px 20px;
-    top: 80px;
+    padding: 12px 20px;
+    min-width: 240px;
   }
 
-  .game-image-container {
-    height: 130px;
+  .back-button {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>
