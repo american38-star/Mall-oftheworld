@@ -6,56 +6,89 @@
       <div class="header-glow"></div>
     </div>
 
+    <!-- عرض الرصيد الحالي -->
+    <div class="current-balance">
+      الرصيد الحالي: <strong>{{ balance.toFixed(2) }} USDT</strong>
+    </div>
+
     <!-- محتوى اللعبة -->
     <div class="game-content">
       <div class="chicken-area">
-        <div class="chicken">🐔</div>
+        <div class="chicken" :class="{ walking: gameActive }">🐔</div>
         <div class="road">
           <div 
             v-for="(step, index) in steps" 
             :key="index"
             class="road-step"
-            :class="{ 'active': currentStep === index, 'passed': index < currentStep }"
+            :class="{ 
+              'active': currentStep === index, 
+              'passed': index < currentStep,
+              'danger': step >= 3
+            }"
           >
-            <span class="step-multiplier">x{{ step }}</span>
+            <span class="step-multiplier">x{{ step.toFixed(1) }}</span>
           </div>
         </div>
       </div>
 
       <!-- منطقة الرهان -->
       <div class="bet-area">
-        <div class="balance-info">
-          <span>رصيدك: {{ balance }} USDT</span>
-        </div>
-
-        <div v-if="!gameActive" class="bet-controls">
-          <input 
-            type="number" 
-            v-model="betAmount" 
-            placeholder="مبلغ الرهان"
-            class="bet-input"
-          >
+        <div v-if="!gameActive && !gameOver" class="bet-controls">
+          <div class="input-wrapper">
+            <span class="input-icon">💰</span>
+            <input 
+              type="number" 
+              v-model.number="betAmount" 
+              placeholder="مبلغ الرهان"
+              class="bet-input"
+              min="0.01"
+              step="0.01"
+            >
+            <span class="input-currency">USDT</span>
+          </div>
+          
           <button 
             @click="startGame" 
             class="start-btn"
-            :disabled="!betAmount || betAmount <= 0 || betAmount > balance"
+            :disabled="!isValidBet"
           >
-            ابدأ اللعبة
+            <span>ابدأ اللعبة</span>
+            <i class="fas fa-play"></i>
           </button>
+
+          <div v-if="betAmount > balance" class="error-message">
+            ❌ الرصيد غير كافي
+          </div>
         </div>
 
         <div v-if="gameActive" class="game-controls">
-          <div class="current-multiplier">
-            المضاعف الحالي: x{{ currentMultiplier }}
+          <div class="multiplier-display">
+            <span class="label">المضاعف الحالي</span>
+            <span class="value">{{ currentMultiplier.toFixed(2) }}x</span>
           </div>
+          
+          <div class="potential-profit">
+            الربح المحتمل: <strong>{{ (betAmount * currentMultiplier).toFixed(2) }} USDT</strong>
+          </div>
+
           <div class="action-buttons">
-            <button @click="nextStep" class="next-btn">الخطوة التالية</button>
-            <button @click="cashOut" class="cashout-btn">سحب الأرباح</button>
+            <button @click="nextStep" class="next-btn">
+              <i class="fas fa-arrow-right"></i>
+              تقدم
+            </button>
+            <button @click="cashOut" class="cashout-btn">
+              <i class="fas fa-hand-holding-usd"></i>
+              سحب
+            </button>
           </div>
         </div>
 
-        <div v-if="gameOver" class="game-over" :class="{ 'win': gameWon, 'lose': !gameWon }">
-          {{ gameMessage }}
+        <div v-if="gameOver" class="game-result" :class="{ 'win': gameWon, 'lose': !gameWon }">
+          <div class="result-icon">{{ gameWon ? '🎉' : '💥' }}</div>
+          <div class="result-message">{{ gameMessage }}</div>
+          <button @click="resetGame" class="play-again-btn">
+            لعب مرة أخرى
+          </button>
         </div>
       </div>
     </div>
@@ -68,7 +101,8 @@ export default {
   props: {
     balance: {
       type: Number,
-      required: true
+      required: true,
+      default: 0
     }
   },
   emits: ['update-balance', 'show-result'],
@@ -82,21 +116,25 @@ export default {
       currentStep: 0,
       currentMultiplier: 1.0,
       steps: [1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0],
-      crashProbability: 0.3
+      crashBaseRate: 0.25
+    }
+  },
+  computed: {
+    isValidBet() {
+      return this.betAmount && 
+             this.betAmount > 0 && 
+             this.betAmount <= this.balance
     }
   },
   methods: {
     startGame() {
-      if (!this.betAmount || this.betAmount <= 0) {
-        this.$emit('show-result', 'الرجاء إدخال مبلغ الرهان', false)
-        return
-      }
-      if (this.betAmount > this.balance) {
-        this.$emit('show-result', 'الرصيد غير كافي', false)
+      // التحقق من صحة الرهان
+      if (!this.isValidBet) {
+        this.$emit('show-result', '❌ مبلغ الرهان غير صحيح', false)
         return
       }
 
-      // خصم الرهان
+      // خصم الرهان من الرصيد (عن طريق emit)
       const newBalance = this.balance - this.betAmount
       this.$emit('update-balance', newBalance)
 
@@ -105,43 +143,58 @@ export default {
       this.gameOver = false
       this.currentStep = 0
       this.currentMultiplier = this.steps[0]
+      
+      this.$emit('show-result', '🚀 انطلقت الرحلة!', true)
     },
 
     nextStep() {
-      // حساب فرصة الخسارة
-      const loseChance = this.crashProbability + (this.currentStep * 0.05)
+      // حساب فرصة الخسارة (تزيد كلما تقدمت)
+      const loseChance = this.crashBaseRate + (this.currentStep * 0.04)
       
       if (Math.random() < loseChance) {
-        // خسارة
+        // خسارة 💥
         this.gameActive = false
         this.gameOver = true
         this.gameWon = false
         this.gameMessage = '💥 انفجرت! خسرت الرهان'
         this.$emit('show-result', this.gameMessage, false)
+        return
+      }
+
+      // الانتقال للخطوة التالية
+      if (this.currentStep < this.steps.length - 1) {
+        this.currentStep++
+        this.currentMultiplier = this.steps[this.currentStep]
       } else {
-        // الانتقال للخطوة التالية
-        if (this.currentStep < this.steps.length - 1) {
-          this.currentStep++
-          this.currentMultiplier = this.steps[this.currentStep]
-        } else {
-          // وصل للنهاية
-          this.cashOut()
-        }
+        // وصل للنهاية (فوز تلقائي)
+        this.cashOut()
       }
     },
 
     cashOut() {
+      // حساب الربح
       const profit = this.betAmount * this.currentMultiplier
+      
+      // إضافة الربح للرصيد
       const newBalance = this.balance + profit
-      
       this.$emit('update-balance', newBalance)
-      
+
+      // عرض نتيجة الفوز
       this.gameActive = false
       this.gameOver = true
       this.gameWon = true
       this.gameMessage = `🎉 ربحت ${profit.toFixed(2)} USDT`
       
       this.$emit('show-result', this.gameMessage, true)
+    },
+
+    resetGame() {
+      // إعادة تعيين اللعبة
+      this.gameActive = false
+      this.gameOver = false
+      this.betAmount = null
+      this.currentStep = 0
+      this.currentMultiplier = 1.0
     }
   }
 }
@@ -154,13 +207,13 @@ export default {
   padding: 25px;
   border: 1px solid rgba(255, 215, 0, 0.3);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-  max-width: 500px;
+  max-width: 550px;
   margin: 0 auto;
 }
 
 .game-header {
   position: relative;
-  margin-bottom: 25px;
+  margin-bottom: 15px;
   text-align: center;
 }
 
@@ -186,6 +239,21 @@ export default {
   z-index: 0;
 }
 
+.current-balance {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+}
+
+.current-balance strong {
+  font-size: 18px;
+  margin-left: 5px;
+}
+
 .game-content {
   display: flex;
   flex-direction: column;
@@ -203,12 +271,18 @@ export default {
   font-size: 80px;
   text-align: center;
   margin-bottom: 20px;
-  animation: bounce 2s infinite;
+  filter: drop-shadow(0 0 20px #ffd700);
+  transition: all 0.3s;
 }
 
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+.chicken.walking {
+  animation: walk 0.5s infinite;
+}
+
+@keyframes walk {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px) rotate(-5deg); }
+  75% { transform: translateX(5px) rotate(5deg); }
 }
 
 .road {
@@ -217,13 +291,29 @@ export default {
   overflow-x: auto;
   padding: 10px 0;
   white-space: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: #ffd700 #1a1f30;
+}
+
+.road::-webkit-scrollbar {
+  height: 6px;
+}
+
+.road::-webkit-scrollbar-track {
+  background: #1a1f30;
+  border-radius: 10px;
+}
+
+.road::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 10px;
 }
 
 .road-step {
-  min-width: 60px;
-  height: 80px;
+  min-width: 65px;
+  height: 85px;
   background: linear-gradient(145deg, #252b3d, #1a1f30);
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,12 +324,17 @@ export default {
 .road-step.active {
   background: linear-gradient(135deg, #ffd700, #ffed4a);
   transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+  z-index: 2;
 }
 
 .road-step.passed {
   border-color: #4caf50;
   opacity: 0.7;
+}
+
+.road-step.danger {
+  border-color: #f44336;
 }
 
 .step-multiplier {
@@ -257,13 +352,6 @@ export default {
   padding: 20px;
 }
 
-.balance-info {
-  text-align: center;
-  margin-bottom: 15px;
-  color: #ffd700;
-  font-weight: 600;
-}
-
 .bet-controls {
   display: flex;
   flex-direction: column;
@@ -271,45 +359,84 @@ export default {
   align-items: center;
 }
 
+.input-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+}
+
+.input-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  z-index: 2;
+}
+
 .bet-input {
   width: 100%;
-  max-width: 250px;
-  padding: 12px 20px;
+  padding: 15px 45px 15px 60px;
   border-radius: 50px;
   background: linear-gradient(145deg, #1e2333, #131826);
   border: 2px solid rgba(255, 215, 0, 0.3);
   color: white;
   font-size: 16px;
   text-align: center;
+  transition: all 0.3s;
 }
 
 .bet-input:focus {
   outline: none;
   border-color: #ffd700;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+}
+
+.input-currency {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ffd700;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .start-btn {
   background: linear-gradient(135deg, #ffd700, #ffed4a);
   color: #0a0f1e;
   border: none;
-  padding: 12px 30px;
+  padding: 15px 35px;
   border-radius: 50px;
   font-weight: 700;
   font-size: 16px;
   cursor: pointer;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  max-width: 250px;
+  max-width: 280px;
+  justify-content: center;
 }
 
 .start-btn:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(255, 215, 0, 0.4);
+  box-shadow: 0 10px 25px rgba(255, 215, 0, 0.4);
 }
 
 .start-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.error-message {
+  color: #f44336;
+  font-size: 14px;
+  padding: 8px 15px;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 50px;
+  border: 1px solid #f44336;
 }
 
 .game-controls {
@@ -319,11 +446,36 @@ export default {
   align-items: center;
 }
 
-.current-multiplier {
-  font-size: 24px;
+.multiplier-display {
+  text-align: center;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  width: 100%;
+}
+
+.multiplier-display .label {
+  display: block;
+  color: #8a8f9c;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.multiplier-display .value {
+  font-size: 36px;
   font-weight: 800;
   color: #ffd700;
-  text-shadow: 0 0 10px #ffd700;
+  text-shadow: 0 0 15px #ffd700;
+}
+
+.potential-profit {
+  text-align: center;
+  color: #8a8f9c;
+}
+
+.potential-profit strong {
+  color: #ffd700;
+  font-size: 18px;
 }
 
 .action-buttons {
@@ -334,7 +486,7 @@ export default {
 }
 
 .next-btn, .cashout-btn {
-  padding: 12px 25px;
+  padding: 12px 20px;
   border: none;
   border-radius: 50px;
   font-weight: 700;
@@ -342,7 +494,10 @@ export default {
   cursor: pointer;
   transition: all 0.3s;
   flex: 1;
-  max-width: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .next-btn {
@@ -360,24 +515,57 @@ export default {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.game-over {
+.game-result {
   text-align: center;
-  padding: 15px;
-  border-radius: 50px;
-  font-weight: 700;
+  padding: 20px;
+  border-radius: 20px;
   animation: slideUp 0.5s;
 }
 
-.game-over.win {
-  background: rgba(76, 175, 80, 0.2);
+.game-result.win {
+  background: rgba(76, 175, 80, 0.15);
   border: 1px solid #4caf50;
+}
+
+.game-result.lose {
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid #f44336;
+}
+
+.result-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.result-message {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+.game-result.win .result-message {
   color: #4caf50;
 }
 
-.game-over.lose {
-  background: rgba(244, 67, 54, 0.2);
-  border: 1px solid #f44336;
+.game-result.lose .result-message {
   color: #f44336;
+}
+
+.play-again-btn {
+  background: linear-gradient(135deg, #ffd700, #ffed4a);
+  color: #0a0f1e;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.play-again-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
 }
 
 @keyframes slideUp {
@@ -405,18 +593,20 @@ export default {
   }
 
   .road-step {
-    min-width: 50px;
-    height: 70px;
+    min-width: 55px;
+    height: 75px;
   }
 
   .action-buttons {
     flex-direction: column;
-    align-items: center;
   }
 
   .next-btn, .cashout-btn {
     width: 100%;
-    max-width: none;
+  }
+
+  .multiplier-display .value {
+    font-size: 28px;
   }
 }
 </style>
