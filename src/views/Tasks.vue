@@ -85,11 +85,22 @@ export default {
   
   async created() {
     const user = auth.currentUser
-    if (!user) return
+    if (!user) {
+      console.log("لا يوجد مستخدم مسجل")
+      return
+    }
     
-    const snap = await getDoc(doc(db, "users", user.uid))
-    if (snap.exists()) {
-      this.balance = Number(snap.data().balance || 0)
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid))
+      if (snap.exists()) {
+        this.balance = Number(snap.data().balance || 0)
+        console.log("تم جلب الرصيد:", this.balance)
+      } else {
+        console.log("المستخدم ليس لديه رصيد")
+        this.balance = 0
+      }
+    } catch (error) {
+      console.error("خطأ في جلب الرصيد:", error)
     }
   },
   
@@ -98,19 +109,28 @@ export default {
       this.selectedGame = gameId
       this.gameOpened = true
       this.gameError = ""
+      console.log("تم فتح اللعبة:", gameId)
     },
     
     closeGame() {
       this.gameOpened = false
+      console.log("تم إغلاق اللعبة")
     },
     
     async updateBalance(newBalance) {
+      console.log("تحديث الرصيد من:", this.balance, "إلى:", newBalance)
       this.balance = newBalance
+      
       const user = auth.currentUser
       if (user) {
-        await updateDoc(doc(db, "users", user.uid), {
-          balance: this.balance
-        })
+        try {
+          await updateDoc(doc(db, "users", user.uid), {
+            balance: this.balance
+          })
+          console.log("تم تحديث الرصيد في Firebase:", this.balance)
+        } catch (error) {
+          console.error("خطأ في تحديث الرصيد:", error)
+        }
       }
     },
     
