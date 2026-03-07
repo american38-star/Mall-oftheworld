@@ -31,7 +31,17 @@
         class="game-card"
         @click="openGame(game)"
       >
-        <div class="game-icon">{{ game.icon || '🎮' }}</div>
+        <!-- عرض الصورة إذا وجدت، وإلا عرض الأيقونة -->
+        <div class="game-image-container">
+          <img 
+            v-if="game.image" 
+            :src="game.image" 
+            :alt="game.name"
+            class="game-image"
+            @error="handleImageError"
+          >
+          <div v-else class="game-icon">{{ game.icon || '🎮' }}</div>
+        </div>
         <h3 class="game-name">{{ game.name }}</h3>
         <p class="game-description">{{ game.description || 'اضغط للعب' }}</p>
       </div>
@@ -60,9 +70,8 @@
 </template>
 
 <script>
-import { auth, db } from "../firebase"
-import { doc, getDoc, updateDoc } from "firebase/firestore"
-import { ref, shallowRef, onMounted } from 'vue'
+import { auth, getUserBalance, updateUserBalance, addTransaction } from "../firebase"
+import { shallowRef } from 'vue'
 
 export default {
   name: "Tasks",
@@ -71,6 +80,17 @@ export default {
     // استيراد جميع الألعاب تلقائياً من مجلد games
     const gameModules = import.meta.glob('../components/games/*.vue', { eager: true })
     
+    // استيراد جميع الصور من مجلد games-images
+    let gameImages = {}
+    try {
+      gameImages = import.meta.glob('../components/games-images/*.{png,jpg,jpeg,svg,gif}', { 
+        eager: true,
+        as: 'url'
+      })
+    } catch (error) {
+      console.warn("⚠️ مجلد الصور غير موجود:", error)
+    }
+    
     const gamesComponents = []
     
     // تحويل الملفات المستوردة إلى مصفوفة من الكائنات
@@ -78,10 +98,22 @@ export default {
       const component = gameModules[path].default
       const fileName = path.split('/').pop().replace('.vue', '')
       
+      // البحث عن صورة بنفس اسم اللعبة
+      let gameImage = null
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.svg', '.gif']
+      
+      for (const ext of imageExtensions) {
+        const imagePath = `../components/games-images/${fileName}${ext}`
+        if (gameImages[imagePath]) {
+          gameImage = gameImages[imagePath]
+          break
+        }
+      }
+      
       // استخراج اسم اللعبة من الملف أو استخدام اسم الملف
-      let gameName = fileName
+      let gameName = fileName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
       let gameIcon = '🎮'
-      let gameDescription = ''
+      let gameDescription = 'اضغط للعب'
       
       // إذا كان المكون يحتوي على خصائص meta، استخدمها
       if (component.meta) {
@@ -94,6 +126,7 @@ export default {
         id: fileName,
         name: gameName,
         icon: gameIcon,
+        image: gameImage, // إضافة مسار الصورة
         description: gameDescription,
         component: shallowRef(component)
       })
@@ -129,32 +162,22 @@ export default {
       const user = auth.currentUser
       
       if (!user) {
-        console.log("لا يوجد مستخدم مسجل الدخول")
+        console.log("⚠️ لا يوجد مستخدم مسجل الدخول")
         this.loading = false
         return
       }
 
       try {
-        const userRef = doc(db, "users", user.uid)
-        const userSnap = await getDoc(userRef)
-        
-        if (userSnap.exists()) {
-          this.balance = Number(userSnap.data().balance || 0)
-          console.log("تم جلب الرصيد:", this.balance)
-        } else {
-          // إذا لم يكن المستخدم موجوداً، قم بإنشائه برصيد 0
-          await updateDoc(userRef, { balance: 0 })
-          this.balance = 0
-          console.log("تم إنشاء مستخدم جديد برصيد 0")
-        }
+        this.balance = await getUserBalance(user.uid)
+        console.log("✅ تم جلب الرصيد:", this.balance)
       } catch (error) {
-        console.error("خطأ في جلب الرصيد:", error)
+        console.error("❌ خطأ في جلب الرصيد:", error)
       } finally {
         this.loading = false
       }
     },
 
-    async updateBalance(newBalance) {
+    async updateBalance(newBalance, gameName = '', betAmount = 0, won = false) {
       const oldBalance = this.balance
       this.balance = newBalance
       
@@ -162,12 +185,30 @@ export default {
       if (!user) return
 
       try {
-        const userRef = doc(db, "users", user.uid)
-        await updateDoc(userRef, { balance: newBalance })
-        console.log(`تم تحديث الرصيد: ${oldBalance} -> ${newBalance}`)
+        // تحديث الرصيد في Firebase
+        const success = await updateUserBalance(user.uid, newBalance)
+        
+        if (success) {
+          console.log(`✅ تم تحديث الرصيد: ${oldBalance} -> ${newBalance}`)
+          
+          // تسجيل المعاملة
+          if (gameName && betAmount > 0) {
+            await addTransaction(user.uid, {
+              gameName,
+              betAmount,
+              won,
+              oldBalance,
+              newBalance,
+              profit: newBalance - oldBalance
+            })
+          }
+        } else {
+          // إعادة الرصيد القديم في حالة الفشل
+          this.balance = oldBalance
+          this.showResult('فشل تحديث الرصيد!', false)
+        }
       } catch (error) {
-        console.error("خطأ في تحديث الرصيد:", error)
-        // إعادة الرصيد القديم في حالة الفشل
+        console.error("❌ خطأ في تحديث الرصيد:", error)
         this.balance = oldBalance
       }
     },
@@ -195,6 +236,12 @@ export default {
       this.resultTimeout = setTimeout(() => {
         this.resultMessage.show = false
       }, 2000)
+    },
+
+    handleImageError(event) {
+      // في حالة فشل تحميل الصورة، نظهر الأيقونة بدلاً منها
+      event.target.style.display = 'none'
+      event.target.parentElement.innerHTML = '<div class="game-icon">🎮</div>'
     }
   },
 
@@ -219,6 +266,9 @@ export default {
   display: flex;
   justify-content: center;
   margin-bottom: 30px;
+  position: sticky;
+  top: 20px;
+  z-index: 100;
 }
 
 .balance-card {
@@ -232,11 +282,14 @@ export default {
   font-size: 24px;
   font-weight: bold;
   color: #333;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 215, 0, 0.3);
 }
 
 .balance-card i {
   color: #f1c40f;
   font-size: 28px;
+  filter: drop-shadow(0 0 5px rgba(241, 196, 15, 0.5));
 }
 
 /* رسالة النتيجة */
@@ -258,13 +311,15 @@ export default {
 }
 
 .result-message.win {
-  background: #2ecc71;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
   color: white;
+  border: 2px solid #f1c40f;
 }
 
 .result-message.lose {
-  background: #e74c3c;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
+  border: 2px solid #f1c40f;
 }
 
 @keyframes slideDown {
@@ -303,13 +358,14 @@ export default {
 
 .loading i {
   font-size: 40px;
+  color: #f1c40f;
 }
 
 /* شبكة الألعاب */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -317,28 +373,56 @@ export default {
 .game-card {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 15px;
-  padding: 25px;
+  padding: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   text-align: center;
+  backdrop-filter: blur(10px);
+  border: 2px solid transparent;
 }
 
 .game-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
   background: white;
+  border-color: #f1c40f;
+}
+
+.game-image-container {
+  width: 100%;
+  height: 180px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f6f9fc 0%, #e6f0f5 100%);
+}
+
+.game-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.game-card:hover .game-image {
+  transform: scale(1.05);
 }
 
 .game-icon {
-  font-size: 48px;
-  margin-bottom: 15px;
+  font-size: 64px;
+  margin: 30px 0;
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.2));
 }
 
 .game-name {
   font-size: 20px;
   color: #333;
   margin-bottom: 10px;
+  font-weight: bold;
 }
 
 .game-description {
@@ -354,7 +438,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.95);
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -381,19 +465,20 @@ export default {
 }
 
 .game-modal-header {
-  background: white;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   padding: 15px 20px;
   display: flex;
   align-items: center;
   gap: 15px;
+  color: white;
 }
 
 .close-button {
-  background: none;
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: white;
   width: 40px;
   height: 40px;
   display: flex;
@@ -404,14 +489,14 @@ export default {
 }
 
 .close-button:hover {
-  background: #f0f0f0;
-  color: #e74c3c;
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
 }
 
 .game-modal-header h2 {
   margin: 0;
-  color: #333;
   font-size: 20px;
+  flex: 1;
 }
 
 .game-modal-content {
@@ -422,8 +507,17 @@ export default {
 
 /* تحسينات الجوال */
 @media (max-width: 768px) {
+  .games-page {
+    padding: 10px;
+  }
+
   .games-grid {
     grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .game-image-container {
+    height: 150px;
   }
 
   .balance-card {
@@ -434,6 +528,35 @@ export default {
   .result-message {
     font-size: 14px;
     padding: 10px 20px;
+    top: 80px;
+  }
+
+  .game-modal-header h2 {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .balance-card {
+    font-size: 16px;
+    padding: 10px 20px;
+  }
+
+  .game-image-container {
+    height: 130px;
+  }
+
+  .game-icon {
+    font-size: 48px;
+    margin: 20px 0;
+  }
+
+  .game-name {
+    font-size: 16px;
+  }
+
+  .game-description {
+    font-size: 12px;
   }
 }
 </style>
