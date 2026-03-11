@@ -1,3956 +1,1296 @@
-<template>    
-  <div class="game-page">    
-    <!-- الرصيد -->
-    <div class="top-bar">
-      <div class="balance-gold">
-        <i class="fas fa-coins"></i>
-        <span>رصيدك: <strong>{{ balance.toFixed(2) }} USDT</strong></span>
+<!-- src/components/games/MegaBoomingFruits.vue -->
+<template>
+  <div class="mega-booming-fruits">
+    <!-- رأس اللعبة -->
+    <div class="game-header">
+      <div class="game-title-section">
+        <h1 class="game-title">🍒 MEGA BOOMING FRUITS 🍒</h1>
+        <div class="game-subtitle">X50 MAX WIN</div>
+      </div>
+      <div class="game-stats-header">
+        <div class="stat-box">
+          <span class="stat-label">LAST WIN</span>
+          <span class="stat-value" :class="{ 'highlight': lastWin > 0 }">${{ lastWin.toFixed(2) }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">TOTAL BETS</span>
+          <span class="stat-value">${{ totalBets.toFixed(2) }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">RTP</span>
+          <span class="stat-value">97.5%</span>
+        </div>
       </div>
     </div>
 
-    <!-- رسالة الفوز/الخسارة -->
-    <transition name="slide-fade">
-      <div v-if="showResultMessage" class="result-message" :class="resultType">
-        <i :class="resultIcon"></i>
-        <span>{{ resultText }}</span>
+    <!-- شريط الروليت -->
+    <div class="roulette-section">
+      <div class="roulette-container" :class="{ spinning: isSpinning }">
+        <div class="roulette-track" ref="rouletteTrack">
+          <div 
+            v-for="(segment, index) in rouletteSegments" 
+            :key="index"
+            class="roulette-segment"
+            :class="getSegmentClass(segment)"
+          >
+            <span class="segment-icon">{{ getFruitIcon(segment) }}</span>
+            <span class="segment-value">{{ segment.value }}x</span>
+          </div>
+          <!-- تكرار للحركة المستمرة -->
+          <div 
+            v-for="(segment, index) in rouletteSegments" 
+            :key="'dup-' + index"
+            class="roulette-segment"
+            :class="getSegmentClass(segment)"
+          >
+            <span class="segment-icon">{{ getFruitIcon(segment) }}</span>
+            <span class="segment-value">{{ segment.value }}x</span>
+          </div>
+        </div>
+        <div class="roulette-indicator"></div>
       </div>
-    </transition>
-
-    <!-- زر الرجوع عندما تكون اللعبة مفتوحة -->
-    <div v-if="gameOpened" class="back-button-container">
-      <button @click="closeGame" class="back-button">
-        <i class="fas fa-arrow-right"></i>
-        رجوع إلى الألعاب
-      </button>
-    </div>
-
-    <!-- التبويبات - تظهر فقط عندما لا تكون اللعبة مفتوحة -->
-    <div v-if="!gameOpened" class="tabs">
-      <button 
-        v-for="tab in gamesList" 
-        :key="tab.id"
-        :class="{active: selectedGame===tab.id}" 
-        @click="openGame(tab.id)"
-      >
-        <span class="tab-icon">{{ tab.icon }}</span>
-        <span class="tab-text">{{ tab.name }}</span>
-      </button>
-    </div>
-
-    <!-- عرض اللعبة المختارة - تظهر بملء الشاشة -->
-    <div v-if="gameOpened" class="game-fullscreen">
-      <!-- Chicken Road -->
-      <div v-if="selectedGame==='chicken'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🐔 CHICKEN ROAD</h2>
-          <div class="casino-glow"></div>
-        </div>
-
-        <div class="game-scene">
-          <div class="chicken-container">
-            <div class="chicken-glow"></div>
-            <div class="chicken" :class="{ walking: chickenStarted }">🐔</div>
-          </div>
-
-          <div v-if="chickenStarted" class="road-container">
-            <div class="road">
-              <div
-                v-for="(step, i) in chickenSteps"
-                :key="i"
-                class="step"
-                :class="{
-                  active: i === chickenPosition,
-                  passed: i < chickenPosition,
-                  'danger': step.multiplier >= 3,
-                  'warning': step.multiplier >= 2 && step.multiplier < 3
-                }"
-              >
-                <span class="step-multiplier">{{ step.multiplier.toFixed(1) }}x</span>
-                <div v-if="i === chickenPosition" class="chicken-icon">🐔</div>
-                <div v-if="i < chickenPosition" class="step-check">✓</div>
-              </div>
-            </div>
+      
+      <!-- نتيجة الجولة -->
+      <transition name="pop">
+        <div v-if="showResult" class="result-display" :class="resultClass">
+          <span class="result-icon">{{ resultIcon }}</span>
+          <div class="result-details">
+            <span class="result-text">{{ resultText }}</span>
+            <span class="result-amount" v-if="resultAmount > 0">+${{ resultAmount.toFixed(2) }}</span>
           </div>
         </div>
+      </transition>
+    </div>
 
-        <div class="casino-controls">
-          <div v-if="!chickenStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="chickenBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button 
-              @click="startChicken"
-              class="casino-button"
-              :disabled="!chickenBet || chickenBet <= 0"
-            >
-              <span>ابدأ الرهان</span>
-              <i class="fas fa-dice"></i>
-            </button>
-          </div>
-
-          <div v-if="chickenStarted" class="game-panel">
-            <div class="profit-meter">
-              <div class="profit-label">الربح المحتمل</div>
-              <div class="profit-value">{{ chickenProfit.toFixed(2) }} USDT</div>
-            </div>
-            <div class="action-row">
-              <button @click="chickenNext" class="action-btn danger-btn" :disabled="chickenGameOver">
-                <i class="fas fa-arrow-right"></i>
-                تقدم
-              </button>
-              <button @click="chickenCashOut" class="action-btn success-btn" :disabled="chickenGameOver">
-                <i class="fas fa-hand-holding-usd"></i>
-                سحب
-              </button>
-            </div>
-          </div>
+    <!-- لوحة الرهان -->
+    <div class="betting-panel">
+      <div class="balance-info">
+        <div class="current-balance">
+          <i class="fas fa-coins"></i>
+          <span>${{ balance.toFixed(2) }}</span>
+        </div>
+        <div class="bet-multiplier" v-if="currentMultiplier > 1">
+          <span class="multiplier">{{ currentMultiplier.toFixed(2) }}x</span>
+          <span class="potential-win">${{ (betAmount * currentMultiplier).toFixed(2) }}</span>
         </div>
       </div>
 
-      <!-- Dice -->
-      <div v-if="selectedGame==='dice'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎲 DICE</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="dice-container" :class="{ rolling: diceRolling }">
-            <div class="dice-3d">
-              <div class="dice-face front">{{ diceRoll || '?' }}</div>
-              <div class="dice-face back">{{ diceRoll || '?' }}</div>
-              <div class="dice-face right">{{ diceRoll || '?' }}</div>
-              <div class="dice-face left">{{ diceRoll || '?' }}</div>
-              <div class="dice-face top">{{ diceRoll || '?' }}</div>
-              <div class="dice-face bottom">{{ diceRoll || '?' }}</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div class="slider-container">
-            <label>نسبة الفوز <span class="slider-value">{{ diceChance }}%</span></label>
+      <!-- خيارات الرهان -->
+      <div class="bet-options">
+        <div class="bet-amount-section">
+          <label>💰 BET AMOUNT</label>
+          <div class="amount-controls">
+            <button @click="decreaseBet" :disabled="isSpinning || betAmount <= minBet">-</button>
             <input 
-              type="range" 
-              v-model.number="diceChance" 
-              min="1" 
-              max="20" 
-              step="1"
-              class="casino-slider"
-              :disabled="diceStarted"
+              type="number" 
+              v-model.number="betAmount" 
+              :min="minBet" 
+              :max="balance"
+              :disabled="isSpinning"
+              step="0.1"
             >
+            <button @click="increaseBet" :disabled="isSpinning || betAmount >= balance">+</button>
           </div>
-          
-          <div class="multiplier-box">
-            <span class="multiplier-label">المضاعف</span>
-            <span class="multiplier-value">{{ (95 / diceChance).toFixed(2) }}x</span>
-          </div>
-          
-          <div v-if="!diceStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="diceBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startDice" class="casino-button" :disabled="!diceBet || diceBet <= 0">
-              <span>رمي النرد</span>
-              <i class="fas fa-dice"></i>
-            </button>
-          </div>
+        </div>
+
+        <div class="quick-bets">
+          <button 
+            v-for="amount in quickBetAmounts" 
+            :key="amount"
+            @click="setBetAmount(amount)"
+            :disabled="isSpinning || amount > balance"
+            class="quick-bet-btn"
+          >
+            ${{ amount }}
+          </button>
+          <button 
+            @click="setBetAmount(balance)"
+            :disabled="isSpinning"
+            class="quick-bet-btn max"
+          >
+            MAX
+          </button>
         </div>
       </div>
 
-      <!-- Mines -->
-      <div v-if="selectedGame==='mines'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>💣 MINES</h2>
-          <div class="casino-glow"></div>
-        </div>
+      <!-- أزرار التحكم -->
+      <div class="action-buttons">
+        <button 
+          class="spin-btn" 
+          @click="startSpin"
+          :disabled="isSpinning || betAmount > balance || betAmount < minBet"
+        >
+          <span v-if="!isSpinning">🎰 SPIN</span>
+          <span v-else><i class="fas fa-spinner fa-spin"></i> SPINNING...</span>
+        </button>
         
-        <div class="game-scene">
-          <div class="mines-container">
-            <div class="mines-header">
-              <span>الألغام: {{ minesCount }}</span>
-              <span>|</span>
-              <span>المكشوف: {{ minesRevealed }}</span>
-            </div>
-            <div v-if="minesStarted" class="mines-grid">
-              <button 
-                v-for="(cell, index) in minesCells" 
-                :key="index"
-                class="mine-cell"
-                :class="{
-                  'revealed': cell.revealed,
-                  'mine': cell.mine && cell.revealed,
-                  'safe': !cell.mine && cell.revealed,
-                }"
-                @click="revealMine(index)"
-                :disabled="cell.revealed || minesGameOver"
-              >
-                <span v-if="!cell.revealed">❓</span>
-                <span v-else-if="cell.mine">💣</span>
-                <span v-else>💎</span>
-              </button>
-            </div>
-            <div v-else class="mines-placeholder">
-              <span>ابدأ اللعبة لرؤية الحقل</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div class="slider-container">
-            <label>عدد الألغام <span class="slider-value">{{ minesCount }}</span></label>
-            <input 
-              type="range" 
-              v-model.number="minesCount" 
-              min="8" 
-              max="20" 
-              step="1"
-              class="casino-slider"
-              :disabled="minesStarted"
-            >
-          </div>
-          
-          <div v-if="!minesStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="minesBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startMines" class="casino-button" :disabled="!minesBet || minesBet <= 0">
-              <span>ابدأ اللعبة</span>
-              <i class="fas fa-bomb"></i>
-            </button>
-          </div>
-          
-          <div v-if="minesStarted && !minesGameOver" class="action-row">
-            <button @click="minesCashOut" class="action-btn success-btn">
-              <i class="fas fa-hand-holding-usd"></i>
-              سحب ({{ minesProfit.toFixed(2) }} USDT)
-            </button>
-          </div>
-        </div>
+        <button 
+          class="auto-btn" 
+          @click="toggleAutoPlay"
+          :class="{ active: autoPlayActive }"
+          :disabled="isSpinning || betAmount > balance"
+        >
+          <i class="fas fa-play-circle"></i>
+          AUTO
+        </button>
       </div>
 
-      <!-- Crash -->
-      <div v-if="selectedGame==='crash'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🚀 CRASH</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="crash-container">
-            <div class="multiplier-display" :class="{ 'crashed': crashCrashed }">
-              {{ crashMultiplier.toFixed(2) }}x
-            </div>
-            <div class="rocket-animation">
-              <div class="rocket" :class="{ 'launched': crashStarted && !crashCrashed, 'exploded': crashCrashed }">🚀</div>
-              <div class="smoke-effect" v-if="crashStarted && !crashCrashed"></div>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" :style="{ width: crashProgress + '%' }"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!crashStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="crashBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div class="chip-input">
-              <span class="chip-icon">🎯</span>
-              <input
-                type="number"
-                v-model.number="crashAutoCashout"
-                placeholder="السحب عند"
-                class="casino-input"
-                step="0.1"
-                min="1.1"
-                max="5"
-              />
-              <span class="chip-currency">x</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startCrash" class="casino-button" :disabled="!crashBet || crashBet <= 0">
-              <span>إطلاق الصاروخ</span>
-              <i class="fas fa-rocket"></i>
-            </button>
-          </div>
-          
-          <div v-if="crashStarted && !crashCrashed" class="action-row">
-            <button @click="crashCashOut" class="action-btn success-btn">
-              <i class="fas fa-hand-holding-usd"></i>
-              سحب ({{ (crashBet * crashMultiplier).toFixed(2) }} USDT)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Limbo -->
-      <div v-if="selectedGame==='limbo'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎯 LIMBO</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="limbo-container">
-            <div class="target-line" :style="{ height: (limboTarget * 10) + 'px' }">
-              <span class="target-label">{{ limboTarget }}x</span>
-            </div>
-            <div class="result-ball" :class="{ jumping: limboStarted }">
-              {{ limboResult > 0 ? limboResult.toFixed(2) + 'x' : '?' }}
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!limboStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="limboBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div class="chip-input">
-              <span class="chip-icon">🎯</span>
-              <input
-                type="number"
-                v-model.number="limboTarget"
-                placeholder="المضاعف"
-                class="casino-input"
-                step="0.1"
-                min="1.1"
-                max="10"
-              />
-              <span class="chip-currency">x</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startLimbo" class="casino-button" :disabled="!limboBet || limboBet <= 0">
-              <span>ابدأ</span>
-              <i class="fas fa-crosshairs"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Blackjack -->
-      <div v-if="selectedGame==='blackjack'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🃏 BLACKJACK</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="blackjack-table">
-            <div class="dealer-area">
-              <div class="area-label">الموزع</div>
-              <div class="cards-row">
-                <div v-for="(card, i) in dealerHand" :key="i" class="casino-card-small" :class="{ 'card-back': i === 1 && !dealerRevealed }">
-                  {{ i === 1 && !dealerRevealed ? '?' : card }}
-                </div>
+      <!-- إعدادات التشغيل التلقائي -->
+      <transition name="slide">
+        <div v-if="autoPlayActive" class="auto-settings">
+          <div class="auto-controls">
+            <div class="auto-spins">
+              <label>SPINS</label>
+              <div class="auto-spins-control">
+                <button @click="decreaseAutoSpins" :disabled="autoSpins <= 1">-</button>
+                <input type="number" v-model.number="autoSpins" min="1" max="100">
+                <button @click="increaseAutoSpins" :disabled="autoSpins >= 100">+</button>
               </div>
             </div>
-            <div class="player-area">
-              <div class="area-label">أنت <span class="score-badge">{{ playerScore }}</span></div>
-              <div class="cards-row">
-                <div v-for="card in playerHand" :key="card" class="casino-card-small">{{ card }}</div>
+            <div class="stop-conditions">
+              <label>STOP ON</label>
+              <div class="condition-checkbox">
+                <label>
+                  <input type="checkbox" v-model="stopOnWin"> WIN
+                </label>
+                <label>
+                  <input type="checkbox" v-model="stopOnMultiplier"> 10x+
+                </label>
               </div>
             </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!blackjackStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="blackjackBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startBlackjack" class="casino-button" :disabled="!blackjackBet || blackjackBet <= 0">
-              <span>توزيع</span>
-              <i class="fas fa-credit-card"></i>
+            <button class="stop-auto-btn" @click="stopAutoPlay">
+              <i class="fas fa-stop"></i> STOP
             </button>
           </div>
-          
-          <div v-if="blackjackStarted && !blackjackGameOver" class="action-row">
-            <button @click="blackjackHit" class="action-btn warning-btn">ضرب 🃏</button>
-            <button @click="blackjackStand" class="action-btn success-btn">وقف ✋</button>
-          </div>
+        </div>
+      </transition>
+    </div>
+
+    <!-- سجل النتائج -->
+    <div class="history-section">
+      <h3>📊 LAST 10 SPINS</h3>
+      <div class="history-list">
+        <div 
+          v-for="(item, index) in spinHistory" 
+          :key="index"
+          class="history-item"
+          :class="{ win: item.won }"
+        >
+          <span class="history-icon">{{ getFruitIcon(item.segment) }}</span>
+          <span class="history-multiplier">{{ item.multiplier }}x</span>
+          <span class="history-bet">${{ item.betAmount.toFixed(2) }}</span>
+          <span class="history-result" :class="{ 'win-text': item.won }">
+            {{ item.won ? '+' : '-' }}${{ Math.abs(item.profit).toFixed(2) }}
+          </span>
         </div>
       </div>
+    </div>
 
-      <!-- Slot Machine -->
-      <div v-if="selectedGame==='slot'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎰 SLOT MACHINE</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="slot-machine-container">
-            <div class="slot-reels" :class="{ spinning: slotSpinning }">
-              <div class="reel">{{ slotReels[0] }}</div>
-              <div class="reel">{{ slotReels[1] }}</div>
-              <div class="reel">{{ slotReels[2] }}</div>
-            </div>
+    <!-- جدول المدفوعات -->
+    <div class="paytable-section">
+      <h3>📋 PAYTABLE</h3>
+      <div class="paytable-grid">
+        <div v-for="segment in rouletteSegments" :key="segment.id" class="paytable-item">
+          <div class="paytable-icon" :class="getSegmentClass(segment)">
+            {{ getFruitIcon(segment) }}
           </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!slotStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="slotBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startSlot" class="casino-button" :disabled="!slotBet || slotBet <= 0">
-              <span>لف البكرات</span>
-              <i class="fas fa-sliders-h"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Coinflip -->
-      <div v-if="selectedGame==='coinflip'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🪙 COINFLIP</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="coin-container">
-            <div class="coin-3d" :class="{ flipping: coinflipFlipping }">
-              <div class="coin-face front">🪙</div>
-              <div class="coin-face back">📝</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!coinflipStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="coinflipBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div class="choice-row">
-              <button 
-                @click="coinflipChoice = 'صورة'" 
-                class="choice-btn-small" 
-                :class="{active: coinflipChoice === 'صورة'}"
-              >
-                🪙 صورة
-              </button>
-              <button 
-                @click="coinflipChoice = 'كتابة'" 
-                class="choice-btn-small" 
-                :class="{active: coinflipChoice === 'كتابة'}"
-              >
-                📝 كتابة
-              </button>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startCoinflip" class="casino-button" :disabled="!coinflipBet || coinflipBet <= 0 || !coinflipChoice">
-              <span>اقلب العملة</span>
-              <i class="fas fa-coins"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Wheel Spin -->
-      <div v-if="selectedGame==='wheel'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎡 WHEEL</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="wheel-container">
-            <div class="wheel-outer" :style="{ transform: `rotate(${wheelRotation}deg)` }">
-              <div v-for="(mult, index) in wheelMultipliers" :key="index" 
-                   class="wheel-segment-casino" 
-                   :style="{ transform: `rotate(${index * 45}deg)` }">
-                <span class="segment-value-casino">{{ mult }}x</span>
-              </div>
-            </div>
-            <div class="wheel-pointer">▼</div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!wheelStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="wheelBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startWheel" class="casino-button" :disabled="!wheelBet || wheelBet <= 0">
-              <span>دور العجلة</span>
-              <i class="fas fa-circle-notch"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Keno -->
-      <div v-if="selectedGame==='keno'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎱 KENO</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="keno-container">
-            <div class="keno-grid">
-              <div 
-                v-for="n in 40" 
-                :key="n"
-                class="keno-ball"
-                :class="{
-                  'selected': kenoSelected.includes(n),
-                  'drawn': kenoDrawn.includes(n)
-                }"
-                @click="toggleKenoNumber(n)"
-              >
-                {{ n }}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!kenoStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="kenoBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startKeno" class="casino-button" :disabled="!kenoBet || kenoBet <= 0">
-              <span>ابدأ</span>
-              <i class="fas fa-dice-d6"></i>
-            </button>
-          </div>
-          
-          <div v-if="kenoStarted && kenoSelected.length > 0 && kenoDrawn.length === 0" class="action-row">
-            <button @click="drawKeno" class="action-btn gold-btn">
-              <i class="fas fa-dice"></i> سحب ({{ kenoSelected.length }})
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bowling -->
-      <div v-if="selectedGame==='bowling'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎳 BOWLING</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="bowling-container">
-            <div class="pins-setup">
-              <div v-for="pin in 10" :key="pin" 
-                   class="bowling-pin" 
-                   :class="{ knocked: bowlingKnocked.includes(pin) }">
-                🎳
-              </div>
-            </div>
-            <div class="ball-track">
-              <div class="bowling-ball-casino" :class="{ rolling: bowlingRolling }">⚫</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!bowlingStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="bowlingBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startBowling" class="casino-button" :disabled="!bowlingBet || bowlingBet <= 0">
-              <span>ارم الكرة</span>
-              <i class="fas fa-bowling-ball"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Puzzle -->
-      <div v-if="selectedGame==='puzzle'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🧩 PUZZLE</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="puzzle-container">
-            <div class="puzzle-grid-casino">
-              <div 
-                v-for="(piece, index) in puzzlePieces" 
-                :key="index"
-                class="puzzle-tile"
-                :class="{ empty: piece === null }"
-                @click="movePuzzle(index)"
-              >
-                {{ piece !== null ? piece : '' }}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!puzzleStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="puzzleBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startPuzzle" class="casino-button" :disabled="!puzzleBet || puzzleBet <= 0">
-              <span>ابدأ اللغز</span>
-              <i class="fas fa-puzzle-piece"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Target Shot -->
-      <div v-if="selectedGame==='target'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎯 TARGET</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="target-container-casino">
-            <div class="target-casino">
-              <div class="target-ring bullseye" @click="shootTarget(10)">
-                <span class="ring-value">10</span>
-              </div>
-              <div class="target-ring middle" @click="shootTarget(5)">
-                <span class="ring-value">5</span>
-              </div>
-              <div class="target-ring outer" @click="shootTarget(2)">
-                <span class="ring-value">2</span>
-              </div>
-            </div>
-            <div class="target-score">النقاط: {{ targetScore }} / 30</div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!targetStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="targetBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startTarget" class="casino-button" :disabled="!targetBet || targetBet <= 0">
-              <span>ابدأ التصويب</span>
-              <i class="fas fa-bullseye"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Lucky Number -->
-      <div v-if="selectedGame==='lucky'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎲 LUCKY NUMBER</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="lucky-container">
-            <div class="number-drum" :class="{ spinning: luckyStarted }">
-              {{ luckyDrawn || '?' }}
-            </div>
-            <div class="chosen-number">رقمك: {{ luckyNumber || '--' }}</div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!luckyStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="luckyBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div class="chip-input">
-              <span class="chip-icon">#</span>
-              <input
-                type="number"
-                v-model.number="luckyNumber"
-                placeholder="رقم الحظ"
-                class="casino-input"
-                min="1"
-                max="100"
-              />
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startLucky" class="casino-button" :disabled="!luckyBet || luckyBet <= 0 || !luckyNumber">
-              <span>جرب حظك</span>
-              <i class="fas fa-star"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mystery Box -->
-      <div v-if="selectedGame==='mystery'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>🎁 MYSTERY BOX</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="mystery-container">
-            <div class="mystery-box" @click="openMysteryBox" :class="{ opened: mysteryOpened, shaking: !mysteryOpened }">
-              <span v-if="!mysteryOpened">🎁</span>
-              <span v-else class="box-content">{{ mysteryPrize }}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!mysteryStarted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="mysteryBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            <button @click="startMystery" class="casino-button" :disabled="!mysteryBet || mysteryBet <= 0">
-              <span>افتح الصندوق</span>
-              <i class="fas fa-gift"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- High/Low (Trading Game) -->
-      <div v-if="selectedGame==='highlow'" class="casino-card">
-        <div class="casino-card-header">
-          <h2>📊 HIGH / LOW</h2>
-          <div class="casino-glow"></div>
-        </div>
-        
-        <div class="game-scene">
-          <div class="trading-container">
-            <!-- الرسم البياني -->
-            <canvas ref="tradingChart" width="400" height="200" class="trading-chart"></canvas>
-            
-            <!-- السهم المتحرك -->
-            <div class="arrow-container" :class="{ 'arrow-moving': isArrowMoving }">
-              <div class="arrow-line"></div>
-              <div class="arrow-head" :style="{ left: arrowPosition + '%' }">▶</div>
-            </div>
-            
-            <!-- نقاط البداية والنهاية -->
-            <div class="price-markers">
-              <div class="start-marker">بداية ${{ startPrice.toFixed(2) }}</div>
-              <div class="end-marker" v-if="!isArrowMoving">نهاية ${{ endPrice.toFixed(2) }}</div>
-            </div>
-            
-            <!-- المؤقت -->
-            <div v-if="isArrowMoving" class="trading-timer">
-              <div class="timer-progress" :style="{ width: timerProgress + '%' }"></div>
-              <span>{{ remainingTime }}s</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="casino-controls">
-          <div v-if="!isArrowMoving && !tradeCompleted" class="bet-panel">
-            <div class="chip-input">
-              <span class="chip-icon">💰</span>
-              <input
-                type="number"
-                v-model.number="highLowBet"
-                placeholder="0.00"
-                class="casino-input"
-                @input="clearGameError"
-                :disabled="isBetLocked"
-              />
-              <span class="chip-currency">USDT</span>
-            </div>
-            
-            <div v-if="gameError" class="casino-error">{{ gameError }}</div>
-            
-            <div class="trading-buttons">
-              <button 
-                @click="placeTrade('high')" 
-                class="trading-btn high-btn"
-                :disabled="!highLowBet || highLowBet <= 0 || isBetLocked"
-              >
-                <span class="btn-icon">📈</span>
-                <span class="btn-text">HIGH</span>
-                <span class="btn-multiplier">x1.8</span>
-              </button>
-              <button 
-                @click="placeTrade('low')" 
-                class="trading-btn low-btn"
-                :disabled="!highLowBet || highLowBet <= 0 || isBetLocked"
-              >
-                <span class="btn-icon">📉</span>
-                <span class="btn-text">LOW</span>
-                <span class="btn-multiplier">x1.8</span>
-              </button>
-            </div>
-          </div>
-          
-          <div v-if="tradeCompleted" class="trade-result" :class="{ 'win-result': highLowWon, 'lose-result': !highLowWon }">
-            <div class="result-icon">{{ highLowWon ? '🎉' : '😢' }}</div>
-            <div class="result-text">{{ highLowResultMessage }}</div>
-            <div class="result-profit" v-if="highLowWon">+{{ highLowProfit.toFixed(2) }} USDT</div>
+          <div class="paytable-details">
+            <span class="paytable-name">{{ segment.name }}</span>
+            <span class="paytable-multiplier">{{ segment.value }}x</span>
           </div>
         </div>
       </div>
     </div>
-  </div>    
-</template>    
-    
-<script>    
-import { auth, db } from "../firebase";    
-import { doc, getDoc, updateDoc } from "firebase/firestore";    
-    
-export default {    
-  name: "Games",    
-    
-  data() {    
-    return {    
-      gameOpened: false,
-      selectedGame: "chicken",
-      showResultMessage: false,
-      resultType: '',
-      resultIcon: '',
-      resultText: '',
-      resultTimeout: null,
-      
-      gamesList: [
-        { id: 'chicken', name: 'Chicken Road', icon: '🐔' },
-        { id: 'dice', name: 'Dice', icon: '🎲' },
-        { id: 'mines', name: 'Mines', icon: '💣' },
-        { id: 'crash', name: 'Crash', icon: '🚀' },
-        { id: 'limbo', name: 'Limbo', icon: '🎯' },
-        { id: 'blackjack', name: 'Blackjack', icon: '🃏' },
-        { id: 'slot', name: 'Slot', icon: '🎰' },
-        { id: 'coinflip', name: 'Coinflip', icon: '🪙' },
-        { id: 'wheel', name: 'Wheel', icon: '🎡' },
-        { id: 'keno', name: 'Keno', icon: '🎱' },
-        { id: 'bowling', name: 'Bowling', icon: '🎳' },
-        { id: 'puzzle', name: 'Puzzle', icon: '🧩' },
-        { id: 'target', name: 'Target', icon: '🎯' },
-        { id: 'lucky', name: 'Lucky Number', icon: '🎮' },
-        { id: 'mystery', name: 'Mystery Box', icon: '🎁' },
-        { id: 'highlow', name: 'High/Low', icon: '📊' }
-      ],
-      balance: 0,    
-      gameError: "",    
-    
-      /* Chicken Road */
-      chickenBet: null,
-      chickenStarted: false,
-      chickenGameOver: false,
-      chickenPosition: 0,
-      chickenSteps: [
-        { multiplier: 0.1 },
-        { multiplier: 0.2 },
-        { multiplier: 0.3 },
-        { multiplier: 0.5 },
-        { multiplier: 0.8 },
-        { multiplier: 1.2 },
-        { multiplier: 1.5 },
-        { multiplier: 2.0 },
-        { multiplier: 2.5 },
-        { multiplier: 3.0 }
-      ],
-      
-      /* Dice */
-      diceBet: null,
-      diceStarted: false,
-      diceRolling: false,
-      diceChance: 10,
-      diceRoll: null,
-      diceResultText: "",
-      diceWon: false,
-      
-      /* Mines */
-      minesBet: null,
-      minesStarted: false,
-      minesCount: 12,
-      minesCells: [],
-      minesGameOver: false,
-      minesRevealed: 0,
-      
-      /* Crash */
-      crashBet: null,
-      crashStarted: false,
-      crashMultiplier: 1.0,
-      crashCrashed: false,
-      crashProgress: 0,
-      crashAutoCashout: 2.0,
-      crashInterval: null,
-      
-      /* Limbo */
-      limboBet: null,
-      limboStarted: false,
-      limboTarget: 2.0,
-      limboResult: 0,
-      limboWon: false,
-      
-      /* Blackjack */
-      blackjackBet: null,
-      blackjackStarted: false,
-      blackjackGameOver: false,
-      blackjackWon: false,
-      blackjackResult: "",
-      dealerHand: [],
-      playerHand: [],
-      dealerRevealed: false,
-      deck: [],
-      
-      /* Slot Machine */
-      slotBet: null,
-      slotStarted: false,
-      slotSpinning: false,
-      slotReels: ['🍒', '🍒', '🍒'],
-      slotWon: false,
-      slotResult: "",
-      slotSymbols: ['🍒', '🍋', '🍊', '7️⃣', '💎', '🔔'],
-      
-      /* Coinflip */
-      coinflipBet: null,
-      coinflipStarted: false,
-      coinflipChoice: "",
-      coinflipResult: "",
-      coinflipWon: false,
-      coinflipFlipping: false,
-      
-      /* Wheel */
-      wheelBet: null,
-      wheelStarted: false,
-      wheelRotation: 0,
-      wheelResult: "",
-      wheelMultipliers: [0.2, 0.5, 1, 0.3, 0.8, 1.5, 2, 0.1],
-      
-      /* Keno */
-      kenoBet: null,
-      kenoStarted: false,
-      kenoSelected: [],
-      kenoDrawn: [],
-      kenoMatches: 0,
-      kenoMultiplier: 0,
-      
-      /* Bowling */
-      bowlingBet: null,
-      bowlingStarted: false,
-      bowlingKnocked: [],
-      bowlingRolling: false,
-      bowlingResult: "",
-      
-      /* Puzzle */
-      puzzleBet: null,
-      puzzleStarted: false,
-      puzzlePieces: [],
-      puzzleSolved: false,
-      
-      /* Target */
-      targetBet: null,
-      targetStarted: false,
-      targetResult: "",
-      targetScore: 0,
-      
-      /* Lucky Number */
-      luckyBet: null,
-      luckyStarted: false,
-      luckyNumber: null,
-      luckyDrawn: null,
-      luckyWon: false,
-      
-      /* Mystery Box */
-      mysteryBet: null,
-      mysteryStarted: false,
-      mysteryOpened: false,
-      mysteryPrize: "",
-      mysteryResult: "",
-      
-      /* High/Low (Trading Game) */
-      highLowBet: null,
-      highLowChoice: null,
-      isArrowMoving: false,
-      isBetLocked: false,
-      tradeCompleted: false,
-      highLowWon: false,
-      highLowResultMessage: "",
-      highLowProfit: 0,
-      
-      // Chart data
-      chartData: [],
-      chartCanvas: null,
-      chartContext: null,
-      animationFrame: null,
-      
-      // Arrow position (0-100%)
-      arrowPosition: 0,
-      
-      // Timer
-      totalTime: 5,
-      remainingTime: 5,
-      timerProgress: 100,
-      timerInterval: null,
-      
-      // Price tracking
-      startPrice: 100,
-      currentPrice: 100,
-      endPrice: 100,
-      
-      // RNG control (45% win rate for player)
-      winProbability: 0.45
-    };    
-  },    
-    
-  computed: {    
-    chickenProfit() {    
-      if (!this.chickenBet) return 0;    
-      return this.chickenBet * this.chickenSteps[this.chickenPosition].multiplier;    
-    },
-    
-    minesProfit() {
-      if (!this.minesBet) return 0;
-      let multiplier = 0.1 + (this.minesRevealed * 0.2);
-      return this.minesBet * Math.min(multiplier, 3);
-    },
-    
-    playerScore() {
-      return this.calculateHand(this.playerHand);
-    }
-  },    
-    
-  async created() {    
-    const user = auth.currentUser;    
-    if (!user) return;    
-    const snap = await getDoc(doc(db, "users", user.uid));    
-    if (snap.exists()) {    
-      this.balance = Number(snap.data().balance || 0);    
-    }    
-  },    
-    
-  mounted() {
-    // Initialize chart when highlow game is opened
-    this.$watch('selectedGame', (newVal) => {
-      if (newVal === 'highlow' && this.gameOpened) {
-        this.$nextTick(() => {
-          this.initChart();
-        });
-      }
-    });
-  },
+  </div>
+</template>
+
+<script>
+export default {
+  name: "MegaBoomingFruits",
   
-  beforeDestroy() {
-    this.cleanupHighLow();
+  static: {
+    meta: {
+      name: 'Mega Booming Fruits',
+      icon: '🍒',
+      description: 'احصل على مضاعفات تصل إلى 50x'
+    }
   },
-    
-  methods: {    
-    openGame(gameId) {
-      this.selectedGame = gameId;
-      this.gameOpened = true;
-      this.gameError = "";
+
+  props: {
+    balance: {
+      type: Number,
+      required: true,
+      default: 0
+    }
+  },
+
+  emits: ['update-balance', 'show-result'],
+
+  data() {
+    return {
+      // إعدادات اللعبة
+      minBet: 0.1,
+      maxBet: 1000,
       
-      // Initialize chart for highlow game
-      if (gameId === 'highlow') {
-        this.$nextTick(() => {
-          this.initChart();
-          this.resetHighLow();
-        });
-      }
-    },
-    
-    closeGame() {
-      this.gameOpened = false;
-      // إيقاف جميع الألعاب عند الرجوع
-      this.chickenStarted = false;
-      this.chickenGameOver = false;
-      this.diceStarted = false;
-      this.minesStarted = false;
-      if (this.crashInterval) clearInterval(this.crashInterval);
-      this.crashStarted = false;
-      this.limboStarted = false;
-      this.blackjackStarted = false;
-      this.slotStarted = false;
-      this.coinflipStarted = false;
-      this.wheelStarted = false;
-      this.kenoStarted = false;
-      this.bowlingStarted = false;
-      this.puzzleStarted = false;
-      this.targetStarted = false;
-      this.luckyStarted = false;
-      this.mysteryStarted = false;
+      // الرهان الحالي
+      betAmount: 1,
       
-      // Cleanup highlow
-      this.cleanupHighLow();
-    },
-    
-    clearGameError() {
-      this.gameError = "";
-    },
-    
-    async updateBalance(newBalance) {
-      this.balance = newBalance;
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        balance: this.balance,
-      });
-    },
-    
-    showResult(message, isWin) {
-      if (this.resultTimeout) clearTimeout(this.resultTimeout);
+      // حالة اللعبة
+      isSpinning: false,
+      showResult: false,
+      currentMultiplier: 1,
       
-      this.resultText = message;
-      this.resultType = isWin ? 'win-message' : 'lose-message';
-      this.resultIcon = isWin ? 'fas fa-trophy' : 'fas fa-skull';
-      this.showResultMessage = true;
+      // نتائج
+      lastWin: 0,
+      totalBets: 0,
+      spinHistory: [],
       
-      this.resultTimeout = setTimeout(() => {
-        this.showResultMessage = false;
-      }, 2000);
-    },
-    
-    /* ===== High/Low Trading Game ===== */
-    initChart() {
-      this.chartCanvas = this.$refs.tradingChart;
-      if (!this.chartCanvas) return;
+      // التشغيل التلقائي
+      autoPlayActive: false,
+      autoSpins: 10,
+      autoSpinsRemaining: 0,
+      stopOnWin: false,
+      stopOnMultiplier: false,
       
-      this.chartContext = this.chartCanvas.getContext('2d');
-      this.generateChartData();
-      this.drawChart();
-    },
-    
-    generateChartData() {
-      // Generate random chart data (50 points)
-      this.chartData = [];
-      let value = 100;
-      for (let i = 0; i < 50; i++) {
-        // Random walk
-        value += (Math.random() - 0.5) * 4;
-        this.chartData.push(value);
-      }
-      this.startPrice = this.chartData[this.chartData.length - 1];
-      this.currentPrice = this.startPrice;
-    },
-    
-    drawChart() {
-      if (!this.chartContext || !this.chartCanvas) return;
+      // نتيجة الجولة
+      resultText: '',
+      resultIcon: '',
+      resultClass: '',
+      resultAmount: 0,
       
-      const ctx = this.chartContext;
-      const canvas = this.chartCanvas;
-      const width = canvas.width;
-      const height = canvas.height;
+      // قطاعات الروليت (مثل العاب الكازينو الحقيقية)
+      rouletteSegments: [
+        { id: 1, name: 'CHERRY', icon: '🍒', value: 2, color: 'red', probability: 0.2 },
+        { id: 2, name: 'LEMON', icon: '🍋', value: 3, color: 'yellow', probability: 0.15 },
+        { id: 3, name: 'ORANGE', icon: '🍊', value: 4, color: 'orange', probability: 0.12 },
+        { id: 4, name: 'PLUM', icon: '🍑', value: 5, color: 'purple', probability: 0.1 },
+        { id: 5, name: 'GRAPES', icon: '🍇', value: 6, color: 'purple', probability: 0.08 },
+        { id: 6, name: 'WATERMELON', icon: '🍉', value: 8, color: 'green', probability: 0.06 },
+        { id: 7, name: 'BELL', icon: '🔔', value: 10, color: 'gold', probability: 0.05 },
+        { id: 8, name: 'BAR', icon: '💎', value: 15, color: 'blue', probability: 0.03 },
+        { id: 9, name: 'SEVEN', icon: '7️⃣', value: 20, color: 'red', probability: 0.02 },
+        { id: 10, name: 'STAR', icon: '⭐', value: 30, color: 'gold', probability: 0.01 },
+        { id: 11, name: 'MEGA', icon: '💥', value: 40, color: 'rainbow', probability: 0.005 },
+        { id: 12, name: 'BOOM', icon: '🔥', value: 50, color: 'rainbow', probability: 0.002 }
+      ],
       
-      // Clear canvas
-      ctx.clearRect(0, 0, width, height);
-      
-      // Draw grid
-      ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
-      ctx.lineWidth = 1;
-      
-      // Horizontal grid lines
-      for (let i = 0; i <= 4; i++) {
-        const y = height * i / 4;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.1)';
-        ctx.stroke();
-      }
-      
-      // Draw chart line
-      if (this.chartData.length < 2) return;
-      
-      const minPrice = Math.min(...this.chartData);
-      const maxPrice = Math.max(...this.chartData);
-      const priceRange = maxPrice - minPrice || 1;
-      
-      ctx.beginPath();
-      ctx.lineWidth = 2;
-      
-      for (let i = 0; i < this.chartData.length; i++) {
-        const x = (i / (this.chartData.length - 1)) * width;
-        const y = height - ((this.chartData[i] - minPrice) / priceRange) * height * 0.8 - height * 0.1;
-        
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          // Determine color based on price movement
-          if (this.chartData[i] > this.chartData[i-1]) {
-            ctx.strokeStyle = '#4caf50';
-          } else {
-            ctx.strokeStyle = '#f44336';
-          }
-          ctx.lineTo(x, y);
+      quickBetAmounts: [1, 5, 10, 25, 50, 100],
+      autoSpinTimer: null
+    }
+  },
+
+  computed: {
+    // حساب إجمالي الاحتمالات
+    totalProbability() {
+      return this.rouletteSegments.reduce((sum, seg) => sum + seg.probability, 0)
+    }
+  },
+
+  watch: {
+    // مراقبة الرهان
+    betAmount: {
+      handler(newVal) {
+        if (newVal > this.balance) {
+          this.betAmount = this.balance
         }
-      }
-      ctx.stroke();
-      
-      // Fill area under the line
-      ctx.lineTo(width, height);
-      ctx.lineTo(0, height);
-      ctx.closePath();
-      ctx.globalAlpha = 0.1;
-      ctx.fillStyle = '#ffd700';
-      ctx.fill();
-      ctx.globalAlpha = 1;
+        if (newVal < this.minBet) {
+          this.betAmount = this.minBet
+        }
+      },
+      immediate: true
     },
-    
-    updateChart() {
-      // Add new random point to chart
-      const lastValue = this.chartData[this.chartData.length - 1];
-      const change = (Math.random() - 0.5) * 6;
-      const newValue = lastValue + change;
-      
-      this.chartData.push(newValue);
-      this.chartData.shift();
-      
-      this.currentPrice = newValue;
-      this.drawChart();
+
+    // مراقبة التشغيل التلقائي
+    autoPlayActive(active) {
+      if (active) {
+        this.autoSpinsRemaining = this.autoSpins
+        this.startAutoSpin()
+      }
+    }
+  },
+
+  methods: {
+    // زيادة الرهان
+    increaseBet() {
+      const newAmount = this.betAmount + 1
+      if (newAmount <= this.balance) {
+        this.betAmount = newAmount
+      }
     },
-    
-    resetHighLow() {
-      this.highLowBet = null;
-      this.highLowChoice = null;
-      this.isArrowMoving = false;
-      this.isBetLocked = false;
-      this.tradeCompleted = false;
-      this.arrowPosition = 0;
-      this.remainingTime = this.totalTime;
-      this.timerProgress = 100;
-      this.startPrice = 100;
-      this.currentPrice = 100;
-      this.generateChartData();
-      this.drawChart();
+
+    // تقليل الرهان
+    decreaseBet() {
+      const newAmount = this.betAmount - 1
+      if (newAmount >= this.minBet) {
+        this.betAmount = newAmount
+      }
     },
-    
-    cleanupHighLow() {
-      if (this.timerInterval) {
-        clearInterval(this.timerInterval);
-        this.timerInterval = null;
+
+    // تعيين مبلغ الرهان
+    setBetAmount(amount) {
+      if (amount <= this.balance) {
+        this.betAmount = amount
       }
-      if (this.animationFrame) {
-        cancelAnimationFrame(this.animationFrame);
-        this.animationFrame = null;
-      }
-      this.isArrowMoving = false;
     },
-    
-    async placeTrade(choice) {
-      // Prevent spam
-      if (this.isBetLocked || this.isArrowMoving) {
-        this.gameError = "الرجاء الانتظار حتى انتهاء الجولة الحالية";
-        return;
-      }
-      
-      if (!this.highLowBet || this.highLowBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      
-      if (this.highLowBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.highLowChoice = choice;
-      this.isBetLocked = true;
+
+    // بدء الدوران
+    async startSpin() {
+      if (this.isSpinning || this.betAmount > this.balance) return
+
+      this.isSpinning = true
+      this.showResult = false
       
       // خصم الرهان
-      this.balance -= this.highLowBet;
-      await this.updateBalance(this.balance);
+      const newBalance = this.balance - this.betAmount
+      this.$emit('update-balance', newBalance, 'Mega Booming Fruits', this.betAmount, false)
       
-      // بدء حركة السهم
-      this.startTrading();
-    },
-    
-    startTrading() {
-      this.isArrowMoving = true;
-      this.tradeCompleted = false;
-      this.arrowPosition = 0;
-      this.remainingTime = this.totalTime;
-      this.timerProgress = 100;
+      this.totalBets += this.betAmount
+
+      // تحديد النتيجة بناءً على الاحتمالات
+      const result = this.getRandomSegment()
       
-      // تحديد النتيجة مسبقاً باستخدام RNG (45% فوز للاعب)
-      const random = Math.random();
-      const willPriceGoUp = random < this.winProbability ? this.highLowChoice === 'high' : this.highLowChoice !== 'high';
+      // محاكاة دوران الروليت
+      await this.animateRoulette(result)
       
-      // حساب السعر النهائي بناءً على النتيجة
-      const startPrice = this.startPrice;
-      let finalPrice;
+      // حساب الربح
+      const winAmount = this.betAmount * result.value
+      const won = result.value > 1
       
-      if (willPriceGoUp) {
-        // السعر يرتفع (فوز إذا اختار high)
-        finalPrice = startPrice * (1 + (Math.random() * 0.15 + 0.05));
+      if (won) {
+        const newBalanceWithWin = newBalance + winAmount
+        this.$emit('update-balance', newBalanceWithWin, 'Mega Booming Fruits', this.betAmount, true)
+        this.lastWin = winAmount
+        this.resultAmount = winAmount
+        this.resultText = `YOU WON ${result.value}X!`
+        this.resultIcon = this.getFruitIcon(result)
+        this.resultClass = 'win'
+        
+        this.$emit('show-result', `🎉 MEGA WIN! ${result.value}x = $${winAmount.toFixed(2)}`, true)
       } else {
-        // السعر ينخفض (فوز إذا اختار low)
-        finalPrice = startPrice * (1 - (Math.random() * 0.15 + 0.05));
+        this.lastWin = 0
+        this.resultAmount = 0
+        this.resultText = 'TRY AGAIN!'
+        this.resultIcon = '😢'
+        this.resultClass = 'lose'
+        
+        this.$emit('show-result', `😢 Better luck next time!`, false)
       }
-      
-      this.endPrice = finalPrice;
-      
-      // حركة السهم والمؤشر
-      const startTime = Date.now();
-      const duration = this.totalTime * 1000;
-        
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        // تحديث موضع السهم (0% إلى 100%)
-        this.arrowPosition = progress * 100;
-        
-        // تحديث السعر الحالي (يتحرك بشكل عشوائي)
-        const currentProgressPrice = startPrice + (finalPrice - startPrice) * progress;
-        const randomFactor = (Math.random() - 0.5) * 2;
-        this.currentPrice = currentProgressPrice + randomFactor;
-        
-        // تحديث الرسم البياني
-        this.updateChart();
-        
-        if (progress < 1) {
-          this.animationFrame = requestAnimationFrame(animate);
-        } else {
-          // انتهت الحركة
-          this.currentPrice = finalPrice;
-          this.finishTrade();
-        }
-      };
-      
-      this.animationFrame = requestAnimationFrame(animate);
-      
-      // تحديث المؤقت
-      this.timerInterval = setInterval(() => {
-        if (this.remainingTime > 0) {
-          this.remainingTime -= 1;
-          this.timerProgress = (this.remainingTime / this.totalTime) * 100;
-        }
-      }, 1000);
+
+      // إضافة إلى السجل
+      this.spinHistory.unshift({
+        segment: result,
+        multiplier: result.value,
+        betAmount: this.betAmount,
+        profit: won ? winAmount : -this.betAmount,
+        won: won
+      })
+
+      // الاحتفاظ بآخر 10 جولات فقط
+      if (this.spinHistory.length > 10) {
+        this.spinHistory.pop()
+      }
+
+      this.showResult = true
+      this.isSpinning = false
+
+      // التحقق من التشغيل التلقائي
+      this.checkAutoPlay()
     },
-    
-    async finishTrade() {
-      // إيقاف المؤقت والأنيميشن
-      if (this.timerInterval) {
-        clearInterval(this.timerInterval);
-        this.timerInterval = null;
+
+    // الحصول على قطاع عشوائي بناءً على الاحتمالات
+    getRandomSegment() {
+      const random = Math.random()
+      let cumulativeProbability = 0
+      
+      for (const segment of this.rouletteSegments) {
+        cumulativeProbability += segment.probability
+        if (random < cumulativeProbability) {
+          return segment
+        }
       }
-      if (this.animationFrame) {
-        cancelAnimationFrame(this.animationFrame);
-        this.animationFrame = null;
-      }
       
-      this.isArrowMoving = false;
+      return this.rouletteSegments[0]
+    },
+
+    // محاكاة دوران الروليت
+    async animateRoulette(targetSegment) {
+      const track = this.$refs.rouletteTrack
+      if (!track) return
+
+      const segmentWidth = 120 // عرض القطاع بالبكسل
+      const spins = 20 // عدد الدورات
+      const targetIndex = this.rouletteSegments.findIndex(s => s.id === targetSegment.id)
       
-      // تحديد نتيجة التداول
-      const priceIncreased = this.endPrice > this.startPrice;
+      // حساب المسافة للوصول إلى القطاع المطلوب
+      const targetPosition = (targetIndex + this.rouletteSegments.length * 3) * segmentWidth
       
-      if ((this.highLowChoice === 'high' && priceIncreased) || 
-          (this.highLowChoice === 'low' && !priceIncreased)) {
-        // فوز
-        this.highLowWon = true;
-        this.highLowProfit = this.highLowBet * 1.8;
-        this.balance += this.highLowProfit;
-        await this.updateBalance(this.balance);
-        this.highLowResultMessage = `فوز! السعر ${priceIncreased ? 'ارتفع' : 'انخفض'} إلى $${this.endPrice.toFixed(2)}`;
-        this.showResult(`🎉 ربحت ${this.highLowProfit.toFixed(2)} USDT`, true);
+      // تحريك الروليت
+      track.style.transition = 'transform 3s cubic-bezier(0.25, 0.1, 0.15, 1)'
+      track.style.transform = `translateX(-${targetPosition}px)`
+      
+      // انتظار انتهاء الحركة
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      
+      // إعادة التعيين للحركة التالية
+      track.style.transition = 'none'
+      track.style.transform = `translateX(-${targetIndex * segmentWidth}px)`
+    },
+
+    // الحصول على أيقونة الفاكهة
+    getFruitIcon(segment) {
+      return segment.icon
+    },
+
+    // الحصول على كلاس القطاع
+    getSegmentClass(segment) {
+      return `segment-${segment.color}`
+    },
+
+    // تبديل التشغيل التلقائي
+    toggleAutoPlay() {
+      if (this.autoPlayActive) {
+        this.stopAutoPlay()
       } else {
-        // خسارة
-        this.highLowWon = false;
-        this.highLowProfit = 0;
-        this.highLowResultMessage = `خسارة! السعر ${priceIncreased ? 'ارتفع' : 'انخفض'} إلى $${this.endPrice.toFixed(2)}`;
-        this.showResult(`😢 خسرت الرهان`, false);
+        this.autoPlayActive = true
       }
-      
-      this.tradeCompleted = true;
-      
-      // فتح الرهان مرة أخرى بعد 3 ثواني
-      setTimeout(() => {
-        this.isBetLocked = false;
-        this.resetHighLow();
-      }, 3000);
     },
-    
-    /* ===== Chicken Road ===== */
-    async startChicken() {
-      if (!this.chickenBet || this.chickenBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
+
+    // بدء التشغيل التلقائي
+    startAutoSpin() {
+      if (this.autoSpinsRemaining > 0 && this.autoPlayActive) {
+        this.startSpin()
+      } else {
+        this.stopAutoPlay()
       }
-      if (this.chickenBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.chickenBet;
-      await this.updateBalance(this.balance);
-      
-      this.chickenStarted = true;
-      this.chickenGameOver = false;
-      this.chickenPosition = 0;
     },
-    
-    chickenNext() {
-      if (this.chickenGameOver) return;
-      
-      const loseChance = 0.7 + (this.chickenPosition * 0.03);
-      if (Math.random() < loseChance) {
-        this.chickenGameOver = true;
-        this.showResult("💥 خسرت الرهان!", false);
+
+    // التحقق من التشغيل التلقائي
+    checkAutoPlay() {
+      if (!this.autoPlayActive) return
+
+      this.autoSpinsRemaining--
+
+      // التحقق من شروط الإيقاف
+      if (this.stopOnWin && this.lastWin > 0) {
+        this.stopAutoPlay()
+        this.$emit('show-result', '🛑 Auto play stopped: Win detected', false)
+        return
+      }
+
+      if (this.stopOnMultiplier && this.currentMultiplier >= 10) {
+        this.stopAutoPlay()
+        this.$emit('show-result', '🛑 Auto play stopped: 10x+ multiplier', false)
+        return
+      }
+
+      if (this.autoSpinsRemaining > 0 && this.autoPlayActive) {
         setTimeout(() => {
-          this.chickenStarted = false;
-        }, 2000);
-        return;
-      }
-      
-      if (this.chickenPosition < this.chickenSteps.length - 1) {
-        this.chickenPosition++;
+          this.startSpin()
+        }, 500)
       } else {
-        this.chickenCashOut();
+        this.stopAutoPlay()
       }
     },
-    
-    async chickenCashOut() {
-      if (this.chickenGameOver) return;
-      
-      const profit = this.chickenProfit;
-      this.balance += profit;
-      await this.updateBalance(this.balance);
-      this.showResult(`🎉 ربحت ${profit.toFixed(2)} USDT`, true);
-      this.chickenGameOver = true;
-      setTimeout(() => {
-        this.chickenStarted = false;
-      }, 2000);
-    },
-    
-    /* ===== Dice ===== */
-    async startDice() {
-      if (!this.diceBet || this.diceBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.diceBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.diceBet;
-      await this.updateBalance(this.balance);
-      
-      this.diceStarted = true;
-      this.diceRolling = true;
-      
-      let rolls = 0;
-      const interval = setInterval(() => {
-        this.diceRoll = Math.floor(Math.random() * 100) + 1;
-        rolls++;
-        if (rolls >= 15) {
-          clearInterval(interval);
-          this.diceRolling = false;
-          this.checkDiceResult();
-        }
-      }, 100);
-    },
-    
-    async checkDiceResult() {
-      this.diceWon = this.diceRoll <= this.diceChance;
-      const multiplier = 95 / this.diceChance;
-      const profit = this.diceBet * multiplier;
-      
-      if (this.diceWon) {
-        this.balance += profit;
-        await this.updateBalance(this.balance);
-        this.showResult(`🎉 ربحت ${profit.toFixed(2)} USDT`, true);
-      } else {
-        this.showResult(`😢 خسرت! الرقم كان ${this.diceRoll}`, false);
-      }
-      
-      setTimeout(() => {
-        this.diceStarted = false;
-      }, 2000);
-    },
-    
-    /* ===== Mines ===== */
-    async startMines() {
-      if (!this.minesBet || this.minesBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.minesBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.minesBet;
-      await this.updateBalance(this.balance);
-      
-      this.minesStarted = true;
-      this.minesGameOver = false;
-      this.minesRevealed = 0;
-      
-      this.minesCells = [];
-      for (let i = 0; i < 25; i++) {
-        this.minesCells.push({ revealed: false, mine: false });
-      }
-      
-      let minesPlaced = 0;
-      while (minesPlaced < this.minesCount) {
-        const index = Math.floor(Math.random() * 25);
-        if (!this.minesCells[index].mine) {
-          this.minesCells[index].mine = true;
-          minesPlaced++;
-        }
+
+    // إيقاف التشغيل التلقائي
+    stopAutoPlay() {
+      this.autoPlayActive = false
+      this.autoSpinsRemaining = 0
+      if (this.autoSpinTimer) {
+        clearTimeout(this.autoSpinTimer)
       }
     },
-    
-    revealMine(index) {
-      if (this.minesGameOver || this.minesCells[index].revealed) return;
-      
-      this.minesCells[index].revealed = true;
-      
-      if (this.minesCells[index].mine) {
-        this.minesGameOver = true;
-        this.showResult("💥 انفجر لغم! خسرت الرهان", false);
-        setTimeout(() => {
-          this.minesStarted = false;
-        }, 2000);
-      } else {
-        this.minesRevealed++;
+
+    // زيادة عدد الدورات التلقائية
+    increaseAutoSpins() {
+      if (this.autoSpins < 100) {
+        this.autoSpins++
       }
     },
-    
-    async minesCashOut() {
-      if (this.minesGameOver) return;
-      
-      const profit = this.minesProfit;
-      this.balance += profit;
-      await this.updateBalance(this.balance);
-      this.showResult(`🎉 ربحت ${profit.toFixed(2)} USDT`, true);
-      this.minesGameOver = true;
-      setTimeout(() => {
-        this.minesStarted = false;
-      }, 2000);
-    },
-    
-    /* ===== Crash ===== */
-    async startCrash() {
-      if (!this.crashBet || this.crashBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
+
+    // تقليل عدد الدورات التلقائية
+    decreaseAutoSpins() {
+      if (this.autoSpins > 1) {
+        this.autoSpins--
       }
-      if (this.crashBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.crashBet;
-      await this.updateBalance(this.balance);
-      
-      this.crashStarted = true;
-      this.crashCrashed = false;
-      this.crashMultiplier = 1.0;
-      this.crashProgress = 0;
-      
-      const crashPoint = 1.1 + (Math.random() * 4);
-      
-      this.crashInterval = setInterval(() => {
-        if (this.crashCrashed) return;
-        
-        this.crashMultiplier += 0.02;
-        this.crashProgress = ((this.crashMultiplier - 1) / 5) * 100;
-        
-        if (this.crashMultiplier >= crashPoint) {
-          this.crashCrashed = true;
-          clearInterval(this.crashInterval);
-          this.showResult("💥 انفجر الصاروخ!", false);
-          setTimeout(() => {
-            this.crashStarted = false;
-          }, 2000);
-        }
-        
-        if (this.crashMultiplier >= this.crashAutoCashout && !this.crashCrashed) {
-          this.crashCashOut();
-        }
-      }, 200);
-    },
-    
-    async crashCashOut() {
-      if (this.crashCrashed) return;
-      
-      clearInterval(this.crashInterval);
-      const profit = this.crashBet * this.crashMultiplier;
-      this.balance += profit;
-      await this.updateBalance(this.balance);
-      this.showResult(`🎉 سحبت وربحت ${profit.toFixed(2)} USDT`, true);
-      this.crashCrashed = true;
-      setTimeout(() => {
-        this.crashStarted = false;
-      }, 2000);
-    },
-    
-    /* ===== Limbo ===== */
-    async startLimbo() {
-      if (!this.limboBet || this.limboBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.limboBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.limboBet;
-      await this.updateBalance(this.balance);
-      
-      this.limboStarted = true;
-      
-      setTimeout(() => {
-        this.limboResult = 0.1 + (Math.random() * 5);
-        this.limboWon = this.limboResult >= this.limboTarget;
-        
-        if (this.limboWon) {
-          const profit = this.limboBet * this.limboResult;
-          this.balance += profit;
-          this.updateBalance(this.balance);
-          this.showResult(`🎉 فوز! المضاعف ${this.limboResult.toFixed(2)}x`, true);
-        } else {
-          this.showResult(`😢 خسارة! المضاعف ${this.limboResult.toFixed(2)}x`, false);
-        }
-        
-        setTimeout(() => {
-          this.limboStarted = false;
-        }, 2000);
-      }, 1500);
-    },
-    
-    /* ===== Blackjack ===== */
-    createDeck() {
-      const suits = ['♥', '♦', '♣', '♠'];
-      const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-      const deck = [];
-      for (let suit of suits) {
-        for (let value of values) {
-          deck.push(value + suit);
-        }
-      }
-      return this.shuffle(deck);
-    },
-    
-    shuffle(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
-    },
-    
-    getCardValue(card) {
-      const value = card.slice(0, -1);
-      if (value === 'A') return 11;
-      if (['K', 'Q', 'J'].includes(value)) return 10;
-      return parseInt(value);
-    },
-    
-    calculateHand(hand) {
-      let sum = 0;
-      let aces = 0;
-      for (let card of hand) {
-        const value = this.getCardValue(card);
-        if (value === 11) aces++;
-        sum += value;
-      }
-      while (sum > 21 && aces > 0) {
-        sum -= 10;
-        aces--;
-      }
-      return sum;
-    },
-    
-    async startBlackjack() {
-      if (!this.blackjackBet || this.blackjackBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.blackjackBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.blackjackBet;
-      await this.updateBalance(this.balance);
-      
-      this.blackjackStarted = true;
-      this.blackjackGameOver = false;
-      this.dealerRevealed = false;
-      this.deck = this.createDeck();
-      
-      this.playerHand = [this.deck.pop(), this.deck.pop()];
-      this.dealerHand = [this.deck.pop(), this.deck.pop()];
-    },
-    
-    blackjackHit() {
-      if (this.blackjackGameOver) return;
-      
-      this.playerHand.push(this.deck.pop());
-      if (this.calculateHand(this.playerHand) > 21) {
-        this.blackjackStand();
-      }
-    },
-    
-    async blackjackStand() {
-      this.dealerRevealed = true;
-      
-      setTimeout(async () => {
-        while (this.calculateHand(this.dealerHand) < 17) {
-          this.dealerHand.push(this.deck.pop());
-        }
-        
-        const playerScore = this.calculateHand(this.playerHand);
-        const dealerScore = this.calculateHand(this.dealerHand);
-        
-        this.blackjackGameOver = true;
-        
-        if (playerScore > 21) {
-          this.showResult("😢 خسرت! نقاطك تجاوزت 21", false);
-        } else if (dealerScore > 21) {
-          const profit = this.blackjackBet * 2;
-          this.balance += profit;
-          await this.updateBalance(this.balance);
-          this.showResult(`🎉 فوز! ربحت ${profit.toFixed(2)} USDT`, true);
-        } else if (playerScore > dealerScore) {
-          const profit = this.blackjackBet * 2;
-          this.balance += profit;
-          await this.updateBalance(this.balance);
-          this.showResult(`🎉 فوز! ${playerScore} ضد ${dealerScore}`, true);
-        } else if (playerScore < dealerScore) {
-          this.showResult(`😢 خسارة! ${playerScore} ضد ${dealerScore}`, false);
-        } else {
-          this.balance += this.blackjackBet;
-          await this.updateBalance(this.balance);
-          this.showResult(`🤝 تعادل! استرداد الرهان`, true);
-        }
-      }, 1000);
-    },
-    
-    /* ===== Slot Machine ===== */
-    async startSlot() {
-      if (!this.slotBet || this.slotBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.slotBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.slotBet;
-      await this.updateBalance(this.balance);
-      
-      this.slotStarted = true;
-      this.slotSpinning = true;
-      
-      let spins = 0;
-      const spinInterval = setInterval(() => {
-        this.slotReels = [
-          this.slotSymbols[Math.floor(Math.random() * this.slotSymbols.length)],
-          this.slotSymbols[Math.floor(Math.random() * this.slotSymbols.length)],
-          this.slotSymbols[Math.floor(Math.random() * this.slotSymbols.length)]
-        ];
-        spins++;
-        
-        if (spins >= 20) {
-          clearInterval(spinInterval);
-          this.slotSpinning = false;
-          this.checkSlotWin();
-        }
-      }, 150);
-    },
-    
-    async checkSlotWin() {
-      const [a, b, c] = this.slotReels;
-      this.slotWon = a === b && b === c;
-      
-      if (this.slotWon) {
-        let multiplier = 0.5;
-        if (a === '7️⃣') multiplier = 3;
-        else if (a === '💎') multiplier = 2;
-        else if (a === '🔔') multiplier = 1.5;
-        else multiplier = 1;
-        
-        const profit = this.slotBet * multiplier;
-        this.balance += profit;
-        await this.updateBalance(this.balance);
-        this.showResult(`🎉 ربحت ${profit.toFixed(2)} USDT`, true);
-      } else {
-        this.showResult("😢 للأسف لا فوز", false);
-      }
-      
-      setTimeout(() => {
-        this.slotStarted = false;
-      }, 2000);
-    },
-    
-    /* ===== Coinflip ===== */
-    async startCoinflip() {
-      if (!this.coinflipBet || this.coinflipBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (!this.coinflipChoice) {
-        this.gameError = "اختر صورة أو كتابة";
-        return;
-      }
-      if (this.coinflipBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.coinflipBet;
-      await this.updateBalance(this.balance);
-      
-      this.coinflipStarted = true;
-      this.coinflipFlipping = true;
-      
-      setTimeout(() => {
-        this.coinflipResult = Math.random() < 0.5 ? "صورة" : "كتابة";
-        this.coinflipWon = this.coinflipResult === this.coinflipChoice;
-        this.coinflipFlipping = false;
-        
-        if (this.coinflipWon) {
-          const profit = this.coinflipBet * 1.8;
-          this.balance += profit;
-          this.updateBalance(this.balance);
-          this.showResult(`🎉 فوز! ربحت ${profit.toFixed(2)} USDT`, true);
-        } else {
-          this.showResult(`😢 خسارة! كانت النتيجة ${this.coinflipResult}`, false);
-        }
-        
-        setTimeout(() => {
-          this.coinflipStarted = false;
-        }, 2000);
-      }, 2000);
-    },
-    
-    /* ===== Wheel Spin ===== */
-    async startWheel() {
-      if (!this.wheelBet || this.wheelBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.wheelBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.wheelBet;
-      await this.updateBalance(this.balance);
-      
-      this.wheelStarted = true;
-      const spins = 10 + Math.floor(Math.random() * 10);
-      const targetIndex = Math.floor(Math.random() * 8);
-      const targetRotation = 360 * spins + (targetIndex * 45);
-      
-      this.wheelRotation = 0;
-      const interval = setInterval(() => {
-        this.wheelRotation += 15;
-        if (this.wheelRotation >= targetRotation) {
-          clearInterval(interval);
-          
-          setTimeout(async () => {
-            const multiplier = this.wheelMultipliers[targetIndex];
-            const profit = this.wheelBet * multiplier;
-            this.balance += profit;
-            await this.updateBalance(this.balance);
-            
-            if (multiplier >= 1) {
-              this.showResult(`🎉 ربحت ${profit.toFixed(2)} USDT`, true);
-            } else {
-              this.showResult(`😢 خسرت! المضاعف ${multiplier}x`, false);
-            }
-            
-            setTimeout(() => {
-              this.wheelStarted = false;
-            }, 2000);
-          }, 500);
-        }
-      }, 20);
-    },
-    
-    /* ===== Keno ===== */
-    async startKeno() {
-      if (!this.kenoBet || this.kenoBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.kenoBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.kenoBet;
-      await this.updateBalance(this.balance);
-      
-      this.kenoStarted = true;
-      this.kenoSelected = [];
-      this.kenoDrawn = [];
-      this.kenoMatches = 0;
-    },
-    
-    toggleKenoNumber(n) {
-      if (this.kenoDrawn.length > 0) return;
-      
-      const index = this.kenoSelected.indexOf(n);
-      if (index === -1) {
-        if (this.kenoSelected.length < 4) {
-          this.kenoSelected.push(n);
-        }
-      } else {
-        this.kenoSelected.splice(index, 1);
-      }
-    },
-    
-    async drawKeno() {
-      if (this.kenoSelected.length === 0) return;
-      
-      this.kenoDrawn = [];
-      const numbers = Array.from({ length: 40 }, (_, i) => i + 1);
-      
-      let drawn = 0;
-      const interval = setInterval(() => {
-        if (drawn < 20) {
-          const index = Math.floor(Math.random() * numbers.length);
-          this.kenoDrawn.push(numbers[index]);
-          numbers.splice(index, 1);
-          drawn++;
-        } else {
-          clearInterval(interval);
-          this.calculateKenoResult();
-        }
-      }, 200);
-    },
-    
-    async calculateKenoResult() {
-      this.kenoMatches = this.kenoSelected.filter(n => this.kenoDrawn.includes(n)).length;
-      
-      const multipliers = [0, 0.1, 0.5, 1, 2];
-      this.kenoMultiplier = multipliers[this.kenoMatches] || 0;
-      
-      if (this.kenoMultiplier > 0) {
-        const profit = this.kenoBet * this.kenoMultiplier;
-        this.balance += profit;
-        await this.updateBalance(this.balance);
-        this.showResult(`🎉 ${this.kenoMatches} تطابق! ربحت ${profit.toFixed(2)} USDT`, true);
-      } else {
-        this.showResult(`😢 ${this.kenoMatches} تطابق. لا فوز`, false);
-      }
-    },
-    
-    /* ===== Bowling ===== */
-    async startBowling() {
-      if (!this.bowlingBet || this.bowlingBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.bowlingBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.bowlingBet;
-      await this.updateBalance(this.balance);
-      
-      this.bowlingStarted = true;
-      this.bowlingRolling = true;
-      this.bowlingKnocked = [];
-      
-      setTimeout(() => {
-        const knocked = Math.floor(Math.random() * 9);
-        
-        let knockInterval = setInterval(() => {
-          if (this.bowlingKnocked.length < knocked) {
-            const pin = Math.floor(Math.random() * 10) + 1;
-            if (!this.bowlingKnocked.includes(pin)) {
-              this.bowlingKnocked.push(pin);
-            }
-          } else {
-            clearInterval(knockInterval);
-            this.bowlingRolling = false;
-            this.calculateBowlingResult(knocked);
-          }
-        }, 100);
-      }, 1500);
-    },
-    
-    async calculateBowlingResult(knocked) {
-      let multiplier = 0.1;
-      if (knocked === 10) multiplier = 2;
-      else if (knocked >= 8) multiplier = 1.5;
-      else if (knocked >= 5) multiplier = 1;
-      else if (knocked >= 3) multiplier = 0.5;
-      
-      const profit = this.bowlingBet * multiplier;
-      this.balance += profit;
-      await this.updateBalance(this.balance);
-      
-      if (knocked === 10) {
-        this.showResult(`🎳 سترايك! ربحت ${profit.toFixed(2)} USDT`, true);
-      } else {
-        this.showResult(`🎳 ضربت ${knocked} قوارير وخسرت`, false);
-      }
-      
-      setTimeout(() => {
-        this.bowlingStarted = false;
-      }, 2000);
-    },
-    
-    /* ===== Puzzle ===== */
-    async startPuzzle() {
-      if (!this.puzzleBet || this.puzzleBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.puzzleBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.puzzleBet;
-      await this.updateBalance(this.balance);
-      
-      this.puzzleStarted = true;
-      this.puzzleSolved = false;
-      
-      let pieces = [1, 2, 3, 4, 5, 6, 7, 8, null];
-      pieces = this.shuffle(pieces);
-      this.puzzlePieces = pieces;
-    },
-    
-    movePuzzle(index) {
-      if (this.puzzleSolved) return;
-      
-      const emptyIndex = this.puzzlePieces.indexOf(null);
-      const validMoves = [
-        emptyIndex - 1, emptyIndex + 1,
-        emptyIndex - 3, emptyIndex + 3
-      ];
-      
-      if (validMoves.includes(index)) {
-        this.puzzlePieces[emptyIndex] = this.puzzlePieces[index];
-        this.puzzlePieces[index] = null;
-      }
-      
-      if (JSON.stringify(this.puzzlePieces) === JSON.stringify([1, 2, 3, 4, 5, 6, 7, 8, null])) {
-        this.puzzleSolved = true;
-        const profit = this.puzzleBet * 2;
-        this.balance += profit;
-        this.updateBalance(this.balance);
-        this.showResult(`🧩 أحسنت! ربحت ${profit.toFixed(2)} USDT`, true);
-        
-        setTimeout(() => {
-          this.puzzleStarted = false;
-        }, 2000);
-      }
-    },
-    
-    /* ===== Target Shot ===== */
-    async startTarget() {
-      if (!this.targetBet || this.targetBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.targetBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.targetBet;
-      await this.updateBalance(this.balance);
-      
-      this.targetStarted = true;
-      this.targetScore = 0;
-    },
-    
-    async shootTarget(score) {
-      const hit = Math.random() < 0.3;
-      
-      if (hit) {
-        this.targetScore += score;
-      }
-      
-      if (this.targetScore >= 30) {
-        const multiplier = 1.5;
-        const profit = this.targetBet * multiplier;
-        this.balance += profit;
-        await this.updateBalance(this.balance);
-        this.showResult(`🎉 فوز! ربحت ${profit.toFixed(2)} USDT`, true);
-        
-        setTimeout(() => {
-          this.targetStarted = false;
-        }, 2000);
-      } else if (!hit) {
-        this.showResult(`😢 أخطأت الهدف`, false);
-      }
-    },
-    
-    /* ===== Lucky Number ===== */
-    async startLucky() {
-      if (!this.luckyBet || this.luckyBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (!this.luckyNumber || this.luckyNumber < 1 || this.luckyNumber > 100) {
-        this.gameError = "أدخل رقم بين 1 و 100";
-        return;
-      }
-      if (this.luckyBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.luckyBet;
-      await this.updateBalance(this.balance);
-      
-      this.luckyStarted = true;
-      
-      let rolls = 0;
-      const interval = setInterval(() => {
-        this.luckyDrawn = Math.floor(Math.random() * 100) + 1;
-        rolls++;
-        
-        if (rolls >= 20) {
-          clearInterval(interval);
-          this.luckyWon = this.luckyDrawn === this.luckyNumber;
-          
-          if (this.luckyWon) {
-            const profit = this.luckyBet * 10;
-            this.balance += profit;
-            this.updateBalance(this.balance);
-            this.showResult(`🎉 رقم محظوظ! ربحت ${profit.toFixed(2)} USDT`, true);
-          } else {
-            this.showResult(`😢 الرقم المسحوب ${this.luckyDrawn}`, false);
-          }
-          
-          setTimeout(() => {
-            this.luckyStarted = false;
-          }, 2000);
-        }
-      }, 100);
-    },
-    
-    /* ===== Mystery Box ===== */
-    async startMystery() {
-      if (!this.mysteryBet || this.mysteryBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.mysteryBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.mysteryBet;
-      await this.updateBalance(this.balance);
-      
-      this.mysteryStarted = true;
-      this.mysteryOpened = false;
-    },
-    
-    async openMysteryBox() {
-      if (this.mysteryOpened) return;
-      
-      this.mysteryOpened = true;
-      
-      setTimeout(async () => {
-        const prizes = [0.1, 0.2, 0.3, 0.5, 0.8, 1, 1.2, 1.5];
-        const weights = [0.25, 0.2, 0.15, 0.12, 0.1, 0.08, 0.05, 0.05];
-        
-        let random = Math.random();
-        let cumulative = 0;
-        let multiplier = 0.1;
-        
-        for (let i = 0; i < weights.length; i++) {
-          cumulative += weights[i];
-          if (random < cumulative) {
-            multiplier = prizes[i];
-            break;
-          }
-        }
-        
-        const profit = this.mysteryBet * multiplier;
-        this.balance += profit;
-        await this.updateBalance(this.balance);
-        
-        if (multiplier >= 1) {
-          this.mysteryPrize = `${profit.toFixed(2)} USDT`;
-          this.showResult(`🎉 ربحت ${profit.toFixed(2)} USDT!`, true);
-        } else {
-          this.mysteryPrize = `${profit.toFixed(2)} USDT`;
-          this.showResult(`😢 خسرت جزء من الرهان`, false);
-        }
-      }, 1000);
+    }
+  },
+
+  beforeUnmount() {
+    if (this.autoSpinTimer) {
+      clearTimeout(this.autoSpinTimer)
     }
   }
-};    
-</script>    
-    
-<style scoped>    
-/* ===== التصميم العام ===== */
-.game-page {    
-  background: linear-gradient(135deg, #0a0f1e 0%, #1a1f2f 100%);
-  min-height: 100vh;    
-  color: #ffffff;    
-  padding: 15px;    
-  text-align: center;    
-  direction: rtl;
-  font-family: 'Montserrat', 'Cairo', sans-serif;
-  position: relative;
-  overflow-x: hidden;
 }
+</script>
 
-/* ===== الشريط العلوي ===== */
-.top-bar {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-  z-index: 10;
-  position: relative;
-}
-
-.balance-gold {
-  background: linear-gradient(145deg, #1e2333, #131826);
-  padding: 12px 30px;
-  border-radius: 100px;
-  border: 1px solid #ffd700;
-  box-shadow: 0 5px 20px rgba(255, 215, 0, 0.2), inset 0 0 10px rgba(255, 215, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  backdrop-filter: blur(10px);
-}
-
-.balance-gold i {
-  color: #ffd700;
-  font-size: 22px;
-  filter: drop-shadow(0 0 8px #ffd700);
-}
-
-.balance-gold strong {
-  color: #ffd700;
-  font-size: 20px;
-  margin-right: 5px;
-  text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-}
-
-/* ===== رسالة النتيجة ===== */
-.result-message {
-  position: fixed;
-  top: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 15px 30px;
-  border-radius: 50px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 18px;
-  font-weight: 700;
-  z-index: 9999;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  border: 1px solid;
-  backdrop-filter: blur(10px);
-  min-width: 280px;
-  justify-content: center;
-}
-
-.win-message {
-  background: linear-gradient(145deg, #1a2f1a, #0f1f0f);
-  border-color: #4caf50;
-  box-shadow: 0 0 30px rgba(76, 175, 80, 0.3);
-  color: #4caf50;
-}
-
-.win-message i {
-  color: #4caf50;
-  filter: drop-shadow(0 0 8px #4caf50);
-}
-
-.lose-message {
-  background: linear-gradient(145deg, #2f1a1a, #1f0f0f);
-  border-color: #f44336;
-  box-shadow: 0 0 30px rgba(244, 67, 54, 0.3);
-  color: #f44336;
-}
-
-.lose-message i {
-  color: #f44336;
-  filter: drop-shadow(0 0 8px #f44336);
-}
-
-.slide-fade-enter-active {
-  transition: all 0.3s ease;
-}
-.slide-fade-leave-active {
-  transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
-}
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  transform: translateX(-50%) translateY(-20px);
-  opacity: 0;
-}
-
-/* ===== زر الرجوع ===== */
-.back-button-container {
-  margin-bottom: 20px;
-  text-align: right;
-}
-
-.back-button {
-  background: linear-gradient(145deg, #1e2333, #131826);
-  color: #ffd700;
-  border: 1px solid #ffd700;
-  padding: 10px 25px;
-  border-radius: 50px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.back-button:hover {
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  color: #0a0f1e;
-  transform: translateX(-5px);
-  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
-}
-
-/* ===== التبويبات ===== */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 25px;
-  max-height: 200px;
-  overflow-y: auto;
-  padding: 15px;
-  background: rgba(30, 35, 51, 0.7);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 215, 0, 0.2);
-  scrollbar-width: thin;
-  scrollbar-color: #ffd700 #1e2333;
-}
-
-.tabs button {
-  padding: 12px 20px;
-  border-radius: 50px;
-  background: linear-gradient(145deg, #1e2333, #131826);
-  color: #ffffff;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.tabs button:hover {
-  border-color: #ffd700;
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
-}
-
-.tabs .active {
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  color: #0a0f1e;
-  border: none;
-  box-shadow: 0 5px 25px rgba(255, 215, 0, 0.5);
-}
-
-/* ===== وضع ملء الشاشة ===== */
-.game-fullscreen {
-  min-height: calc(100vh - 150px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 10px 0;
-}
-
-/* ===== الكروت الرئيسية ===== */
-.casino-card {
-  background: rgba(20, 25, 40, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 40px;
-  padding: 25px;
-  width: 100%;
-  max-width: 550px;
+<style scoped>
+.mega-booming-fruits {
+  max-width: 1200px;
   margin: 0 auto;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), inset 0 0 50px rgba(255, 215, 0, 0.1);
-  position: relative;
-  overflow: hidden;
+  background: linear-gradient(135deg, #1a1f2e 0%, #2a2f3f 100%);
+  border-radius: 20px;
+  padding: 25px;
+  color: #ffffff;
+  font-family: 'Montserrat', 'Arial', sans-serif;
 }
 
-.casino-card::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
-  animation: rotate 25s linear infinite;
-  pointer-events: none;
+/* رأس اللعبة */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #ffd700;
 }
 
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.game-title-section {
+  text-align: left;
 }
 
-.casino-card-header {
-  position: relative;
-  margin-bottom: 25px;
-  text-align: center;
-}
-
-.casino-card-header h2 {
+.game-title {
   font-size: 28px;
   font-weight: 800;
-  background: linear-gradient(135deg, #ffd700, #ffed4a, #ffd700);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  position: relative;
-  z-index: 1;
-  letter-spacing: 2px;
-  text-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
-}
-
-.casino-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, transparent 70%);
-  filter: blur(40px);
-  z-index: 0;
-}
-
-/* ===== مشهد اللعبة ===== */
-.game-scene {
-  background: rgba(10, 15, 30, 0.7);
-  border-radius: 30px;
-  padding: 25px;
-  margin-bottom: 25px;
-  border: 1px solid rgba(255, 215, 0, 0.2);
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ===== عناصر التحكم ===== */
-.casino-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.bet-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  align-items: center;
-}
-
-.chip-input {
-  position: relative;
-  width: 100%;
-  max-width: 280px;
-}
-
-.chip-icon {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 18px;
-  z-index: 2;
-}
-
-.casino-input {
-  width: 100%;
-  padding: 15px 45px 15px 60px;
-  border-radius: 50px;
-  background: linear-gradient(145deg, #1a1f30, #0f1422);
-  color: #ffffff;
-  border: 2px solid rgba(255, 215, 0, 0.3);
-  font-size: 18px;
-  text-align: center;
-  transition: all 0.3s ease;
-  box-shadow: inset 0 5px 10px rgba(0, 0, 0, 0.5);
-}
-
-.casino-input:focus {
-  outline: none;
-  border-color: #ffd700;
-  box-shadow: 0 0 25px rgba(255, 215, 0, 0.3), inset 0 5px 10px rgba(0, 0, 0, 0.5);
-}
-
-.chip-currency {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
   color: #ffd700;
-  font-weight: 700;
+  text-transform: uppercase;
+  margin: 0 0 5px 0;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { text-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+  50% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
+}
+
+.game-subtitle {
   font-size: 14px;
-  text-shadow: 0 0 8px #ffd700;
+  color: #a0a0a0;
+  letter-spacing: 2px;
 }
 
-.casino-button {
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  color: #0a0f1e;
-  border: none;
-  padding: 15px 40px;
-  border-radius: 50px;
-  font-weight: 700;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  box-shadow: 0 10px 25px rgba(255, 215, 0, 0.4), inset 0 2px 5px rgba(255, 255, 255, 0.5);
-  width: 100%;
-  max-width: 280px;
-}
-
-.casino-button:hover:not(:disabled) {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(255, 215, 0, 0.6), inset 0 2px 10px rgba(255, 255, 255, 0.7);
-}
-
-.casino-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: grayscale(0.5);
-}
-
-.casino-error {
-  color: #f44336;
-  font-size: 14px;
-  background: rgba(244, 67, 54, 0.1);
-  padding: 8px 20px;
-  border-radius: 50px;
-  border: 1px solid #f44336;
-}
-
-/* ===== عناصر اللعبة المشتركة ===== */
-.action-row {
+.game-stats-header {
   display: flex;
   gap: 15px;
-  justify-content: center;
-  width: 100%;
 }
 
-.action-btn {
-  padding: 12px 25px;
-  border-radius: 50px;
-  border: none;
-  font-weight: 700;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  justify-content: center;
-}
-
-.success-btn {
-  background: linear-gradient(135deg, #4caf50, #45a049);
-  color: white;
-  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
-}
-
-.danger-btn {
-  background: linear-gradient(135deg, #f44336, #d32f2f);
-  color: white;
-  box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
-}
-
-.warning-btn {
-  background: linear-gradient(135deg, #ff9800, #f57c00);
-  color: white;
-  box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
-}
-
-.gold-btn {
-  background: linear-gradient(135deg, #ffd700, #ffc107);
-  color: #0a0f1e;
-  box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
-}
-
-.profit-meter {
-  background: linear-gradient(145deg, #1a1f30, #0f1422);
-  padding: 20px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 215, 0, 0.3);
+.stat-box {
+  background: #2a2f42;
+  padding: 10px 15px;
+  border-radius: 8px;
   text-align: center;
+  min-width: 100px;
 }
 
-.profit-label {
-  color: #8a8f9c;
-  font-size: 14px;
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #a0a0a0;
   margin-bottom: 5px;
 }
 
-.profit-value {
+.stat-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
   color: #ffd700;
+}
+
+.stat-value.highlight {
+  animation: pulse 1s ease;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* قسم الروليت */
+.roulette-section {
+  position: relative;
+  margin-bottom: 30px;
+  padding: 20px 0;
+}
+
+.roulette-container {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #1e2335;
+  padding: 15px 0;
+  position: relative;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+.roulette-track {
+  display: flex;
+  transition: transform 3s cubic-bezier(0.25, 0.1, 0.15, 1);
+  will-change: transform;
+}
+
+.roulette-segment {
+  min-width: 120px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 5px;
+  border-radius: 10px;
+  background: #2a2f42;
+  border: 2px solid #3a4055;
+  transition: all 0.3s ease;
+}
+
+.segment-red {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.segment-yellow {
+  background: linear-gradient(135deg, #f1c40f, #f39c12);
+}
+
+.segment-orange {
+  background: linear-gradient(135deg, #e67e22, #d35400);
+}
+
+.segment-purple {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.segment-green {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+}
+
+.segment-gold {
+  background: linear-gradient(135deg, #ffd700, #f1c40f);
+}
+
+.segment-blue {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.segment-rainbow {
+  background: linear-gradient(135deg, #ffd700, #e74c3c, #9b59b6, #3498db);
+  animation: rainbow 3s linear infinite;
+}
+
+@keyframes rainbow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+.segment-icon {
+  font-size: 30px;
+  margin-bottom: 5px;
+}
+
+.segment-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.roulette-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  background: #ffd700;
+  transform: translateX(-50%);
+  box-shadow: 0 0 20px #ffd700;
+  z-index: 2;
+}
+
+/* عرض النتيجة */
+.result-display {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px 40px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  z-index: 10;
+  border: 2px solid;
+  backdrop-filter: blur(10px);
+  animation: popIn 0.3s ease;
+}
+
+@keyframes popIn {
+  0% { transform: translate(-50%, -50%) scale(0); }
+  80% { transform: translate(-50%, -50%) scale(1.1); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.result-display.win {
+  border-color: #2ecc71;
+  box-shadow: 0 0 30px rgba(46, 204, 113, 0.5);
+}
+
+.result-display.lose {
+  border-color: #e74c3c;
+  box-shadow: 0 0 30px rgba(231, 76, 60, 0.5);
+}
+
+.result-icon {
+  font-size: 40px;
+}
+
+.result-details {
+  text-align: center;
+}
+
+.result-text {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.result-amount {
+  display: block;
   font-size: 28px;
   font-weight: 800;
-  text-shadow: 0 0 15px #ffd700;
+  color: #2ecc71;
 }
 
-.slider-container {
-  width: 100%;
-  text-align: center;
+.pop-enter-active, .pop-leave-active {
+  transition: all 0.3s ease;
 }
 
-.slider-container label {
+.pop-enter-from, .pop-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+}
+
+/* لوحة الرهان */
+.betting-panel {
+  background: #2a2f42;
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 30px;
+  border: 1px solid #3a4055;
+}
+
+.balance-info {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 10px;
-  color: #ffd700;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #3a4055;
+}
+
+.current-balance {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
   font-weight: 600;
 }
 
-.slider-value {
-  background: rgba(255, 215, 0, 0.2);
-  padding: 5px 15px;
-  border-radius: 50px;
-  border: 1px solid #ffd700;
-}
-
-.casino-slider {
-  width: 100%;
-  height: 8px;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #1a1f30, #ffd700);
-  outline: none;
-  -webkit-appearance: none;
-}
-
-.casino-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 25px;
-  height: 25px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  cursor: pointer;
-  box-shadow: 0 0 20px #ffd700;
-  border: 2px solid white;
-}
-
-.multiplier-box {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 10px;
-  border-radius: 50px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-}
-
-.multiplier-label {
-  color: #8a8f9c;
-  font-size: 14px;
-}
-
-.multiplier-value {
+.current-balance i {
   color: #ffd700;
-  font-size: 20px;
-  font-weight: 700;
-  text-shadow: 0 0 10px #ffd700;
-}
-
-/* ===== Chicken Road ===== */
-.chicken-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  margin: 20px 0;
-}
-
-.chicken {
-  font-size: 90px;
-  filter: drop-shadow(0 0 25px #ffd700);
-  animation: float 3s infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-15px); }
-}
-
-.chicken.walking {
-  animation: walkCycle 0.5s infinite;
-}
-
-@keyframes walkCycle {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-8px) rotate(-5deg); }
-  75% { transform: translateX(8px) rotate(5deg); }
-}
-
-.road-container {
-  background: linear-gradient(145deg, #1a1f30, #0f1422);
-  border-radius: 30px;
-  padding: 20px;
-  margin-top: 20px;
-}
-
-.road {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.step {
-  flex: 1;
-  min-width: 45px;
-  background: linear-gradient(145deg, #252b3d, #1a1f30);
-  border-radius: 15px;
-  padding: 15px 5px;
-  position: relative;
-  border: 1px solid rgba(255, 215, 0, 0.2);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.step.active {
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  transform: scale(1.1);
-  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.5);
-  z-index: 2;
-}
-
-.step.passed {
-  border-color: #4caf50;
-  opacity: 0.7;
-}
-
-.step.danger {
-  border-color: #f44336;
-}
-
-.step.warning {
-  border-color: #ff9800;
-}
-
-.step-multiplier {
-  font-weight: 700;
-  font-size: 14px;
-  color: #ffd700;
-}
-
-.step.active .step-multiplier {
-  color: #0a0f1e;
-}
-
-.chicken-icon {
   font-size: 24px;
-  margin-top: 8px;
-  animation: bounce 0.5s infinite;
 }
 
-/* ===== Dice 3D ===== */
-.dice-container {
-  perspective: 1000px;
-  width: 120px;
-  height: 120px;
-  margin: 20px auto;
+.bet-multiplier {
+  text-align: right;
 }
 
-.dice-3d {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  animation: diceIdle 3s infinite;
-}
-
-@keyframes diceIdle {
-  0%, 100% { transform: rotateX(0) rotateY(0); }
-  25% { transform: rotateX(10deg) rotateY(10deg); }
-  75% { transform: rotateX(-10deg) rotateY(-10deg); }
-}
-
-.rolling .dice-3d {
-  animation: diceRoll 0.5s infinite linear !important;
-}
-
-@keyframes diceRoll {
-  0% { transform: rotateX(0) rotateY(0); }
-  100% { transform: rotateX(360deg) rotateY(360deg); }
-}
-
-.dice-face {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(145deg, #ffd700, #ffed4a);
-  border: 3px solid #0a0f1e;
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
+.multiplier {
+  display: block;
+  font-size: 24px;
   font-weight: 800;
-  color: #0a0f1e;
-  backface-visibility: hidden;
+  color: #ffd700;
 }
 
-.front { transform: translateZ(60px); }
-.back { transform: rotateY(180deg) translateZ(60px); }
-.right { transform: rotateY(90deg) translateZ(60px); }
-.left { transform: rotateY(-90deg) translateZ(60px); }
-.top { transform: rotateX(90deg) translateZ(60px); }
-.bottom { transform: rotateX(-90deg) translateZ(60px); }
-
-/* ===== Mines ===== */
-.mines-container {
-  width: 100%;
+.potential-win {
+  display: block;
+  font-size: 14px;
+  color: #a0a0a0;
 }
 
-.mines-header {
-  display: flex;
-  justify-content: center;
+.bet-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-bottom: 20px;
-  color: #ffd700;
-  font-weight: 600;
 }
 
-.mines-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-}
-
-.mine-cell {
-  aspect-ratio: 1;
-  background: linear-gradient(145deg, #252b3d, #1a1f30);
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  color: #ffd700;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
-}
-
-.mine-cell:hover:not(:disabled) {
-  transform: scale(1.05);
-  border-color: #ffd700;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-}
-
-.mine-cell.revealed {
-  background: #1a1f30;
-}
-
-.mine-cell.mine {
-  background: linear-gradient(145deg, #f44336, #d32f2f);
-  color: white;
-  animation: explode 0.5s;
-}
-
-@keyframes explode {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.5); opacity: 0.5; }
-}
-
-.mine-cell.safe {
-  background: linear-gradient(145deg, #4caf50, #45a049);
-  color: white;
-}
-
-.mines-placeholder {
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #8a8f9c;
-  font-size: 18px;
-}
-
-/* ===== Crash ===== */
-.crash-container {
-  text-align: center;
-  width: 100%;
-}
-
-.multiplier-display {
-  font-size: 70px;
-  font-weight: 800;
-  color: #ffd700;
-  text-shadow: 0 0 30px #ffd700;
-  margin-bottom: 20px;
-  transition: all 0.3s;
-}
-
-.multiplier-display.crashed {
-  color: #f44336;
-  text-shadow: 0 0 30px #f44336;
-  animation: crash 0.5s;
-}
-
-@keyframes crash {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-20px); }
-  75% { transform: translateX(20px); }
-}
-
-.rocket-animation {
-  height: 100px;
-  position: relative;
-  margin: 20px 0;
-}
-
-.rocket {
-  font-size: 50px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  transition: all 0.3s;
-  filter: drop-shadow(0 0 20px #ffd700);
-}
-
-.rocket.launched {
-  animation: flyUp 1s infinite;
-}
-
-@keyframes flyUp {
-  0% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-30px); }
-  100% { transform: translateX(-50%) translateY(0); }
-}
-
-.rocket.exploded {
-  transform: translateX(-50%) rotate(180deg) translateY(30px);
-  opacity: 0.3;
-  filter: drop-shadow(0 0 20px #f44336);
-}
-
-.smoke-effect {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 20px;
-  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
-  border-radius: 50%;
-  animation: smoke 1s infinite;
-}
-
-@keyframes smoke {
-  0% { transform: translateX(-50%) scale(0.5); opacity: 0.8; }
-  100% { transform: translateX(-50%) scale(3); opacity: 0; }
-}
-
-.progress-track {
-  width: 100%;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4caf50, #ffd700, #f44336);
-  transition: width 0.2s;
-}
-
-/* ===== Limbo ===== */
-.limbo-container {
-  position: relative;
-  height: 200px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.target-line {
-  position: absolute;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(to top, #f44336, #ffd700);
-  border-radius: 4px;
-  transition: height 0.3s;
-}
-
-.target-label {
-  position: absolute;
-  top: -25px;
-  left: -15px;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 4px 8px;
-  border-radius: 4px;
+.bet-amount-section label {
+  display: block;
   font-size: 12px;
-  color: #ffd700;
-  border: 1px solid #ffd700;
+  color: #a0a0a0;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
 }
 
-.result-ball {
-  width: 60px;
-  height: 60px;
-  background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
-  border-radius: 50%;
+.amount-controls {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #0a0f1e;
-  box-shadow: 0 0 30px #ffd700;
-  position: relative;
-  z-index: 2;
-}
-
-.result-ball.jumping {
-  animation: jumpBall 1s infinite;
-}
-
-@keyframes jumpBall {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-50px); }
-}
-
-/* ===== Blackjack ===== */
-.blackjack-table {
-  background: linear-gradient(145deg, #0a5c0a, #0a4a0a);
-  padding: 25px;
-  border-radius: 30px;
-  border: 2px solid #ffd700;
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
-}
-
-.dealer-area, .player-area {
-  margin: 20px 0;
-}
-
-.area-label {
-  color: #ffd700;
-  font-size: 16px;
-  margin-bottom: 10px;
-  font-weight: 600;
-}
-
-.cards-row {
-  display: flex;
   gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
 }
 
-.casino-card-small {
-  width: 60px;
-  height: 90px;
-  background: linear-gradient(145deg, #ffffff, #f0f0f0);
-  border: 2px solid #ffd700;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #0a0f1e;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  animation: dealCard 0.3s;
-}
-
-@keyframes dealCard {
-  0% { transform: translateY(-50px) rotate(180deg); opacity: 0; }
-  100% { transform: translateY(0) rotate(0); opacity: 1; }
-}
-
-.casino-card-small.card-back {
-  background: linear-gradient(135deg, #ffd700, #b8860b);
-  color: transparent;
-  position: relative;
-}
-
-.casino-card-small.card-back::after {
-  content: '?';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 24px;
-}
-
-.score-badge {
-  background: #ffd700;
-  color: #0a0f1e;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 14px;
-  margin-right: 10px;
-}
-
-/* ===== Slot Machine ===== */
-.slot-machine-container {
-  background: linear-gradient(145deg, #1a1f30, #0f1422);
-  padding: 25px;
-  border-radius: 30px;
-  border: 3px solid #ffd700;
-}
-
-.slot-reels {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  perspective: 500px;
-}
-
-.reel {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(145deg, #ffffff, #f0f0f0);
-  border: 3px solid #ffd700;
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
-}
-
-.spinning .reel {
-  animation: spinReel 0.1s infinite;
-}
-
-@keyframes spinReel {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(30px); }
-}
-
-/* ===== Coinflip ===== */
-.coin-container {
-  perspective: 1000px;
-  width: 120px;
-  height: 120px;
-  margin: 20px auto;
-}
-
-.coin-3d {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  animation: coinIdle 3s infinite;
-}
-
-@keyframes coinIdle {
-  0%, 100% { transform: rotateY(0); }
-  50% { transform: rotateY(30deg); }
-}
-
-.coin-3d.flipping {
-  animation: flipCoin 0.2s linear infinite !important;
-}
-
-@keyframes flipCoin {
-  0% { transform: rotateY(0); }
-  100% { transform: rotateY(360deg); }
-}
-
-.coin-face {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
-  border: 3px solid #0a0f1e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 50px;
-  backface-visibility: hidden;
-  box-shadow: 0 0 30px #ffd700;
-}
-
-.coin-face.front {
-  transform: translateZ(10px);
-}
-
-.coin-face.back {
-  transform: rotateY(180deg) translateZ(10px);
-}
-
-.choice-row {
-  display: flex;
-  gap: 10px;
-  width: 100%;
-  max-width: 280px;
-}
-
-.choice-btn-small {
-  flex: 1;
-  padding: 12px;
-  border-radius: 50px;
-  background: linear-gradient(145deg, #1e2333, #131826);
-  color: white;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.choice-btn-small.active {
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  color: #0a0f1e;
-  border: none;
-  box-shadow: 0 0 20px #ffd700;
-}
-
-/* ===== Wheel ===== */
-.wheel-container {
-  position: relative;
-  height: 250px;
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
-}
-
-.wheel-outer {
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #1e2333, #131826);
-  border: 4px solid #ffd700;
-  position: relative;
-  transition: transform 3s cubic-bezier(0.25, 0.1, 0.15, 1);
-  box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
-}
-
-.wheel-segment-casino {
-  position: absolute;
-  width: 50%;
-  height: 50%;
-  transform-origin: bottom right;
-  left: 50%;
-  top: 50%;
-  margin-left: -50%;
-  margin-top: -50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.segment-value-casino {
-  transform: rotate(45deg);
-  font-size: 16px;
-  font-weight: 700;
-  color: #ffd700;
-}
-
-.wheel-pointer {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 30px;
-  color: #ffd700;
-  filter: drop-shadow(0 0 10px #ffd700);
-}
-
-/* ===== Keno ===== */
-.keno-container {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.keno-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 5px;
-  min-width: 280px;
-}
-
-.keno-ball {
-  aspect-ratio: 1;
-  background: linear-gradient(145deg, #1e2333, #131826);
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.keno-ball:hover {
-  transform: scale(1.1);
-  border-color: #ffd700;
-}
-
-.keno-ball.selected {
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  color: #0a0f1e;
-  border-color: #ffd700;
-  box-shadow: 0 0 20px #ffd700;
-}
-
-.keno-ball.drawn {
-  background: linear-gradient(145deg, #4caf50, #45a049);
-  color: white;
-  border-color: #4caf50;
-}
-
-/* ===== Bowling ===== */
-.bowling-container {
-  width: 100%;
-}
-
-.pins-setup {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin-bottom: 30px;
-}
-
-.bowling-pin {
-  font-size: 30px;
-  text-align: center;
-  transition: all 0.5s;
-  filter: drop-shadow(0 0 10px #ffd700);
-}
-
-.bowling-pin.knocked {
-  transform: rotate(90deg) scale(0.5);
-  opacity: 0;
-  filter: blur(2px);
-}
-
-.ball-track {
-  position: relative;
-  height: 50px;
-}
-
-.bowling-ball-casino {
-  font-size: 40px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  transition: all 0.3s;
-}
-
-.bowling-ball-casino.rolling {
-  animation: rollToPins 1s ease;
-}
-
-@keyframes rollToPins {
-  0% { transform: translateX(-50%) translateY(0); }
-  100% { transform: translateX(100px) translateY(-30px); }
-}
-
-/* ===== Puzzle ===== */
-.puzzle-container {
-  width: 100%;
-}
-
-.puzzle-grid-casino {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
-  background: linear-gradient(145deg, #1e2333, #131826);
-  padding: 15px;
-  border-radius: 20px;
-}
-
-.puzzle-tile {
-  aspect-ratio: 1;
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 700;
-  color: #0a0f1e;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
-}
-
-.puzzle-tile.empty {
-  background: linear-gradient(145deg, #1e2333, #131826);
-  border: 2px dashed #ffd700;
-}
-
-.puzzle-tile:hover:not(.empty) {
-  transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(255, 215, 0, 0.4);
-}
-
-/* ===== Target ===== */
-.target-container-casino {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.target-casino {
-  position: relative;
-  width: 200px;
-  height: 200px;
-  margin: 20px auto;
-}
-
-.target-ring {
-  position: absolute;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 2px solid #ffd700;
-}
-
-.target-ring:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
-}
-
-.ring-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 0 10px currentColor;
-}
-
-.target-ring.bullseye {
-  width: 60px;
-  height: 60px;
-  background: radial-gradient(circle, #f44336, #d32f2f);
-  top: 70px;
-  left: 70px;
-}
-
-.target-ring.middle {
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, #4caf50, #45a049);
-  top: 50px;
-  left: 50px;
-}
-
-.target-ring.outer {
-  width: 140px;
-  height: 140px;
-  background: radial-gradient(circle, #1e2333, #131826);
-  top: 30px;
-  left: 30px;
-}
-
-.target-score {
-  margin-top: 20px;
-  padding: 10px 25px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 50px;
-  border: 1px solid #ffd700;
-  color: #ffd700;
-  font-weight: 600;
-}
-
-/* ===== Lucky Number ===== */
-.lucky-container {
-  text-align: center;
-}
-
-.number-drum {
-  width: 120px;
-  height: 120px;
-  margin: 20px auto;
-  background: linear-gradient(145deg, #1e2333, #131826);
-  border: 3px solid #ffd700;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  font-weight: 800;
-  color: #ffd700;
-  box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
-}
-
-.number-drum.spinning {
-  animation: spinDrum 0.1s linear infinite;
-}
-
-@keyframes spinDrum {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.chosen-number {
-  margin-top: 15px;
-  color: #8a8f9c;
-  font-size: 18px;
-}
-
-/* ===== Mystery Box ===== */
-.mystery-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-}
-
-.mystery-box {
-  width: 150px;
-  height: 150px;
-  background: linear-gradient(135deg, #ffd700, #ffed4a);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 60px;
-  cursor: pointer;
-  transition: all 0.5s;
-  box-shadow: 0 15px 40px rgba(255, 215, 0, 0.4);
-  border: 3px solid rgba(255, 255, 255, 0.3);
-}
-
-.mystery-box.shaking {
-  animation: shake 0.5s infinite;
-}
-
-@keyframes shake {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(10deg); }
-  75% { transform: rotate(-10deg); }
-}
-
-.mystery-box.opened {
-  background: linear-gradient(145deg, #1e2333, #131826);
-  border: 2px solid #ffd700;
-  font-size: 24px;
-  color: #ffd700;
-  animation: openBox 0.5s;
-}
-
-@keyframes openBox {
-  0% { transform: scale(1) rotate(0); }
-  50% { transform: scale(1.2) rotate(180deg); }
-  100% { transform: scale(1) rotate(360deg); }
-}
-
-.box-content {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-/* ===== High/Low Trading Game ===== */
-.trading-container {
-  width: 100%;
-  position: relative;
-}
-
-.trading-chart {
-  width: 100%;
-  height: 200px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 15px;
-  border: 1px solid rgba(255, 215, 0, 0.2);
-}
-
-.arrow-container {
-  position: relative;
+.amount-controls button {
+  width: 40px;
   height: 40px;
-  margin: 20px 0 10px;
-}
-
-.arrow-line {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #4caf50, #ffd700, #f44336);
-  transform: translateY(-50%);
-}
-
-.arrow-head {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  color: #ffd700;
-  font-size: 24px;
-  text-shadow: 0 0 10px #ffd700;
-  transition: left 0.1s linear;
-}
-
-.arrow-moving .arrow-head {
-  animation: arrowPulse 0.5s infinite;
-}
-
-@keyframes arrowPulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(1.2); }
-}
-
-.price-markers {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-  font-size: 12px;
-  color: #8a8f9c;
-}
-
-.start-marker, .end-marker {
-  background: rgba(0, 0, 0, 0.5);
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-}
-
-.end-marker {
-  color: #ffd700;
-}
-
-.trading-timer {
-  position: relative;
-  height: 30px;
-  margin-top: 15px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 15px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-}
-
-.timer-progress {
-  height: 100%;
-  background: linear-gradient(90deg, #4caf50, #ffd700);
-  transition: width 1s linear;
-}
-
-.trading-timer span {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-weight: 700;
-  text-shadow: 0 0 5px black;
-}
-
-.trading-buttons {
-  display: flex;
-  gap: 15px;
-  width: 100%;
-  max-width: 280px;
-}
-
-.trading-btn {
-  flex: 1;
-  padding: 15px;
   border: none;
-  border-radius: 15px;
-  font-weight: 700;
+  border-radius: 8px;
+  background: #1e2335;
+  color: #ffd700;
+  font-size: 20px;
+  font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  background: linear-gradient(145deg, #1e2333, #131826);
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  color: white;
+  border: 1px solid #3a4055;
 }
 
-.trading-btn:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
+.amount-controls button:hover:not(:disabled) {
+  background: #ffd700;
+  color: #1e2335;
+  transform: scale(1.1);
 }
 
-.trading-btn:disabled {
+.amount-controls button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.high-btn {
-  border-color: #4caf50;
+.amount-controls input {
+  flex: 1;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: #1e2335;
+  color: #ffd700;
+  font-size: 18px;
+  text-align: center;
+  border: 1px solid #3a4055;
+  transition: all 0.3s ease;
 }
 
-.high-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4caf50, #45a049);
-  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+.amount-controls input:focus {
+  outline: none;
+  border-color: #ffd700;
 }
 
-.low-btn {
-  border-color: #f44336;
+.quick-bets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
-.low-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #f44336, #d32f2f);
-  box-shadow: 0 8px 20px rgba(244, 67, 54, 0.3);
+.quick-bet-btn {
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background: #1e2335;
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #3a4055;
 }
 
-.btn-icon {
-  font-size: 24px;
+.quick-bet-btn:hover:not(:disabled) {
+  background: #ffd700;
+  color: #1e2335;
+  transform: translateY(-2px);
 }
 
-.btn-text {
-  font-size: 16px;
+.quick-bet-btn.max {
+  background: #ffd700;
+  color: #1e2335;
   font-weight: 700;
 }
 
-.btn-multiplier {
+.quick-bet-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 15px;
+}
+
+.spin-btn {
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+  color: #1e2335;
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.spin-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(255, 215, 0, 0.3);
+}
+
+.spin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auto-btn {
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  background: #1e2335;
+  color: #ffd700;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid #ffd700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auto-btn.active {
+  background: #ffd700;
+  color: #1e2335;
+}
+
+.auto-btn:hover:not(:disabled) {
+  background: #ffd700;
+  color: #1e2335;
+}
+
+.auto-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* إعدادات التشغيل التلقائي */
+.auto-settings {
+  margin-top: 20px;
+  padding: 20px;
+  background: #1e2335;
+  border-radius: 10px;
+  border: 1px solid #3a4055;
+}
+
+.auto-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 20px;
+  align-items: center;
+}
+
+.auto-spins label {
+  display: block;
+  font-size: 12px;
+  color: #a0a0a0;
+  margin-bottom: 5px;
+}
+
+.auto-spins-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.auto-spins-control button {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 5px;
+  background: #2a2f42;
+  color: #ffd700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.auto-spins-control button:hover {
+  background: #ffd700;
+  color: #1e2335;
+}
+
+.auto-spins-control input {
+  width: 60px;
+  height: 30px;
+  border: none;
+  border-radius: 5px;
+  background: #2a2f42;
+  color: #ffd700;
+  text-align: center;
+  border: 1px solid #3a4055;
+}
+
+.stop-conditions label {
+  display: block;
+  font-size: 12px;
+  color: #a0a0a0;
+  margin-bottom: 5px;
+}
+
+.condition-checkbox {
+  display: flex;
+  gap: 15px;
+}
+
+.condition-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #ffffff;
   font-size: 14px;
+  cursor: pointer;
+}
+
+.condition-checkbox input {
+  cursor: pointer;
+}
+
+.stop-auto-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #e74c3c;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stop-auto-btn:hover {
+  background: #c0392b;
+  transform: scale(1.05);
+}
+
+.slide-enter-active, .slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-enter-from, .slide-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* سجل النتائج */
+.history-section {
+  margin-bottom: 30px;
+}
+
+.history-section h3 {
+  color: #ffd700;
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: 50px 60px 1fr 100px;
+  align-items: center;
+  padding: 10px 15px;
+  background: #2a2f42;
+  border-radius: 8px;
+  border-left: 4px solid #e74c3c;
+  transition: all 0.3s ease;
+}
+
+.history-item.win {
+  border-left-color: #2ecc71;
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.history-item:hover {
+  transform: translateX(-5px);
+}
+
+.history-icon {
+  font-size: 24px;
+}
+
+.history-multiplier {
+  font-size: 18px;
+  font-weight: 700;
   color: #ffd700;
 }
 
-.trade-result {
-  text-align: center;
-  padding: 20px;
-  border-radius: 20px;
-  animation: slideUp 0.5s ease;
+.history-bet {
+  color: #a0a0a0;
 }
 
-.win-result {
-  background: linear-gradient(145deg, #1a2f1a, #0f1f0f);
-  border: 1px solid #4caf50;
-}
-
-.lose-result {
-  background: linear-gradient(145deg, #2f1a1a, #1f0f0f);
-  border: 1px solid #f44336;
-}
-
-.result-icon {
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.result-profit {
-  font-size: 24px;
+.history-result {
   font-weight: 700;
-  color: #4caf50;
-  margin-top: 10px;
-  text-shadow: 0 0 10px #4caf50;
+  text-align: right;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.history-result.win-text {
+  color: #2ecc71;
 }
 
-/* ===== تحسينات الجوال ===== */
-@media (max-width: 480px) {
-  .game-page {
-    padding: 10px;
+/* جدول المدفوعات */
+.paytable-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #3a4055;
+}
+
+.paytable-section h3 {
+  color: #ffd700;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+.paytable-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.paytable-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  background: #2a2f42;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.paytable-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
+}
+
+.paytable-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.paytable-details {
+  flex: 1;
+}
+
+.paytable-name {
+  display: block;
+  font-size: 14px;
+  color: #a0a0a0;
+  margin-bottom: 3px;
+}
+
+.paytable-multiplier {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffd700;
+}
+
+/* تحسينات الجوال */
+@media (max-width: 768px) {
+  .mega-booming-fruits {
+    padding: 15px;
   }
 
-  .tabs button {
-    padding: 10px 15px;
-    font-size: 12px;
+  .game-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
   }
 
-  .casino-card {
-    padding: 20px;
+  .game-title-section {
+    text-align: center;
   }
 
-  .casino-card-header h2 {
+  .game-title {
     font-size: 22px;
   }
 
-  .trading-chart {
-    height: 150px;
+  .game-stats-header {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
-  .trading-buttons {
-    flex-direction: column;
-    gap: 10px;
+  .bet-options {
+    grid-template-columns: 1fr;
   }
 
-  .result-message {
+  .auto-controls {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .condition-checkbox {
+    justify-content: center;
+  }
+
+  .history-item {
+    grid-template-columns: 40px 50px 1fr 80px;
     font-size: 14px;
-    padding: 12px 20px;
-    min-width: 240px;
   }
 
-  .action-row {
-    flex-direction: column;
+  .paytable-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .game-title {
+    font-size: 18px;
   }
 
-  .action-btn {
-    width: 100%;
+  .stat-box {
+    min-width: 70px;
+    padding: 8px;
   }
 
-  .arrow-head {
+  .stat-value {
+    font-size: 14px;
+  }
+
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .paytable-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .result-display {
+    padding: 15px 25px;
+  }
+
+  .result-text {
+    font-size: 18px;
+  }
+
+  .result-amount {
     font-size: 20px;
   }
 }
