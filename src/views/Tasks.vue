@@ -52,12 +52,12 @@
             <div class="chicken" :class="{ walking: chickenStarted }">🐔</div>
           </div>
 
-          <div v-if="chickenStarted" class="road-container">
-            <div class="road">
+          <div v-if="chickenStarted" class="road-container-horizontal">
+            <div class="road-horizontal">
               <div
                 v-for="(step, i) in chickenSteps"
                 :key="i"
-                class="step"
+                class="step-horizontal"
                 :class="{
                   active: i === chickenPosition,
                   passed: i < chickenPosition,
@@ -65,9 +65,9 @@
                   'warning': step.multiplier >= 2 && step.multiplier < 3
                 }"
               >
-                <span class="step-multiplier">{{ step.multiplier.toFixed(1) }}x</span>
-                <div v-if="i === chickenPosition" class="chicken-icon">🐔</div>
-                <div v-if="i < chickenPosition" class="step-check">✓</div>
+                <span class="step-multiplier-horizontal">{{ step.multiplier.toFixed(1) }}x</span>
+                <div v-if="i === chickenPosition" class="chicken-icon-horizontal">🐔</div>
+                <div v-if="i < chickenPosition" class="step-check-horizontal">✓</div>
               </div>
             </div>
           </div>
@@ -256,7 +256,7 @@
         </div>
       </div>
 
-      <!-- Crash -->
+      <!-- Crash - معدلة لتبدأ من 0.1 وتنفجر بسرعة -->
       <div v-if="selectedGame==='crash'" class="casino-card">
         <div class="casino-card-header">
           <h2>🚀 CRASH</h2>
@@ -265,15 +265,19 @@
         
         <div class="game-scene">
           <div class="crash-container">
-            <div class="multiplier-display" :class="{ 'crashed': crashCrashed }">
+            <div class="multiplier-display" :class="{ 'crashed': crashCrashed, 'low-multiplier': crashMultiplier < 1 }">
               {{ crashMultiplier.toFixed(2) }}x
             </div>
             <div class="rocket-animation">
-              <div class="rocket" :class="{ 'launched': crashStarted && !crashCrashed, 'exploded': crashCrashed }">🚀</div>
+              <div class="rocket" :class="{ 'launched': crashStarted && !crashCrashed, 'exploded': crashCrashed, 'falling': crashMultiplier < 0.5 }">🚀</div>
               <div class="smoke-effect" v-if="crashStarted && !crashCrashed"></div>
+              <div class="explosion-effect" v-if="crashCrashed">💥</div>
             </div>
             <div class="progress-track">
-              <div class="progress-fill" :style="{ width: crashProgress + '%' }"></div>
+              <div class="progress-fill" :style="{ width: crashProgress + '%', background: crashMultiplier < 1 ? 'linear-gradient(90deg, #f44336, #ff9800)' : 'linear-gradient(90deg, #4caf50, #ffd700, #f44336)' }"></div>
+            </div>
+            <div class="crash-warning" v-if="crashStarted && !crashCrashed && crashMultiplier < 0.8">
+              ⚠️ خطر الانفجار وشيك!
             </div>
           </div>
         </div>
@@ -299,8 +303,8 @@
                 placeholder="السحب عند"
                 class="casino-input"
                 step="0.1"
-                min="1.1"
-                max="5"
+                min="0.2"
+                max="3"
               />
               <span class="chip-currency">x</span>
             </div>
@@ -312,7 +316,7 @@
           </div>
           
           <div v-if="crashStarted && !crashCrashed" class="action-row">
-            <button @click="crashCashOut" class="action-btn success-btn">
+            <button @click="crashCashOut" class="action-btn success-btn" :disabled="crashMultiplier < 0.2">
               <i class="fas fa-hand-holding-usd"></i>
               سحب ({{ (crashBet * crashMultiplier).toFixed(2) }} USDT)
             </button>
@@ -837,7 +841,7 @@
         </div>
       </div>
 
-      <!-- High/Low (Trading Game) -->
+      <!-- High/Low (Trading Game) - أكثر واقعية للبورصة -->
       <div v-if="selectedGame==='highlow'" class="casino-card">
         <div class="casino-card-header">
           <h2>📊 HIGH / LOW</h2>
@@ -846,23 +850,70 @@
         
         <div class="game-scene">
           <div class="trading-container">
-            <!-- الرسم البياني -->
-            <canvas ref="tradingChart" width="400" height="200" class="trading-chart"></canvas>
-            
-            <!-- السهم المتحرك -->
-            <div class="arrow-container" :class="{ 'arrow-moving': isArrowMoving }">
-              <div class="arrow-line"></div>
-              <div class="arrow-head" :style="{ left: arrowPosition + '%' }">▶</div>
+            <!-- مؤشرات السوق -->
+            <div class="market-indicators">
+              <div class="indicator-item">
+                <span class="indicator-label">المؤشر الرئيسي</span>
+                <span class="indicator-value" :class="{ 'positive': marketTrend === 'up', 'negative': marketTrend === 'down' }">
+                  {{ mainIndex.toFixed(2) }}
+                </span>
+              </div>
+              <div class="indicator-item">
+                <span class="indicator-label">حجم التداول</span>
+                <span class="indicator-value">{{ tradingVolume }}M</span>
+              </div>
+              <div class="indicator-item">
+                <span class="indicator-label">الزخم</span>
+                <span class="indicator-value" :class="{ 'positive': marketMomentum > 0, 'negative': marketMomentum < 0 }">
+                  {{ marketMomentum > 0 ? '+' : '' }}{{ marketMomentum }}%
+                </span>
+              </div>
             </div>
             
-            <!-- نقاط البداية والنهاية -->
-            <div class="price-markers">
-              <div class="start-marker">بداية ${{ startPrice.toFixed(2) }}</div>
-              <div class="end-marker" v-if="!isArrowMoving">نهاية ${{ endPrice.toFixed(2) }}</div>
+            <!-- الرسم البياني المتقدم -->
+            <canvas ref="tradingChart" width="400" height="180" class="trading-chart-advanced"></canvas>
+            
+            <!-- خط الاتجاه والسعر الحالي -->
+            <div class="price-line">
+              <div class="current-price-badge" :class="{ 'price-up': marketTrend === 'up', 'price-down': marketTrend === 'down' }">
+                ${{ currentPrice.toFixed(2) }}
+              </div>
+              <div class="trend-line" :class="{ 'uptrend': marketTrend === 'up', 'downtrend': marketTrend === 'down' }"></div>
+            </div>
+            
+            <!-- السهم المتحرك مع تأثيرات -->
+            <div class="arrow-container" :class="{ 'arrow-moving': isArrowMoving }">
+              <div class="arrow-track">
+                <div class="arrow-line" :class="{ 'bullish-line': marketSentiment === 'bull', 'bearish-line': marketSentiment === 'bear' }"></div>
+                <div class="arrow-head" :style="{ left: arrowPosition + '%' }" :class="{ 'bullish-arrow': marketSentiment === 'bull', 'bearish-arrow': marketSentiment === 'bear' }">
+                  ▶
+                </div>
+              </div>
+            </div>
+            
+            <!-- معلومات التداول -->
+            <div class="trading-info">
+              <div class="info-item">
+                <span class="info-label">الافتتاح</span>
+                <span class="info-value">${{ startPrice.toFixed(2) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">الأعلى</span>
+                <span class="info-value text-green">${{ highPrice.toFixed(2) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">الأدنى</span>
+                <span class="info-value text-red">${{ lowPrice.toFixed(2) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">الإغلاق</span>
+                <span class="info-value" v-if="!isArrowMoving">${{ endPrice.toFixed(2) }}</span>
+                <span class="info-value" v-else>--</span>
+              </div>
             </div>
             
             <!-- المؤقت -->
-            <div v-if="isArrowMoving" class="trading-timer">
+            <div v-if="isArrowMoving" class="trading-timer-advanced">
               <div class="timer-progress" :style="{ width: timerProgress + '%' }"></div>
               <span>{{ remainingTime }}s</span>
             </div>
@@ -886,24 +937,30 @@
             
             <div v-if="gameError" class="casino-error">{{ gameError }}</div>
             
-            <div class="trading-buttons">
+            <div class="trading-buttons-advanced">
               <button 
                 @click="placeTrade('high')" 
-                class="trading-btn high-btn"
+                class="trading-btn-advanced high-btn-advanced"
                 :disabled="!highLowBet || highLowBet <= 0 || isBetLocked"
               >
-                <span class="btn-icon">📈</span>
-                <span class="btn-text">HIGH</span>
-                <span class="btn-multiplier">x1.8</span>
+                <span class="btn-icon-advanced">📈</span>
+                <div class="btn-content">
+                  <span class="btn-text-advanced">HIGH</span>
+                  <span class="btn-subtext">صاعد</span>
+                </div>
+                <span class="btn-multiplier-advanced">x1.8</span>
               </button>
               <button 
                 @click="placeTrade('low')" 
-                class="trading-btn low-btn"
+                class="trading-btn-advanced low-btn-advanced"
                 :disabled="!highLowBet || highLowBet <= 0 || isBetLocked"
               >
-                <span class="btn-icon">📉</span>
-                <span class="btn-text">LOW</span>
-                <span class="btn-multiplier">x1.8</span>
+                <span class="btn-icon-advanced">📉</span>
+                <div class="btn-content">
+                  <span class="btn-text-advanced">LOW</span>
+                  <span class="btn-subtext">هابط</span>
+                </div>
+                <span class="btn-multiplier-advanced">x1.8</span>
               </button>
             </div>
           </div>
@@ -992,13 +1049,13 @@ export default {
       minesGameOver: false,
       minesRevealed: 0,
       
-      /* Crash */
+      /* Crash - معدلة */
       crashBet: null,
       crashStarted: false,
       crashMultiplier: 1.0,
       crashCrashed: false,
       crashProgress: 0,
-      crashAutoCashout: 2.0,
+      crashAutoCashout: 1.2,
       crashInterval: null,
       
       /* Limbo */
@@ -1084,7 +1141,7 @@ export default {
       mysteryPrize: "",
       mysteryResult: "",
       
-      /* High/Low (Trading Game) */
+      /* High/Low (Trading Game) - محسن */
       highLowBet: null,
       highLowChoice: null,
       isArrowMoving: false,
@@ -1113,9 +1170,18 @@ export default {
       startPrice: 100,
       currentPrice: 100,
       endPrice: 100,
+      highPrice: 100,
+      lowPrice: 100,
       
-      // RNG control (45% win rate for player)
-      winProbability: 0.45
+      // Market indicators
+      mainIndex: 12500.45,
+      tradingVolume: 234,
+      marketMomentum: 0,
+      marketTrend: 'neutral',
+      marketSentiment: 'bull',
+      
+      // RNG control (30% win rate for player - أكثر أماناً للموقع)
+      winProbability: 0.30
     };    
   },    
     
@@ -1224,30 +1290,43 @@ export default {
       }, 2000);
     },
     
-    /* ===== High/Low Trading Game ===== */
+    /* ===== High/Low Trading Game (محسن) ===== */
     initChart() {
       this.chartCanvas = this.$refs.tradingChart;
       if (!this.chartCanvas) return;
       
       this.chartContext = this.chartCanvas.getContext('2d');
       this.generateChartData();
-      this.drawChart();
+      this.drawAdvancedChart();
     },
     
     generateChartData() {
-      // Generate random chart data (50 points)
+      // Generate realistic chart data (50 points)
       this.chartData = [];
       let value = 100;
+      this.highPrice = value;
+      this.lowPrice = value;
+      
       for (let i = 0; i < 50; i++) {
-        // Random walk
-        value += (Math.random() - 0.5) * 4;
+        // Random walk with trends
+        const trend = Math.random() > 0.7 ? (Math.random() - 0.5) * 2 : (Math.random() - 0.5) * 1;
+        value += trend;
+        
+        // Update high/low
+        this.highPrice = Math.max(this.highPrice, value);
+        this.lowPrice = Math.min(this.lowPrice, value);
+        
         this.chartData.push(value);
       }
       this.startPrice = this.chartData[this.chartData.length - 1];
       this.currentPrice = this.startPrice;
+      
+      // Update main index (for realism)
+      this.mainIndex = 12000 + Math.random() * 1000;
+      this.tradingVolume = 150 + Math.floor(Math.random() * 200);
     },
     
-    drawChart() {
+    drawAdvancedChart() {
       if (!this.chartContext || !this.chartCanvas) return;
       
       const ctx = this.chartContext;
@@ -1258,13 +1337,21 @@ export default {
       // Clear canvas
       ctx.clearRect(0, 0, width, height);
       
+      // Draw gradient background
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, 'rgba(0, 255, 0, 0.05)');
+      gradient.addColorStop(0.5, 'rgba(255, 215, 0, 0.02)');
+      gradient.addColorStop(1, 'rgba(255, 0, 0, 0.05)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      
       // Draw grid
-      ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)';
+      ctx.lineWidth = 0.5;
       
       // Horizontal grid lines
-      for (let i = 0; i <= 4; i++) {
-        const y = height * i / 4;
+      for (let i = 0; i <= 5; i++) {
+        const y = height * i / 5;
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(width, y);
@@ -1272,14 +1359,50 @@ export default {
         ctx.stroke();
       }
       
+      // Vertical grid lines
+      for (let i = 0; i <= 8; i++) {
+        const x = width * i / 8;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.1)';
+        ctx.stroke();
+      }
+      
       // Draw chart line
       if (this.chartData.length < 2) return;
       
-      const minPrice = Math.min(...this.chartData);
-      const maxPrice = Math.max(...this.chartData);
+      const minPrice = Math.min(...this.chartData, this.lowPrice);
+      const maxPrice = Math.max(...this.chartData, this.highPrice);
       const priceRange = maxPrice - minPrice || 1;
       
+      // Draw filled area
       ctx.beginPath();
+      ctx.moveTo(0, height);
+      
+      for (let i = 0; i < this.chartData.length; i++) {
+        const x = (i / (this.chartData.length - 1)) * width;
+        const y = height - ((this.chartData[i] - minPrice) / priceRange) * height * 0.8 - height * 0.1;
+        
+        if (i === 0) {
+          ctx.lineTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.globalAlpha = 0.1;
+      
+      // Determine trend color
+      const trend = this.chartData[this.chartData.length - 1] - this.chartData[0];
+      ctx.fillStyle = trend >= 0 ? '#4caf50' : '#f44336';
+      ctx.fill();
+      
+      // Draw line
+      ctx.beginPath();
+      ctx.globalAlpha = 1;
       ctx.lineWidth = 2;
       
       for (let i = 0; i < this.chartData.length; i++) {
@@ -1289,7 +1412,7 @@ export default {
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
-          // Determine color based on price movement
+          // Color based on movement
           if (this.chartData[i] > this.chartData[i-1]) {
             ctx.strokeStyle = '#4caf50';
           } else {
@@ -1300,27 +1423,45 @@ export default {
       }
       ctx.stroke();
       
-      // Fill area under the line
-      ctx.lineTo(width, height);
-      ctx.lineTo(0, height);
-      ctx.closePath();
-      ctx.globalAlpha = 0.1;
-      ctx.fillStyle = '#ffd700';
-      ctx.fill();
+      // Draw support/resistance lines
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = '#ffd700';
+      ctx.setLineDash([5, 3]);
+      ctx.beginPath();
+      ctx.moveTo(0, height - ((this.highPrice - minPrice) / priceRange) * height * 0.8 - height * 0.1);
+      ctx.lineTo(width, height - ((this.highPrice - minPrice) / priceRange) * height * 0.8 - height * 0.1);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(0, height - ((this.lowPrice - minPrice) / priceRange) * height * 0.8 - height * 0.1);
+      ctx.lineTo(width, height - ((this.lowPrice - minPrice) / priceRange) * height * 0.8 - height * 0.1);
+      ctx.stroke();
+      
+      ctx.setLineDash([]);
       ctx.globalAlpha = 1;
     },
     
-    updateChart() {
-      // Add new random point to chart
+    updateAdvancedChart() {
+      // Add new random point with realistic movement
       const lastValue = this.chartData[this.chartData.length - 1];
-      const change = (Math.random() - 0.5) * 6;
+      const volatility = 0.5 + Math.random() * 1.5;
+      const change = (Math.random() - 0.5) * volatility;
       const newValue = lastValue + change;
+      
+      // Update high/low
+      this.highPrice = Math.max(this.highPrice, newValue);
+      this.lowPrice = Math.min(this.lowPrice, newValue);
+      
+      // Update market momentum
+      this.marketMomentum = (change / lastValue) * 100;
+      this.marketTrend = change >= 0 ? 'up' : 'down';
+      this.marketSentiment = change >= 0 ? 'bull' : 'bear';
       
       this.chartData.push(newValue);
       this.chartData.shift();
       
       this.currentPrice = newValue;
-      this.drawChart();
+      this.drawAdvancedChart();
     },
     
     resetHighLow() {
@@ -1334,8 +1475,12 @@ export default {
       this.timerProgress = 100;
       this.startPrice = 100;
       this.currentPrice = 100;
+      this.highPrice = 100;
+      this.lowPrice = 100;
+      this.marketMomentum = 0;
+      this.marketTrend = 'neutral';
       this.generateChartData();
-      this.drawChart();
+      this.drawAdvancedChart();
     },
     
     cleanupHighLow() {
@@ -1376,17 +1521,19 @@ export default {
       await this.updateBalance(this.balance);
       
       // بدء حركة السهم
-      this.startTrading();
+      this.startAdvancedTrading();
     },
     
-    startTrading() {
+    startAdvancedTrading() {
       this.isArrowMoving = true;
       this.tradeCompleted = false;
       this.arrowPosition = 0;
       this.remainingTime = this.totalTime;
       this.timerProgress = 100;
+      this.highPrice = this.startPrice;
+      this.lowPrice = this.startPrice;
       
-      // تحديد النتيجة مسبقاً باستخدام RNG (45% فوز للاعب)
+      // تحديد النتيجة مسبقاً باستخدام RNG (30% فوز للاعب - آمن للموقع)
       const random = Math.random();
       const willPriceGoUp = random < this.winProbability ? this.highLowChoice === 'high' : this.highLowChoice !== 'high';
       
@@ -1396,10 +1543,10 @@ export default {
       
       if (willPriceGoUp) {
         // السعر يرتفع (فوز إذا اختار high)
-        finalPrice = startPrice * (1 + (Math.random() * 0.15 + 0.05));
+        finalPrice = startPrice * (1 + (Math.random() * 0.10 + 0.02)); // +2% إلى +12%
       } else {
         // السعر ينخفض (فوز إذا اختار low)
-        finalPrice = startPrice * (1 - (Math.random() * 0.15 + 0.05));
+        finalPrice = startPrice * (1 - (Math.random() * 0.10 + 0.02)); // -2% إلى -12%
       }
       
       this.endPrice = finalPrice;
@@ -1415,13 +1562,23 @@ export default {
         // تحديث موضع السهم (0% إلى 100%)
         this.arrowPosition = progress * 100;
         
-        // تحديث السعر الحالي (يتحرك بشكل عشوائي)
+        // تحديث السعر الحالي (يتحرك بشكل عشوائي مع تقلبات)
         const currentProgressPrice = startPrice + (finalPrice - startPrice) * progress;
-        const randomFactor = (Math.random() - 0.5) * 2;
-        this.currentPrice = currentProgressPrice + randomFactor;
+        const volatility = Math.sin(progress * Math.PI * 4) * 0.5; // موجات سعرية
+        const randomFactor = (Math.random() - 0.5) * 1.5;
+        this.currentPrice = currentProgressPrice + volatility + randomFactor;
+        
+        // تحديث أعلى وأدنى سعر
+        this.highPrice = Math.max(this.highPrice, this.currentPrice);
+        this.lowPrice = Math.min(this.lowPrice, this.currentPrice);
+        
+        // تحديث مؤشرات السوق
+        this.marketMomentum = ((this.currentPrice - startPrice) / startPrice) * 100;
+        this.mainIndex = 12000 + (this.currentPrice - 100) * 20;
+        this.tradingVolume = 150 + Math.floor(Math.random() * 100);
         
         // تحديث الرسم البياني
-        this.updateChart();
+        this.updateAdvancedChart();
         
         if (progress < 1) {
           this.animationFrame = requestAnimationFrame(animate);
@@ -1485,7 +1642,7 @@ export default {
       }, 3000);
     },
     
-    /* ===== Chicken Road ===== */
+    /* ===== Chicken Road (معدلة للعرض الأفقي) ===== */
     async startChicken() {
       if (!this.chickenBet || this.chickenBet <= 0) {
         this.gameError = "الرجاء إدخال مبلغ الرهان";
@@ -1508,7 +1665,7 @@ export default {
     chickenNext() {
       if (this.chickenGameOver) return;
       
-      const loseChance = 0.7 + (this.chickenPosition * 0.03);
+      const loseChance = 0.75 + (this.chickenPosition * 0.02);
       if (Math.random() < loseChance) {
         this.chickenGameOver = true;
         this.showResult("💥 خسرت الرهان!", false);
@@ -1535,6 +1692,74 @@ export default {
       this.chickenGameOver = true;
       setTimeout(() => {
         this.chickenStarted = false;
+      }, 2000);
+    },
+    
+    /* ===== Crash (معدلة لتبدأ من 0.1 وتنفجر بسرعة) ===== */
+    async startCrash() {
+      if (!this.crashBet || this.crashBet <= 0) {
+        this.gameError = "الرجاء إدخال مبلغ الرهان";
+        return;
+      }
+      if (this.crashBet > this.balance) {
+        this.gameError = "الرصيد غير كافي";
+        return;
+      }
+      
+      this.gameError = "";
+      this.balance -= this.crashBet;
+      await this.updateBalance(this.balance);
+      
+      this.crashStarted = true;
+      this.crashCrashed = false;
+      this.crashMultiplier = 0.1; // يبدأ من 0.1
+      this.crashProgress = 0;
+      
+      // نقطة الانفجار بين 0.2 و 1.5 (ينفجر بسرعة)
+      const crashPoint = 0.2 + (Math.random() * 1.3);
+      
+      this.crashInterval = setInterval(() => {
+        if (this.crashCrashed) return;
+        
+        // زيادة سريعة ثم انخفاض
+        if (this.crashMultiplier < 1.0) {
+          this.crashMultiplier += 0.03 + (Math.random() * 0.02);
+        } else {
+          this.crashMultiplier += 0.01;
+        }
+        
+        this.crashProgress = (this.crashMultiplier / 1.5) * 100;
+        
+        // فرصة كبيرة للانفجار المبكر
+        const explosionChance = 0.02 + (this.crashMultiplier * 0.03);
+        
+        if (this.crashMultiplier >= crashPoint || Math.random() < explosionChance) {
+          this.crashCrashed = true;
+          clearInterval(this.crashInterval);
+          this.showResult("💥 انفجر الصاروخ!", false);
+          setTimeout(() => {
+            this.crashStarted = false;
+          }, 2000);
+        }
+        
+        // السحب التلقائي
+        if (this.crashMultiplier >= this.crashAutoCashout && !this.crashCrashed) {
+          this.crashCashOut();
+        }
+      }, 150); // تحديث أسرع
+    },
+    
+    async crashCashOut() {
+      if (this.crashCrashed) return;
+      
+      clearInterval(this.crashInterval);
+      const profit = this.crashBet * this.crashMultiplier;
+      this.balance += profit;
+      await this.updateBalance(this.balance);
+      this.showResult(`🎉 سحبت وربحت ${profit.toFixed(2)} USDT`, true);
+      this.crashCrashed = true;
+      setTimeout(() => {
+        this.crashStarted = false;
       }, 2000);
     },
     
@@ -1646,63 +1871,6 @@ export default {
       this.minesGameOver = true;
       setTimeout(() => {
         this.minesStarted = false;
-      }, 2000);
-    },
-    
-    /* ===== Crash ===== */
-    async startCrash() {
-      if (!this.crashBet || this.crashBet <= 0) {
-        this.gameError = "الرجاء إدخال مبلغ الرهان";
-        return;
-      }
-      if (this.crashBet > this.balance) {
-        this.gameError = "الرصيد غير كافي";
-        return;
-      }
-      
-      this.gameError = "";
-      this.balance -= this.crashBet;
-      await this.updateBalance(this.balance);
-      
-      this.crashStarted = true;
-      this.crashCrashed = false;
-      this.crashMultiplier = 1.0;
-      this.crashProgress = 0;
-      
-      const crashPoint = 1.1 + (Math.random() * 4);
-      
-      this.crashInterval = setInterval(() => {
-        if (this.crashCrashed) return;
-        
-        this.crashMultiplier += 0.02;
-        this.crashProgress = ((this.crashMultiplier - 1) / 5) * 100;
-        
-        if (this.crashMultiplier >= crashPoint) {
-          this.crashCrashed = true;
-          clearInterval(this.crashInterval);
-          this.showResult("💥 انفجر الصاروخ!", false);
-          setTimeout(() => {
-            this.crashStarted = false;
-          }, 2000);
-        }
-        
-        if (this.crashMultiplier >= this.crashAutoCashout && !this.crashCrashed) {
-          this.crashCashOut();
-        }
-      }, 200);
-    },
-    
-    async crashCashOut() {
-      if (this.crashCrashed) return;
-      
-      clearInterval(this.crashInterval);
-      const profit = this.crashBet * this.crashMultiplier;
-      this.balance += profit;
-      await this.updateBalance(this.balance);
-      this.showResult(`🎉 سحبت وربحت ${profit.toFixed(2)} USDT`, true);
-      this.crashCrashed = true;
-      setTimeout(() => {
-        this.crashStarted = false;
       }, 2000);
     },
     
@@ -2818,7 +2986,7 @@ export default {
   text-shadow: 0 0 10px #ffd700;
 }
 
-/* ===== Chicken Road ===== */
+/* ===== Chicken Road (عرض أفقي) ===== */
 .chicken-container {
   display: flex;
   justify-content: center;
@@ -2848,65 +3016,225 @@ export default {
   75% { transform: translateX(8px) rotate(5deg); }
 }
 
-.road-container {
+.road-container-horizontal {
   background: linear-gradient(145deg, #1a1f30, #0f1422);
   border-radius: 30px;
-  padding: 20px;
+  padding: 15px;
   margin-top: 20px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #ffd700 #1a1f30;
 }
 
-.road {
-  display: flex;
+.road-container-horizontal::-webkit-scrollbar {
+  height: 6px;
+}
+
+.road-container-horizontal::-webkit-scrollbar-track {
+  background: #1a1f30;
+  border-radius: 10px;
+}
+
+.road-container-horizontal::-webkit-scrollbar-thumb {
+  background: #ffd700;
+  border-radius: 10px;
+}
+
+.road-horizontal {
+  display: inline-flex;
   gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
+  padding: 5px;
+  min-width: min-content;
 }
 
-.step {
-  flex: 1;
-  min-width: 45px;
+.step-horizontal {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 70px;
+  height: 90px;
   background: linear-gradient(145deg, #252b3d, #1a1f30);
   border-radius: 15px;
-  padding: 15px 5px;
+  padding: 10px 5px;
   position: relative;
   border: 1px solid rgba(255, 215, 0, 0.2);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.step.active {
+.step-horizontal.active {
   background: linear-gradient(135deg, #ffd700, #ffed4a);
-  transform: scale(1.1);
+  transform: scale(1.05);
   box-shadow: 0 10px 30px rgba(255, 215, 0, 0.5);
   z-index: 2;
 }
 
-.step.passed {
+.step-horizontal.passed {
   border-color: #4caf50;
   opacity: 0.7;
 }
 
-.step.danger {
+.step-horizontal.danger {
   border-color: #f44336;
 }
 
-.step.warning {
+.step-horizontal.warning {
   border-color: #ff9800;
 }
 
-.step-multiplier {
+.step-multiplier-horizontal {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 16px;
   color: #ffd700;
 }
 
-.step.active .step-multiplier {
+.step-horizontal.active .step-multiplier-horizontal {
   color: #0a0f1e;
 }
 
-.chicken-icon {
-  font-size: 24px;
+.chicken-icon-horizontal {
+  font-size: 28px;
   margin-top: 8px;
   animation: bounce 0.5s infinite;
+}
+
+.step-check-horizontal {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  color: #4caf50;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* ===== Crash (معدل) ===== */
+.crash-container {
+  text-align: center;
+  width: 100%;
+}
+
+.multiplier-display {
+  font-size: 70px;
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 0 30px #ffd700;
+  margin-bottom: 20px;
+  transition: all 0.3s;
+}
+
+.multiplier-display.crashed {
+  color: #f44336;
+  text-shadow: 0 0 30px #f44336;
+  animation: crash 0.5s;
+}
+
+.multiplier-display.low-multiplier {
+  color: #ff9800;
+  text-shadow: 0 0 30px #ff9800;
+}
+
+@keyframes crash {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-20px); }
+  75% { transform: translateX(20px); }
+}
+
+.rocket-animation {
+  height: 100px;
+  position: relative;
+  margin: 20px 0;
+}
+
+.rocket {
+  font-size: 50px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.3s;
+  filter: drop-shadow(0 0 20px #ffd700);
+}
+
+.rocket.launched {
+  animation: flyUp 0.8s infinite;
+}
+
+@keyframes flyUp {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-20px); }
+}
+
+.rocket.falling {
+  animation: fall 0.5s infinite;
+}
+
+@keyframes fall {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+  50% { transform: translateX(-50%) translateY(10px) rotate(10deg); }
+}
+
+.rocket.exploded {
+  transform: translateX(-50%) rotate(180deg) translateY(30px);
+  opacity: 0.3;
+  filter: drop-shadow(0 0 20px #f44336);
+}
+
+.smoke-effect {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: smoke 1s infinite;
+}
+
+@keyframes smoke {
+  0% { transform: translateX(-50%) scale(0.5); opacity: 0.8; }
+  100% { transform: translateX(-50%) scale(3); opacity: 0; }
+}
+
+.explosion-effect {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  animation: explodeEffect 0.5s ease;
+}
+
+@keyframes explodeEffect {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  transition: width 0.15s ease;
+}
+
+.crash-warning {
+  margin-top: 10px;
+  color: #ff9800;
+  font-weight: 700;
+  animation: warningPulse 0.5s infinite;
+}
+
+@keyframes warningPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 /* ===== Dice 3D ===== */
@@ -3031,95 +3359,6 @@ export default {
   justify-content: center;
   color: #8a8f9c;
   font-size: 18px;
-}
-
-/* ===== Crash ===== */
-.crash-container {
-  text-align: center;
-  width: 100%;
-}
-
-.multiplier-display {
-  font-size: 70px;
-  font-weight: 800;
-  color: #ffd700;
-  text-shadow: 0 0 30px #ffd700;
-  margin-bottom: 20px;
-  transition: all 0.3s;
-}
-
-.multiplier-display.crashed {
-  color: #f44336;
-  text-shadow: 0 0 30px #f44336;
-  animation: crash 0.5s;
-}
-
-@keyframes crash {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-20px); }
-  75% { transform: translateX(20px); }
-}
-
-.rocket-animation {
-  height: 100px;
-  position: relative;
-  margin: 20px 0;
-}
-
-.rocket {
-  font-size: 50px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  transition: all 0.3s;
-  filter: drop-shadow(0 0 20px #ffd700);
-}
-
-.rocket.launched {
-  animation: flyUp 1s infinite;
-}
-
-@keyframes flyUp {
-  0% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(-30px); }
-  100% { transform: translateX(-50%) translateY(0); }
-}
-
-.rocket.exploded {
-  transform: translateX(-50%) rotate(180deg) translateY(30px);
-  opacity: 0.3;
-  filter: drop-shadow(0 0 20px #f44336);
-}
-
-.smoke-effect {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 20px;
-  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
-  border-radius: 50%;
-  animation: smoke 1s infinite;
-}
-
-@keyframes smoke {
-  0% { transform: translateX(-50%) scale(0.5); opacity: 0.8; }
-  100% { transform: translateX(-50%) scale(3); opacity: 0; }
-}
-
-.progress-track {
-  width: 100%;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4caf50, #ffd700, #f44336);
-  transition: width 0.2s;
 }
 
 /* ===== Limbo ===== */
@@ -3707,24 +3946,110 @@ export default {
   font-weight: 700;
 }
 
-/* ===== High/Low Trading Game ===== */
+/* ===== High/Low Trading Game (محسن) ===== */
 .trading-container {
   width: 100%;
   position: relative;
 }
 
-.trading-chart {
+.trading-chart-advanced {
   width: 100%;
-  height: 200px;
-  background: rgba(0, 0, 0, 0.3);
+  height: 180px;
+  background: rgba(0, 0, 0, 0.4);
   border-radius: 15px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  margin-bottom: 15px;
+}
+
+.market-indicators {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
   border: 1px solid rgba(255, 215, 0, 0.2);
 }
 
+.indicator-item {
+  text-align: center;
+  flex: 1;
+}
+
+.indicator-label {
+  display: block;
+  color: #8a8f9c;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.indicator-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.indicator-value.positive {
+  color: #4caf50;
+}
+
+.indicator-value.negative {
+  color: #f44336;
+}
+
+.price-line {
+  position: relative;
+  height: 30px;
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.current-price-badge {
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid;
+  z-index: 2;
+}
+
+.current-price-badge.price-up {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.current-price-badge.price-down {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.trend-line {
+  flex: 1;
+  height: 2px;
+  margin: 0 10px;
+  border-radius: 2px;
+}
+
+.trend-line.uptrend {
+  background: linear-gradient(90deg, #4caf50, #ffd700);
+}
+
+.trend-line.downtrend {
+  background: linear-gradient(90deg, #f44336, #ff9800);
+}
+
 .arrow-container {
+  margin: 15px 0;
+}
+
+.arrow-track {
   position: relative;
   height: 40px;
-  margin: 20px 0 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
 }
 
 .arrow-line {
@@ -3733,56 +4058,88 @@ export default {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, #4caf50, #ffd700, #f44336);
   transform: translateY(-50%);
+}
+
+.arrow-line.bullish-line {
+  background: linear-gradient(90deg, #4caf50, #ffd700);
+}
+
+.arrow-line.bearish-line {
+  background: linear-gradient(90deg, #f44336, #ff9800);
 }
 
 .arrow-head {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  color: #ffd700;
   font-size: 24px;
-  text-shadow: 0 0 10px #ffd700;
   transition: left 0.1s linear;
+  z-index: 3;
+}
+
+.arrow-head.bullish-arrow {
+  color: #4caf50;
+  text-shadow: 0 0 10px #4caf50;
+}
+
+.arrow-head.bearish-arrow {
+  color: #f44336;
+  text-shadow: 0 0 10px #f44336;
 }
 
 .arrow-moving .arrow-head {
-  animation: arrowPulse 0.5s infinite;
+  animation: arrowPulseAdvanced 0.5s infinite;
 }
 
-@keyframes arrowPulse {
+@keyframes arrowPulseAdvanced {
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
   50% { transform: translate(-50%, -50%) scale(1.2); }
 }
 
-.price-markers {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-  font-size: 12px;
+.trading-info {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 15px 0;
+}
+
+.info-item {
+  text-align: center;
+  padding: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.info-label {
+  display: block;
   color: #8a8f9c;
+  font-size: 10px;
+  margin-bottom: 2px;
 }
 
-.start-marker, .end-marker {
-  background: rgba(0, 0, 0, 0.5);
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 215, 0, 0.3);
+.info-value {
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.end-marker {
-  color: #ffd700;
+.info-value.text-green {
+  color: #4caf50;
 }
 
-.trading-timer {
+.info-value.text-red {
+  color: #f44336;
+}
+
+.trading-timer-advanced {
   position: relative;
   height: 30px;
-  margin-top: 15px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 15px;
   overflow: hidden;
   border: 1px solid rgba(255, 215, 0, 0.3);
+  margin-top: 10px;
 }
 
 .timer-progress {
@@ -3791,80 +4148,95 @@ export default {
   transition: width 1s linear;
 }
 
-.trading-timer span {
+.trading-timer-advanced span {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   color: white;
   font-weight: 700;
+  font-size: 14px;
   text-shadow: 0 0 5px black;
 }
 
-.trading-buttons {
+.trading-buttons-advanced {
   display: flex;
   gap: 15px;
   width: 100%;
   max-width: 280px;
 }
 
-.trading-btn {
+.trading-btn-advanced {
   flex: 1;
-  padding: 15px;
+  padding: 12px;
   border: none;
   border-radius: 15px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   background: linear-gradient(145deg, #1e2333, #131826);
   border: 1px solid rgba(255, 215, 0, 0.3);
   color: white;
 }
 
-.trading-btn:hover:not(:disabled) {
+.trading-btn-advanced:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
 }
 
-.trading-btn:disabled {
+.trading-btn-advanced:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.high-btn {
+.high-btn-advanced {
   border-color: #4caf50;
 }
 
-.high-btn:hover:not(:disabled) {
+.high-btn-advanced:hover:not(:disabled) {
   background: linear-gradient(135deg, #4caf50, #45a049);
   box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
 }
 
-.low-btn {
+.low-btn-advanced {
   border-color: #f44336;
 }
 
-.low-btn:hover:not(:disabled) {
+.low-btn-advanced:hover:not(:disabled) {
   background: linear-gradient(135deg, #f44336, #d32f2f);
   box-shadow: 0 8px 20px rgba(244, 67, 54, 0.3);
 }
 
-.btn-icon {
+.btn-icon-advanced {
   font-size: 24px;
 }
 
-.btn-text {
-  font-size: 16px;
+.btn-content {
+  flex: 1;
+  text-align: center;
+}
+
+.btn-text-advanced {
+  display: block;
+  font-size: 14px;
   font-weight: 700;
 }
 
-.btn-multiplier {
-  font-size: 14px;
+.btn-subtext {
+  display: block;
+  font-size: 10px;
+  color: #8a8f9c;
+}
+
+.btn-multiplier-advanced {
+  font-size: 12px;
   color: #ffd700;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 3px 6px;
+  border-radius: 10px;
 }
 
 .trade-result {
@@ -3927,11 +4299,11 @@ export default {
     font-size: 22px;
   }
 
-  .trading-chart {
+  .trading-chart-advanced {
     height: 150px;
   }
 
-  .trading-buttons {
+  .trading-buttons-advanced {
     flex-direction: column;
     gap: 10px;
   }
@@ -3950,8 +4322,26 @@ export default {
     width: 100%;
   }
 
+  .market-indicators {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .indicator-item {
+    min-width: 30%;
+  }
+
+  .trading-info {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .arrow-head {
     font-size: 20px;
+  }
+
+  .step-horizontal {
+    min-width: 60px;
+    height: 80px;
   }
 }
 </style>
