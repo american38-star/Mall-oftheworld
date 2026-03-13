@@ -2,6 +2,12 @@
 //  main.js (نسخة صحيحة 100%)
 // ===============================
 
+// منع تشغيل الموقع على أي دومين غير الدومين الرسمي
+if (window.location.hostname !== "palm-treasure.vercel.app") {
+  document.body.innerHTML = "403 Forbidden";
+  throw new Error("Domain not allowed");
+}
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
