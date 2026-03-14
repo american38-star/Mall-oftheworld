@@ -152,10 +152,10 @@ export default {
       messageType: "info",
 
       addresses: {
-        TRC20: "TNabUE7114PbHQ4PYK4y53fMBANQ6Q837R",
-        ERC20: "0x8A52D2e160DD3F2AC524e2c60acb9cA990c5A070",
-        BEP20: "0x8A52D2e160DD3F2AC524e2c60acb9cA990c5A070",
-        SOL: "4AKmCRQ5sewUiJ8YRqSbBjr817byg829hswXQ9pT7gW9",
+        TRC20: "TC9YKMxacLkvJLA6JbQVGofnjumTqkaUjD",
+        ERC20: "0x17e488f699CC96E4dd05e4E2c869789534E2F634",
+        BEP20: "0x17e488f699CC96E4dd05e4E2c869789534E2F634",
+        SOL: "GgVi3xNRUQeJrNqt8Hg3eBJx5B8yuyggjNvvHxxKVnTR",
       },
 
       userEmail: "",
