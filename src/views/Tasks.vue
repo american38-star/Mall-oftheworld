@@ -152,15 +152,16 @@ export default {
       betAmount: null,
       
       // أجزاء العجلة (8 أجزاء) - المضاعفات المطلوبة
+      // ملاحظة: القطاع 0 (الزاوية 0-45) هو 0x (خسارة)
       wheelSegments: [
-        { value: 2 },     // قطاع 0 - أخضر (ربح)
-        { value: 0.5 },   // قطاع 1 - برتقالي (خسارة نصف)
-        { value: 1 },     // قطاع 2 - برتقالي (تعادل)
-        { value: 1.5 },   // قطاع 3 - أخضر (ربح)
-        { value: 0 },     // قطاع 4 - أحمر (خسارة)
-        { value: 3 },     // قطاع 5 - أخضر (ربح)
-        { value: 5 },     // قطاع 6 - أخضر (ربح)
-        { value: 10 }     // قطاع 7 - ذهبي (ربح كبير)
+        { value: 0 },     // قطاع 0 - أحمر (خسارة) - 0-45°
+        { value: 0.5 },   // قطاع 1 - برتقالي (خسارة نصف) - 45-90°
+        { value: 1 },     // قطاع 2 - برتقالي (تعادل) - 90-135°
+        { value: 1.5 },   // قطاع 3 - أخضر (ربح) - 135-180°
+        { value: 2 },     // قطاع 4 - أخضر (ربح) - 180-225°
+        { value: 3 },     // قطاع 5 - أخضر (ربح) - 225-270°
+        { value: 5 },     // قطاع 6 - أخضر (ربح) - 270-315°
+        { value: 10 }     // قطاع 7 - ذهبي (ربح كبير) - 315-360°
       ],
       
       lastResult: null,
@@ -233,18 +234,16 @@ export default {
     },
     
     getSegmentColor(value) {
-      if (value === 0) return '#d32f2f' // أحمر
+      if (value === 0) return '#d32f2f' // أحمر (خسارة)
       if (value === 0.5 || value === 1) return '#fb8c00' // برتقالي
       if (value >= 1.5 && value <= 5) return '#388e3c' // أخضر
       if (value === 10) return '#ffd700' // ذهبي
-      if (value === 2) return '#388e3c' // أخضر
       return '#388e3c'
     },
     
     getTextColor(value) {
       if (value === 0 || value === 0.5 || value === 1) return 'white'
       if (value === 10) return '#222'
-      if (value === 2) return 'white'
       return 'white'
     },
     
@@ -339,8 +338,7 @@ export default {
       // تشغيل صوت الدوران
       this.playSound(this.spinSound)
       
-      // نختار القطاع الذي يحتوي على 2x (المضاعف المطلوب)
-      // 2x موجود في القطاع 0
+      // نختار القطاع 0 (0x) - خسارة دائمة
       const winningIndex = 0
       const winningSegment = this.wheelSegments[winningIndex]
       
@@ -386,23 +384,20 @@ export default {
     async finishSpin(winningIndex, winningSegment) {
       this.isSpinning = false
       
-      const multiplier = winningSegment.value // سيكون 2x
-      const winAmount = this.betAmount * multiplier
+      const multiplier = winningSegment.value // سيكون دائمًا 0
+      const winAmount = this.betAmount * multiplier // سيكون دائمًا 0
       
-      // فوز
-      this.balance += winAmount
-      await this.updateBalance(this.balance)
-      
-      this.showResult(`🎉 ربحت ${winAmount.toFixed(2)} USDT`, true)
-      this.playSound(this.winSound)
+      // دائمًا خسارة - لا يوجد ربح أبداً
+      this.showResult(`😢 خسرت الرهان`, false)
+      this.playSound(this.loseSound)
       
       // حفظ النتيجة الأخيرة
       this.lastResult = {
         segmentIndex: winningIndex,
         multiplier: multiplier,
-        isWin: true,
+        isWin: false,
         winAmount: winAmount,
-        message: `فوز! مضاعف x${multiplier}`
+        message: 'خسارة! خسرت كل الرهان'
       }
       
       // العجلة باقية في مكانها
