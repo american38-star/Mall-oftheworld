@@ -341,29 +341,26 @@ export default {
       const winningIndex = 0
       const winningSegment = this.wheelSegments[winningIndex]
       
-      // منتصف القطاع الفائز (القطاع 0)
-      const segmentMiddle = winningIndex * this.segmentAngle + this.segmentAngle / 2 // 22.5 درجة
+      // منتصف القطاع 0 هو 22.5 درجة
+      // السهم في الأعلى (زاوية 90 درجة في نظام SVG)
+      // الزاوية المطلوبة لجعل منتصف القطاع 0 تحت السهم = 90 - 22.5 = 67.5 درجة
+      const requiredAngle = 67.5
       
-      // السهم في الأعلى يشير إلى 90 درجة في نظام SVG
-      // نريد أن يكون منتصف القطاع 0 تحت السهم
-      // القطاع 0 يبدأ من 0° إلى 45°، منتصفه 22.5°
-      // لجعل منتصف القطاع 0 تحت السهم (90°)، نحتاج لتدوير العجلة بزاوية 90° - 22.5° = 67.5°
+      // عدد دورات عشوائي (15-25 دورة) لتبدو طبيعية
+      const spins = 15 + Math.floor(Math.random() * 10)
       
-      // عدد دورات كبير لضمان دوران كامل (15-25 دورة)
-      const spins = 15 + Math.floor(Math.random() * 10) // 15-25 دورة
+      // الزاوية المستهدفة: (360 * عدد الدورات) + الزاوية المطلوبة
+      const targetRotation = (360 * spins) + requiredAngle
       
-      // الزاوية المستهدفة: نضيف الدورات الكاملة + الزاوية المطلوبة
-      const targetRotation = (360 * spins) + 67.5
-      
-      const start = this.wheelRotation
-      const duration = 3000 // 3 ثواني
+      const start = 0 // نبدأ دائمًا من 0
+      const duration = 3500 // 3.5 ثواني
       const startTime = performance.now()
       
       const animate = (time) => {
         const elapsed = time - startTime
         const progress = Math.min(elapsed / duration, 1)
         
-        // منحنى التباطؤ الطبيعي
+        // منحنى التباطؤ الطبيعي (يبدأ سريعًا ثم يبطئ)
         const easeOut = 1 - Math.pow(1 - progress, 3)
         
         this.wheelRotation = start + ((targetRotation - start) * easeOut)
@@ -402,9 +399,9 @@ export default {
         message: 'خسارة! خسرت كل الرهان'
       }
       
-      // العجلة باقية في مكانها (على 0x) لأن targetRotation = 360*spins + 67.5
-      // وهذا يعني أنها انتهت عند 67.5 درجة (منتصف القطاع 0)
-      // لا نعيد تعيينها أبداً
+      // العجلة باقية في مكانها ولا نعيد تعيينها
+      // لأن targetRotation = 360*spins + 67.5
+      // وهذا يعني أنها انتهت عند الزاوية الصحيحة (67.5 درجة) تحت السهم
     }
   }
 }
@@ -686,7 +683,7 @@ export default {
 .wheel-svg {
   width: 100%;
   height: 100%;
-  transition: transform 3s cubic-bezier(0.1, 0.9, 0.2, 1);
+  transition: transform 3.5s cubic-bezier(0.1, 0.9, 0.2, 1);
   filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.3));
 }
 
