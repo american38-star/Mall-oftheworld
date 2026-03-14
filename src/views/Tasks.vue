@@ -8,7 +8,7 @@
       </div>
     </div>
 
-    <!-- رسالة الفوز/الخسارة - تظهر فقط بعد توقف العجلة -->
+    <!-- رسالة الفوز/الخسارة -->
     <transition name="slide-fade">
       <div v-if="showResultMessage" class="result-message" :class="resultType">
         <i :class="resultIcon"></i>
@@ -163,15 +163,16 @@ export default {
       betAmount: null,
       
       // أجزاء العجلة (8 أجزاء) - المضاعفات المطلوبة
+      // الترتيب: 0x (أحمر) في الأعلى، ثم باتجاه عقارب الساعة
       wheelSegments: [
-        { value: 0 },
-        { value: 0.5 },
-        { value: 1 },
-        { value: 1.5 },
-        { value: 2 },
-        { value: 3 },
-        { value: 5 },
-        { value: 10 }
+        { value: 0 },     // قطاع 0 - أحمر
+        { value: 0.5 },   // قطاع 1 - برتقالي
+        { value: 1 },     // قطاع 2 - برتقالي
+        { value: 1.5 },   // قطاع 3 - أخضر
+        { value: 2 },     // قطاع 4 - أخضر
+        { value: 3 },     // قطاع 5 - أخضر
+        { value: 5 },     // قطاع 6 - أخضر
+        { value: 10 }     // قطاع 7 - ذهبي
       ],
       
       lastResult: null,
@@ -246,12 +247,12 @@ export default {
       }
     },
     
-    // جعل السهم يقف على 0x
+    // جعل السهم يقف على 0x (القطاع 0)
     setWheelToZero() {
-      // القطاع 0 هو 0x (أحمر)
       // نريد أن يكون منتصف القطاع 0 تحت السهم
-      const targetSegmentCenter = 0 * this.segmentAngle + this.segmentAngle / 2
-      this.wheelRotation = -targetSegmentCenter - 90
+      // السهم في الأعلى (زاوية -90 درجة)
+      // منتصف القطاع 0 هو 22.5 درجة (لأن القطاع 0 من 0° إلى 45°)
+      this.wheelRotation = -22.5 - 90 // -112.5 درجة
     },
     
     getSegmentColor(value) {
@@ -368,7 +369,7 @@ export default {
       // تشغيل صوت الدوران
       this.playSound(this.spinSound)
       
-      // اختيار الجزء الفائز بناءً على توزيع عشوائي (لصالح الموقع)
+      // اختيار القطاع الفائز أولاً
       const random = Math.random()
       let winningIndex
       
@@ -387,19 +388,17 @@ export default {
       
       const winningSegment = this.wheelSegments[winningIndex]
       
-      // حساب الزاوية المستهدفة بدقة
+      // حساب الزاوية المستهدفة بدقة باستخدام المعادلة الصحيحة
+      // targetRotation = (360 * spins) + (360 - (winningIndex * segmentAngle) - (segmentAngle / 2))
+      
+      const spins = 6 + Math.floor(Math.random() * 4) // 6-9 دورات
+      
+      // المعادلة الصحيحة: نريد أن يكون منتصف القطاع الفائز تحت السهم
       // السهم في الأعلى يشير إلى الزاوية -90 درجة
-      // نريد أن يتوقف الجزء الفائز تحت السهم مباشرة
-      const spins = 8 + Math.floor(Math.random() * 8) // 8-15 دورة
+      // منتصف القطاع الفائز هو (winningIndex * segmentAngle) + (segmentAngle / 2)
+      // نحتاج لتدوير العجلة بحيث يصبح هذا المنصف تحت السهم
       
-      // الزاوية المستهدفة: نجعل القطاع الفائز في الأعلى (زاوية -90 درجة)
-      // القطاع يبدأ عند winningIndex * segmentAngle وينتهي عند (winningIndex + 1) * segmentAngle
-      // نريد منتصف القطاع ليكون تحت السهم
-      const targetSegmentCenter = winningIndex * this.segmentAngle + this.segmentAngle / 2
-      
-      // نحتاج لتدوير العجلة بحيث يصبح targetSegmentCenter في الأعلى (زاوية -90)
-      // الفرق بين الزاوية الحالية والزاوية المطلوبة
-      const targetRotation = 360 * spins - targetSegmentCenter - 90
+      const targetRotation = (360 * spins) + (360 - (winningIndex * this.segmentAngle) - (this.segmentAngle / 2))
       
       const start = this.wheelRotation
       const duration = 4000
@@ -418,6 +417,18 @@ export default {
         } else {
           // التأكد من الزاوية النهائية مضبوطة
           this.wheelRotation = targetRotation
+          
+          // التحقق من أن القطاع تحت السهم هو القطاع الفائز
+          // هذا للتصحيح والتأكد
+          const currentAngle = (this.wheelRotation + 90) % 360
+          const segmentIndex = Math.floor(currentAngle / this.segmentAngle) % 8
+          
+          // إذا كان هناك خطأ بسيط (1-2 درجة)، نقوم بتصحيحه
+          if (segmentIndex !== winningIndex) {
+            const correction = (winningIndex * this.segmentAngle + this.segmentAngle / 2) - currentAngle
+            this.wheelRotation += correction
+          }
+          
           this.finishSpin(winningIndex, winningSegment)
         }
       }
