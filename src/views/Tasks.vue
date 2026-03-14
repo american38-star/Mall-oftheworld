@@ -147,20 +147,20 @@ export default {
       gameError: "",
       
       // بيانات عجلة الحظ
-      wheelRotation: 337.5, // الزاوية الابتدائية: السهم على 0x
+      wheelRotation: 0, // نبدأ من 0 (السهم على 0x)
       isSpinning: false,
       betAmount: null,
       
       // أجزاء العجلة (8 أجزاء) - المضاعفات المطلوبة
       wheelSegments: [
-        { value: 0 },     // قطاع 0 - أحمر (خسارة) - 45°
-        { value: 0.5 },   // قطاع 1 - برتقالي (خسارة نصف) - 90°
-        { value: 1 },     // قطاع 2 - برتقالي (تعادل) - 135°
-        { value: 1.5 },   // قطاع 3 - أخضر (ربح) - 180°
-        { value: 2 },     // قطاع 4 - أخضر (ربح) - 225°
-        { value: 3 },     // قطاع 5 - أخضر (ربح) - 270°
-        { value: 5 },     // قطاع 6 - أخضر (ربح) - 315°
-        { value: 10 }     // قطاع 7 - ذهبي (ربح كبير) - 360°
+        { value: 0 },     // قطاع 0 - أحمر (خسارة)
+        { value: 0.5 },   // قطاع 1 - برتقالي (خسارة نصف)
+        { value: 1 },     // قطاع 2 - برتقالي (تعادل)
+        { value: 1.5 },   // قطاع 3 - أخضر (ربح)
+        { value: 2 },     // قطاع 4 - أخضر (ربح)
+        { value: 3 },     // قطاع 5 - أخضر (ربح)
+        { value: 5 },     // قطاع 6 - أخضر (ربح)
+        { value: 10 }     // قطاع 7 - ذهبي (ربح كبير)
       ],
       
       lastResult: null,
@@ -312,7 +312,7 @@ export default {
     },
     
     resetGame() {
-      this.wheelRotation = 337.5 // السهم على 0x
+      this.wheelRotation = 0 // السهم على 0x
       this.isSpinning = false
       this.lastResult = null
       this.gameError = ''
@@ -344,26 +344,26 @@ export default {
       // منتصف القطاع الفائز (القطاع 0)
       const segmentMiddle = winningIndex * this.segmentAngle + this.segmentAngle / 2 // 22.5 درجة
       
-      // عدد دورات مختلف في كل مرة (20-30 دورة) لضمان دوران مختلف
-      const spins = 20 + Math.floor(Math.random() * 11) // 20-30 دورة كاملة
+      // السهم في الأعلى يشير إلى 90 درجة في نظام SVG
+      // نريد أن يكون منتصف القطاع 0 تحت السهم
+      // القطاع 0 يبدأ من 0° إلى 45°، منتصفه 22.5°
+      // لجعل منتصف القطاع 0 تحت السهم (90°)، نحتاج لتدوير العجلة بزاوية 90° - 22.5° = 67.5°
       
-      // الزاوية المستهدفة: نريد أن يكون منتصف القطاع 0 تحت السهم
-      // targetRotation = (360 * spins) + (270 - segmentMiddle)
-      const targetRotation = (360 * spins) + (270 - segmentMiddle)
+      // عدد دورات كبير لضمان دوران كامل (15-25 دورة)
+      const spins = 15 + Math.floor(Math.random() * 10) // 15-25 دورة
       
-      const start = 337.5 // نبدأ دائمًا من نفس الزاوية (0x)
+      // الزاوية المستهدفة: نضيف الدورات الكاملة + الزاوية المطلوبة
+      const targetRotation = (360 * spins) + 67.5
       
-      // مدة دوران ثابتة (3 ثواني) لضمان دوران سريع
-      const duration = 3000 // 3 ثواني ثابتة
-      
+      const start = this.wheelRotation
+      const duration = 3000 // 3 ثواني
       const startTime = performance.now()
       
       const animate = (time) => {
         const elapsed = time - startTime
         const progress = Math.min(elapsed / duration, 1)
         
-        // منحنى التباطؤ الطبيعي - يبدأ سريعاً ثم يبطئ قليلاً في النهاية
-        // استخدام easeOutCubic: 1 - (1-t)^3
+        // منحنى التباطؤ الطبيعي
         const easeOut = 1 - Math.pow(1 - progress, 3)
         
         this.wheelRotation = start + ((targetRotation - start) * easeOut)
@@ -371,10 +371,9 @@ export default {
         if (progress < 1) {
           requestAnimationFrame(animate)
         } else {
-          // التأكد من الزاوية النهائية مضبوطة بالضبط على القطاع 0
+          // التأكد من الزاوية النهائية مضبوطة
           this.wheelRotation = targetRotation
           
-          // انتظار لحظة قصيرة (200ms) ثم عرض النتيجة
           setTimeout(() => {
             this.finishSpin(winningIndex, winningSegment)
           }, 200)
@@ -391,9 +390,6 @@ export default {
       const winAmount = this.betAmount * multiplier // سيكون دائمًا 0
       
       // دائمًا خسارة
-      const isWin = false
-      let message = 'خسارة! خسرت كل الرهان'
-      
       this.showResult(`😢 خسرت الرهان`, false)
       this.playSound(this.loseSound)
       
@@ -401,21 +397,14 @@ export default {
       this.lastResult = {
         segmentIndex: winningIndex,
         multiplier: multiplier,
-        isWin: isWin,
+        isWin: false,
         winAmount: winAmount,
-        message: message
+        message: 'خسارة! خسرت كل الرهان'
       }
       
-      // إعادة تعيين العجلة إلى وضع البداية (0x) بعد الانتهاء
-      // نستخدم setTimeout صغير جداً لضمان أن العجلة ستعود إلى وضع البداية
-      // ولكن بشكل غير مرئي للمستخدم
-      setTimeout(() => {
-        if (!this.isSpinning) {
-          this.wheelRotation = 337.5
-        }
-      }, 500)
-      
-      // ملاحظة: لم نعد نعيد تعيين betAmount، يبقى كما هو ليتمكن اللاعب من إعادة الدوران بنفس المبلغ
+      // العجلة باقية في مكانها (على 0x) لأن targetRotation = 360*spins + 67.5
+      // وهذا يعني أنها انتهت عند 67.5 درجة (منتصف القطاع 0)
+      // لا نعيد تعيينها أبداً
     }
   }
 }
