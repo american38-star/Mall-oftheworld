@@ -8,7 +8,7 @@
       </div>
     </div>
 
-    <!-- رسالة الفوز/الخسارة -->
+    <!-- رسالة الفوز/الخسارة - تظهر فقط بعد توقف العجلة -->
     <transition name="slide-fade">
       <div v-if="showResultMessage" class="result-message" :class="resultType">
         <i :class="resultIcon"></i>
@@ -118,8 +118,8 @@
             </button>
           </div>
 
-          <!-- نتيجة الجولة -->
-          <div v-if="lastResult" class="last-result" :class="{ 'win': lastResult.isWin, 'lose': !lastResult.isWin }">
+          <!-- نتيجة الجولة - تظهر فقط بعد توقف العجلة -->
+          <div v-if="lastResult && !isSpinning" class="last-result" :class="{ 'win': lastResult.isWin, 'lose': !lastResult.isWin }">
             <div class="result-icon">{{ lastResult.isWin ? '🎉' : '😢' }}</div>
             <div class="result-details">
               <span class="result-text">{{ lastResult.message }}</span>
@@ -208,6 +208,9 @@ export default {
     
     // تهيئة الأصوات
     this.initSounds()
+    
+    // جعل السهم يقف على 0x في البداية
+    this.setWheelToZero()
   },
   
   methods: {
@@ -241,6 +244,14 @@ export default {
         sound.currentTime = 0
         sound.play().catch(e => console.log('تعذر تشغيل الصوت'))
       }
+    },
+    
+    // جعل السهم يقف على 0x
+    setWheelToZero() {
+      // القطاع 0 هو 0x (أحمر)
+      // نريد أن يكون منتصف القطاع 0 تحت السهم
+      const targetSegmentCenter = 0 * this.segmentAngle + this.segmentAngle / 2
+      this.wheelRotation = -targetSegmentCenter - 90
     },
     
     getSegmentColor(value) {
@@ -330,7 +341,7 @@ export default {
     },
     
     resetGame() {
-      this.wheelRotation = 0
+      this.setWheelToZero() // السهم يقف على 0x
       this.isSpinning = false
       this.betAmount = null
       this.lastResult = null
@@ -339,6 +350,10 @@ export default {
     
     async spinWheel() {
       if (!this.canSpin) return
+      
+      // إخفاء النتيجة السابقة
+      this.lastResult = null
+      this.showResultMessage = false
       
       // تشغيل صوت النقر
       this.playSound(this.clickSound)
@@ -851,7 +866,7 @@ export default {
   text-align: center;
 }
 
-/* ===== نتيجة الجولة ===== */
+/* ===== نتيجة الجولة - تظهر فقط بعد التوقف ===== */
 .last-result {
   display: flex;
   align-items: center;
