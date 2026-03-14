@@ -8,7 +8,7 @@
       </div>
     </div>
 
-    <!-- رسالة الفوز/الخسارة -->
+    <!-- رسالة الفوز/الخسارة - تظهر فقط بعد توقف العجلة -->
     <transition name="slide-fade">
       <div v-if="showResultMessage" class="result-message" :class="resultType">
         <i :class="resultIcon"></i>
@@ -72,7 +72,6 @@
                     :fill="getTextColor(segment.value)"
                     font-size="14"
                     font-weight="bold"
-                    :transform="getTextRotation(index)"
                   >
                     {{ segment.value }}x
                   </text>
@@ -116,16 +115,6 @@
               <span v-if="!isSpinning">🎡 ابدأ الدوران</span>
               <span v-else>جاري الدوران...</span>
             </button>
-          </div>
-
-          <!-- نتيجة الجولة - تظهر فقط بعد توقف العجلة -->
-          <div v-if="lastResult && !isSpinning" class="last-result" :class="{ 'win': lastResult.isWin, 'lose': !lastResult.isWin }">
-            <div class="result-icon">{{ lastResult.isWin ? '🎉' : '😢' }}</div>
-            <div class="result-details">
-              <span class="result-text">{{ lastResult.message }}</span>
-              <span class="result-multiplier">x{{ lastResult.multiplier }}</span>
-              <span v-if="lastResult.isWin" class="result-amount">+{{ lastResult.winAmount.toFixed(2) }} USDT</span>
-            </div>
           </div>
         </div>
       </div>
@@ -288,11 +277,6 @@ export default {
       return centerY + radius * Math.sin(angle)
     },
     
-    getTextRotation(index) {
-      // النصوص تكون مستقيمة دائماً
-      return ''
-    },
-    
     openGame(gameId) {
       this.selectedGame = gameId
       this.gameOpened = true
@@ -338,8 +322,7 @@ export default {
     async spinWheel() {
       if (!this.canSpin) return
       
-      // إخفاء النتيجة السابقة
-      this.lastResult = null
+      // إخفاء أي رسالة سابقة
       this.showResultMessage = false
       
       // تشغيل صوت النقر
@@ -374,49 +357,42 @@ export default {
       
       const winningSegment = this.wheelSegments[winningIndex]
       
-      // المعادلة الصحيحة للدوران
-      // عدد الدورات الكاملة
-      const spins = 8 + Math.floor(Math.random() * 8) // 8-15 دورة
+      // دوران أكثر واقعية
+      // عدد الدورات الكاملة (8-12 دورة)
+      const spins = 8 + Math.floor(Math.random() * 5)
       
       // منتصف القطاع الفائز
       const segmentMiddle = winningIndex * this.segmentAngle + this.segmentAngle / 2
       
       // الزاوية المستهدفة: نريد أن يكون منتصف القطاع الفائز تحت السهم
-      // السهم في الأعلى (زاوية 270 درجة في نظام SVG)
-      // targetRotation = (360 * spins) + (270 - segmentMiddle)
-      // نبسطها: targetRotation = 360 * spins + 270 - segmentMiddle
-      
-      let targetRotation = 360 * spins + 270 - segmentMiddle
-      
-      // تصحيح الزاوية لتكون ضمن النطاق المنطقي
-      targetRotation = targetRotation % 360
-      if (targetRotation < 0) targetRotation += 360
+      // السهم في الأعلى (زاوية -90 درجة في نظام الدوران)
+      // targetRotation = (360 * spins) + (360 - segmentMiddle) - 90
+      let targetRotation = (360 * spins) + (360 - segmentMiddle) - 90
       
       const start = this.wheelRotation
-      const duration = 4000
+      const duration = 4500 // 4.5 ثواني دوران
       const startTime = performance.now()
       
       const animate = (time) => {
-        const progress = Math.min((time - startTime) / duration, 1)
+        const elapsed = time - startTime
+        const progress = Math.min(elapsed / duration, 1)
         
-        // منحنى التباطؤ الطبيعي
-        const ease = 1 - Math.pow(1 - progress, 3)
+        // منحنى التباطؤ الطبيعي (يبدأ سريعاً ثم يبطئ)
+        // باستخدام دالة easeOutCubic: 1 - (1-t)^3
+        const easeOut = 1 - Math.pow(1 - progress, 3)
         
-        this.wheelRotation = start + ((targetRotation - start) * ease)
+        this.wheelRotation = start + ((targetRotation - start) * easeOut)
         
         if (progress < 1) {
           requestAnimationFrame(animate)
         } else {
-          // التأكد من الزاوية النهائية
+          // التأكد من الزاوية النهائية مضبوطة بالضبط
           this.wheelRotation = targetRotation
           
-          // التحقق من أن القطاع تحت السهم هو القطاع الفائز
-          // هذا للتصحيح والتأكد
-          const currentAngle = (this.wheelRotation + 90) % 360 // تعديل للتحقق
-          const calculatedIndex = Math.floor(currentAngle / this.segmentAngle) % 8
-          
-          // إذا كان هناك خطأ بسيط، نستخدم winningIndex الصحيح
-          this.finishSpin(winningIndex, winningSegment)
+          // انتظار لحظة قصيرة ثم عرض النتيجة
+          setTimeout(() => {
+            this.finishSpin(winningIndex, winningSegment)
+          }, 100)
         }
       }
       
@@ -467,7 +443,7 @@ export default {
         this.playSound(this.loseSound)
       }
       
-      // حفظ النتيجة الأخيرة
+      // حفظ النتيجة الأخيرة (للاستخدام المستقبلي)
       this.lastResult = {
         segmentIndex: winningIndex,
         multiplier: multiplier,
@@ -761,7 +737,7 @@ export default {
 .wheel-svg {
   width: 100%;
   height: 100%;
-  transition: transform 4s cubic-bezier(0.25, 0.1, 0.15, 1);
+  transition: transform 4.5s cubic-bezier(0.25, 0.1, 0.15, 1);
   filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.3));
 }
 
@@ -864,70 +840,6 @@ export default {
   text-align: center;
 }
 
-/* ===== نتيجة الجولة - تظهر فقط بعد التوقف ===== */
-.last-result {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 15px 20px;
-  border-radius: 50px;
-  margin-top: 20px;
-  animation: slideUp 0.5s;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid;
-}
-
-.last-result.win {
-  border-color: #4caf50;
-}
-
-.last-result.lose {
-  border-color: #f44336;
-}
-
-.result-icon {
-  font-size: 35px;
-}
-
-.result-details {
-  flex: 1;
-  text-align: right;
-}
-
-.result-text {
-  display: block;
-  font-size: 14px;
-  color: #8a8f9c;
-  margin-bottom: 5px;
-}
-
-.result-multiplier {
-  display: inline-block;
-  font-size: 20px;
-  font-weight: 700;
-  color: #ffd700;
-  margin-left: 10px;
-}
-
-.result-amount {
-  display: block;
-  font-size: 16px;
-  font-weight: 700;
-  color: #4caf50;
-  margin-top: 5px;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* ===== تحسينات الجوال ===== */
 @media (max-width: 480px) {
   .game-page {
@@ -950,14 +862,6 @@ export default {
   .pointer {
     font-size: 40px;
     top: -10px;
-  }
-
-  .result-icon {
-    font-size: 28px;
-  }
-
-  .result-multiplier {
-    font-size: 18px;
   }
 
   .bet-section {
