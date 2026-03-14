@@ -202,14 +202,14 @@ export default {
 
     // دالة مشاركة عبر واتساب
     shareViaWhatsApp() {
-      const message = `انضم إلى فريقي في Mall of the World باستخدام رابط الدعوة الخاص بي: ${this.inviteLink}`;
+      const message = `انضم إلى فريقي في Palm Treasure باستخدام رابط الدعوة الخاص بي: ${this.inviteLink}`;
       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
     },
 
     // دالة مشاركة عبر تليجرام
     shareViaTelegram() {
-      const message = `انضم إلى فريقي في Mall of the World باستخدام رابط الدعوة الخاص بي: ${this.inviteLink}`;
+      const message = `انضم إلى فريقي في Palm Treasure باستخدام رابط الدعوة الخاص بي: ${this.inviteLink}`;
       const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(this.inviteLink)}&text=${encodeURIComponent(message)}`;
       window.open(telegramUrl, '_blank');
     },
