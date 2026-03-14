@@ -152,13 +152,13 @@ export default {
       betAmount: null,
       
       // أجزاء العجلة (8 أجزاء) - المضاعفات المطلوبة
-      // ملاحظة: القطاع 0 (الزاوية 0-45) هو 0x (خسارة)
+      // تم تبديل القيم: جعلنا 2x في المكان الأول بدلاً من 0x
       wheelSegments: [
-        { value: 0 },     // قطاع 0 - أحمر (خسارة) - 0-45°
+        { value: 2 },     // قطاع 0 - أخضر (ربح) - 0-45° (هذا هو القطاع الذي سيتوقف عليه السهم)
         { value: 0.5 },   // قطاع 1 - برتقالي (خسارة نصف) - 45-90°
         { value: 1 },     // قطاع 2 - برتقالي (تعادل) - 90-135°
         { value: 1.5 },   // قطاع 3 - أخضر (ربح) - 135-180°
-        { value: 2 },     // قطاع 4 - أخضر (ربح) - 180-225°
+        { value: 0 },     // قطاع 4 - أحمر (خسارة) - 180-225°
         { value: 3 },     // قطاع 5 - أخضر (ربح) - 225-270°
         { value: 5 },     // قطاع 6 - أخضر (ربح) - 270-315°
         { value: 10 }     // قطاع 7 - ذهبي (ربح كبير) - 315-360°
@@ -338,7 +338,7 @@ export default {
       // تشغيل صوت الدوران
       this.playSound(this.spinSound)
       
-      // نختار القطاع 0 (0x) - خسارة دائمة
+      // نختار القطاع 0 (الذي يحتوي على 2x) - لكننا سنعتبره خسارة
       const winningIndex = 0
       const winningSegment = this.wheelSegments[winningIndex]
       
@@ -384,8 +384,10 @@ export default {
     async finishSpin(winningIndex, winningSegment) {
       this.isSpinning = false
       
-      const multiplier = winningSegment.value // سيكون دائمًا 0
-      const winAmount = this.betAmount * multiplier // سيكون دائمًا 0
+      // هنا نغير المنطق: بغض النظر عن قيمة القطاع، نعتبره خسارة
+      // نستخدم قيمة 0 بدلاً من قيمة القطاع الفعلية
+      const multiplier = 0 // دائمًا 0 (خسارة)
+      const winAmount = this.betAmount * multiplier // 0
       
       // دائمًا خسارة - لا يوجد ربح أبداً
       this.showResult(`😢 خسرت الرهان`, false)
