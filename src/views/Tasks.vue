@@ -153,14 +153,14 @@ export default {
       
       // أجزاء العجلة (8 أجزاء) - المضاعفات المطلوبة
       wheelSegments: [
-        { value: 0 },     // قطاع 0 - أحمر (خسارة)
-        { value: 0.5 },   // قطاع 1 - برتقالي (خسارة نصف)
-        { value: 1 },     // قطاع 2 - برتقالي (تعادل)
-        { value: 1.5 },   // قطاع 3 - أخضر (ربح)
-        { value: 2 },     // قطاع 4 - أخضر (ربح)
-        { value: 3 },     // قطاع 5 - أخضر (ربح)
-        { value: 5 },     // قطاع 6 - أخضر (ربح)
-        { value: 10 }     // قطاع 7 - ذهبي (ربح كبير)
+        { value: 0 },     // قطاع 0 - أحمر (خسارة) - 45°
+        { value: 0.5 },   // قطاع 1 - برتقالي (خسارة نصف) - 90°
+        { value: 1 },     // قطاع 2 - برتقالي (تعادل) - 135°
+        { value: 1.5 },   // قطاع 3 - أخضر (ربح) - 180°
+        { value: 2 },     // قطاع 4 - أخضر (ربح) - 225°
+        { value: 3 },     // قطاع 5 - أخضر (ربح) - 270°
+        { value: 5 },     // قطاع 6 - أخضر (ربح) - 315°
+        { value: 10 }     // قطاع 7 - ذهبي (ربح كبير) - 360°
       ],
       
       lastResult: null,
@@ -314,7 +314,6 @@ export default {
     resetGame() {
       this.wheelRotation = 337.5 // السهم على 0x
       this.isSpinning = false
-      this.betAmount = null
       this.lastResult = null
       this.gameError = ''
     },
@@ -338,25 +337,27 @@ export default {
       // تشغيل صوت الدوران
       this.playSound(this.spinSound)
       
-      // اختيار القطاع الفائز - اللاعب دائمًا يخسر (لصالح الموقع)
-      // 80% فرصة للخسارة الكلية أو الجزئية
+      // اختيار القطاع الفائز - اللاعب يخسر في معظم الأحيان
+      // 70% فرصة للخسارة الكلية (0x)
+      // 20% فرصة للخسارة الجزئية (0.5x) أو التعادل (1x)
+      // 10% فرصة للربح
       const random = Math.random()
       let winningIndex
       
-      if (random < 0.5) { // 50% أحمر (0x) - خسارة كل الرهان
+      if (random < 0.7) { // 70% أحمر (0x) - خسارة كل الرهان
         winningIndex = 0
-      } else if (random < 0.8) { // 30% برتقالي (0.5x أو 1x) - خسارة نصف أو تعادل
+      } else if (random < 0.9) { // 20% برتقالي (0.5x أو 1x) - خسارة نصف أو تعادل
         const orange = [1, 2]
         winningIndex = orange[Math.floor(Math.random() * orange.length)]
-      } else { // 20% أخضر (1.5x, 2x, 3x, 5x, 10x) - ربح نادر
+      } else { // 10% أخضر (1.5x, 2x, 3x, 5x, 10x) - ربح نادر
         const green = [3, 4, 5, 6, 7]
         winningIndex = green[Math.floor(Math.random() * green.length)]
       }
       
       const winningSegment = this.wheelSegments[winningIndex]
       
-      // دوران واقعي جداً - عدد دورات كبير (20-30 دورة) لدوران كامل
-      const spins = 20 + Math.floor(Math.random() * 10) // 20-30 دورة كاملة
+      // دوران واقعي جداً - عدد دورات كبير (15-25 دورة) لدوران كامل
+      const spins = 15 + Math.floor(Math.random() * 10) // 15-25 دورة كاملة
       
       // منتصف القطاع الفائز
       const segmentMiddle = winningIndex * this.segmentAngle + this.segmentAngle / 2
@@ -366,7 +367,7 @@ export default {
       let targetRotation = (360 * spins) + (270 - segmentMiddle)
       
       const start = this.wheelRotation
-      const duration = 6000 // 6 ثواني دوران كامل
+      const duration = 5000 // 5 ثواني دوران كامل
       const startTime = performance.now()
       
       const animate = (time) => {
@@ -448,10 +449,8 @@ export default {
         message: message
       }
       
-      // إعادة تعيين الرهان بعد 3 ثواني
-      setTimeout(() => {
-        this.betAmount = null
-      }, 3000)
+      // ملاحظة: لم نعد نعيد تعيين betAmount، يبقى كما هو ليتمكن اللاعب من إعادة الدوران بنفس المبلغ
+      // أو تعديله إذا أراد
     }
   }
 }
@@ -733,7 +732,7 @@ export default {
 .wheel-svg {
   width: 100%;
   height: 100%;
-  transition: transform 6s cubic-bezier(0.1, 0.9, 0.2, 1);
+  transition: transform 5s cubic-bezier(0.1, 0.8, 0.2, 1);
   filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.3));
 }
 
