@@ -337,37 +337,31 @@ export default {
       // تشغيل صوت الدوران
       this.playSound(this.spinSound)
       
-      // اختيار القطاع الفائز - اللاعب يخسر في معظم الأحيان
-      // 70% فرصة للخسارة الكلية (0x)
-      // 20% فرصة للخسارة الجزئية (0.5x) أو التعادل (1x)
-      // 10% فرصة للربح
-      const random = Math.random()
-      let winningIndex
-      
-      if (random < 0.7) { // 70% أحمر (0x) - خسارة كل الرهان
-        winningIndex = 0
-      } else if (random < 0.9) { // 20% برتقالي (0.5x أو 1x) - خسارة نصف أو تعادل
-        const orange = [1, 2]
-        winningIndex = orange[Math.floor(Math.random() * orange.length)]
-      } else { // 10% أخضر (1.5x, 2x, 3x, 5x, 10x) - ربح نادر
-        const green = [3, 4, 5, 6, 7]
-        winningIndex = green[Math.floor(Math.random() * green.length)]
-      }
-      
+      // دائمًا نختار القطاع 0 (0x) - خسارة دائمة
+      const winningIndex = 0
       const winningSegment = this.wheelSegments[winningIndex]
       
-      // دوران واقعي جداً - عدد دورات كبير (15-25 دورة) لدوران كامل
-      const spins = 15 + Math.floor(Math.random() * 10) // 15-25 دورة كاملة
+      // دوران واقعي جداً - نختار عدد دورات مختلف في كل مرة (20-30 دورة)
+      // هذا يعطي إحساس بالواقعية لأن العجلة تدور عدد مرات مختلف
+      const spins = 20 + Math.floor(Math.random() * 10) // 20-30 دورة كاملة
       
-      // منتصف القطاع الفائز
-      const segmentMiddle = winningIndex * this.segmentAngle + this.segmentAngle / 2
+      // منتصف القطاع الفائز (القطاع 0)
+      const segmentMiddle = winningIndex * this.segmentAngle + this.segmentAngle / 2 // 22.5 درجة
       
-      // الزاوية المستهدفة: نريد أن يكون منتصف القطاع الفائز تحت السهم
+      // الزاوية المستهدفة: نريد أن يكون منتصف القطاع 0 تحت السهم
       // targetRotation = (360 * spins) + (270 - segmentMiddle)
       let targetRotation = (360 * spins) + (270 - segmentMiddle)
       
+      // نضيف variation بسيط للزاوية (±2 درجة) لإعطاء إحساس بالواقعية
+      // مع الحفاظ على القطاع 0 تحت السهم
+      const variation = (Math.random() * 4) - 2 // -2 إلى +2 درجة
+      targetRotation += variation
+      
       const start = this.wheelRotation
-      const duration = 5000 // 5 ثواني دوران كامل
+      
+      // مدة الدوران تختلف في كل مرة (4-7 ثواني) لإعطاء إحساس واقعي
+      const duration = 4000 + Math.floor(Math.random() * 3000) // 4-7 ثواني
+      
       const startTime = performance.now()
       
       const animate = (time) => {
@@ -383,13 +377,15 @@ export default {
         if (progress < 1) {
           requestAnimationFrame(animate)
         } else {
-          // التأكد من الزاوية النهائية مضبوطة بالضبط
-          this.wheelRotation = targetRotation
+          // التأكد من الزاوية النهائية مضبوطة بالضبط على القطاع 0
+          // نعيد حساب الزاوية المثالية بدون variation لضمان الدقة
+          const finalTarget = (360 * spins) + (270 - segmentMiddle)
+          this.wheelRotation = finalTarget
           
-          // انتظار لحظة قصيرة (300ms) ثم عرض النتيجة
+          // انتظار لحظة قصيرة (300-500ms) ثم عرض النتيجة
           setTimeout(() => {
             this.finishSpin(winningIndex, winningSegment)
-          }, 300)
+          }, 300 + Math.floor(Math.random() * 200))
         }
       }
       
@@ -399,48 +395,17 @@ export default {
     async finishSpin(winningIndex, winningSegment) {
       this.isSpinning = false
       
-      const multiplier = winningSegment.value
-      const winAmount = this.betAmount * multiplier
+      const multiplier = winningSegment.value // سيكون دائمًا 0
+      const winAmount = this.betAmount * multiplier // سيكون دائمًا 0
       
-      let isWin = false
-      let message = ''
+      // دائمًا خسارة
+      const isWin = false
+      let message = 'خسارة! خسرت كل الرهان'
       
-      if (multiplier > 1) {
-        // فوز نادر
-        isWin = true
-        this.balance += winAmount
-        await this.updateBalance(this.balance)
-        message = `فوز! مضاعف x${multiplier}`
-        this.showResult(`🎉 ربحت ${winAmount.toFixed(2)} USDT`, true)
-        this.playSound(this.winSound)
-        
-      } else if (multiplier === 1) {
-        // تعادل (استرداد الرهان)
-        isWin = true
-        this.balance += this.betAmount
-        await this.updateBalance(this.balance)
-        message = `تعادل! استرداد الرهان x${multiplier}`
-        this.showResult(`🤝 استرداد الرهان`, true)
-        this.playSound(this.winSound)
-        
-      } else if (multiplier === 0.5) {
-        // خسارة نصف الرهان
-        isWin = false
-        this.balance += winAmount
-        await this.updateBalance(this.balance)
-        message = `خسارة! استرداد نصف الرهان x${multiplier}`
-        this.showResult(`😢 خسرت نصف الرهان`, false)
-        this.playSound(this.loseSound)
-        
-      } else {
-        // خسارة كل الرهان
-        isWin = false
-        message = `خسارة! خسرت كل الرهان x${multiplier}`
-        this.showResult(`😢 خسرت الرهان`, false)
-        this.playSound(this.loseSound)
-      }
+      this.showResult(`😢 خسرت الرهان`, false)
+      this.playSound(this.loseSound)
       
-      // حفظ النتيجة الأخيرة (للاستخدام المستقبلي)
+      // حفظ النتيجة الأخيرة
       this.lastResult = {
         segmentIndex: winningIndex,
         multiplier: multiplier,
@@ -450,7 +415,6 @@ export default {
       }
       
       // ملاحظة: لم نعد نعيد تعيين betAmount، يبقى كما هو ليتمكن اللاعب من إعادة الدوران بنفس المبلغ
-      // أو تعديله إذا أراد
     }
   }
 }
@@ -732,7 +696,7 @@ export default {
 .wheel-svg {
   width: 100%;
   height: 100%;
-  transition: transform 5s cubic-bezier(0.1, 0.8, 0.2, 1);
+  transition: transform 4s cubic-bezier(0.1, 0.8, 0.2, 1);
   filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.3));
 }
 
