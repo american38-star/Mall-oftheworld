@@ -344,17 +344,16 @@ export default {
       // منتصف القطاع الفائز (القطاع 0)
       const segmentMiddle = winningIndex * this.segmentAngle + this.segmentAngle / 2 // 22.5 درجة
       
-      // عدد دورات كبير وثابت لضمان دوران كامل وسريع في كل مرة
-      // 25 دورة كاملة لضمان دوران سريع وواقعي
-      const spins = 25
+      // عدد دورات مختلف في كل مرة (20-30 دورة) لضمان دوران مختلف
+      const spins = 20 + Math.floor(Math.random() * 11) // 20-30 دورة كاملة
       
       // الزاوية المستهدفة: نريد أن يكون منتصف القطاع 0 تحت السهم
       // targetRotation = (360 * spins) + (270 - segmentMiddle)
-      let targetRotation = (360 * spins) + (270 - segmentMiddle)
+      const targetRotation = (360 * spins) + (270 - segmentMiddle)
       
-      const start = this.wheelRotation
+      const start = 337.5 // نبدأ دائمًا من نفس الزاوية (0x)
       
-      // مدة دوران ثابتة وقصيرة (3 ثواني) لضمان دوران سريع في كل مرة
+      // مدة دوران ثابتة (3 ثواني) لضمان دوران سريع
       const duration = 3000 // 3 ثواني ثابتة
       
       const startTime = performance.now()
@@ -406,6 +405,15 @@ export default {
         winAmount: winAmount,
         message: message
       }
+      
+      // إعادة تعيين العجلة إلى وضع البداية (0x) بعد الانتهاء
+      // نستخدم setTimeout صغير جداً لضمان أن العجلة ستعود إلى وضع البداية
+      // ولكن بشكل غير مرئي للمستخدم
+      setTimeout(() => {
+        if (!this.isSpinning) {
+          this.wheelRotation = 337.5
+        }
+      }, 500)
       
       // ملاحظة: لم نعد نعيد تعيين betAmount، يبقى كما هو ليتمكن اللاعب من إعادة الدوران بنفس المبلغ
     }
