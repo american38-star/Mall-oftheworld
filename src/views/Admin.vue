@@ -1,2185 +1,1187 @@
 <template>
-  <div class="admin-page">
-    <!-- Header -->
-    <div class="header-row">
-      <h1 class="page-title">لوحة الإدارة</h1>
-      <div class="header-actions">
-        <button class="logout-btn" @click="logout">تسجيل خروج</button>
-      </div>
+  <div class="profile-wrapper">
+    <h2 class="title">
+      <span class="title-gold">حسابي</span>
+      <span class="title-icon">👤</span>
+    </h2>
+
+    <div v-if="loading" class="loading-container">
+      <div class="gold-spinner"></div>
+      <p class="loading-text">جاري تحميل بيانات الحساب...</p>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button :class="['tab', activeTab === 'withdraws' ? 'active' : '']" @click="switchTab('withdraws')">
-        طلبات السحب ({{ withdraws.length }})
-      </button>
-      <button :class="['tab', activeTab === 'recharges' ? 'active' : '']" @click="switchTab('recharges')">
-        طلبات التعبئة ({{ rechargeRequests.length }})
-      </button>
-      <button :class="['tab', activeTab === 'users' ? 'active' : '']" @click="switchTab('users')">
-        المستخدمون ({{ users.length }})
-      </button>
-      <button :class="['tab', activeTab === 'notifications' ? 'active' : '']" @click="switchTab('notifications')">
-        الإشعارات
-      </button>
-      <button :class="['tab', activeTab === 'withdrawLogs' ? 'active' : '']" @click="switchTab('withdrawLogs')">
-        سجل السحوبات
-      </button>
-      <button :class="['tab', activeTab === 'rechargeLogs' ? 'active' : '']" @click="switchTab('rechargeLogs')">
-        سجل التعبئة
-      </button>
-    </div>
-
-    <!-- طلبات السحب -->
-    <div v-if="activeTab === 'withdraws'" class="panel">
-      <div class="panel-header">
-        <h2>طلبات السحب</h2>
-        <div class="controls">
-          <input v-model="withdrawFilter" placeholder="بحث عن بريد / محفظة..." />
-          <select v-model="withdrawSort">
-            <option value="newest">الأحدث أولاً</option>
-            <option value="oldest">الأقدم أولاً</option>
-            <option value="amount_desc">الأعلى مبلغ</option>
-            <option value="amount_asc">الأقل مبلغ</option>
-          </select>
-          <button @click="loadWithdrawRequests" type="button">تحديث</button>
+    <div v-else class="profile-box">
+      <!-- صورة المستخدم مع تأثير ذهبي -->
+      <div class="avatar-container">
+        <div class="avatar-glow"></div>
+        <div class="avatar">
+          {{ userData.username ? userData.username.charAt(0).toUpperCase() : 'U' }}
+        </div>
+        <div class="avatar-badge" v-if="userData.vipLevel">
+          VIP {{ userData.vipLevel }}
         </div>
       </div>
 
-      <div v-if="loadingWithdraws" class="loading">⏳ جاري تحميل طلبات السحب...</div>
-      <div v-else>
-        <div v-if="filteredWithdraws.length === 0" class="empty">لا توجد طلبات سحب حالياً.</div>
-        <div class="cards">
-          <div class="card withdraw-card" v-for="req in filteredWithdraws" :key="req.id">
-            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ req.userPhone || '—' }}</span></p>
-            <p><strong>البريد:</strong> <span class="gold-text">{{ req.userEmail || req.email || '—' }}</span></p>
-            <p><strong>المبلغ:</strong> <span class="gold-text">{{ req.amount }} USDT</span></p>
-            <p><strong>الشبكة:</strong> {{ req.network || '—' }}</p>
-            <p><strong>المحفظة:</strong> {{ req.wallet || req.walletAddress || '—' }}</p>
-            <p><strong>مستوى VIP:</strong> {{ req.vipLevel || '—' }}</p>
-            <p><strong>يوم السحب:</strong> {{ req.withdrawDay || '—' }}</p>
-            <p class="muted">تم الإنشاء: {{ formatDate(req.createdAt) }}</p>
-            <div class="card-actions">
-              <button class="btn gold" type="button" @click.stop="openApproveModal(req, 'withdraw')" :disabled="processingId === req.id">موافقة</button>
-              <button class="btn red" type="button" @click.stop="openRejectModal(req, 'withdraw')" :disabled="processingId === req.id">رفض</button>
-              <button class="btn gold-outline" type="button" @click.stop="viewWithdrawDetails(req)">تفاصيل</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <h3 class="username">{{ userData.username || "المستخدم" }}</h3>
 
-    <!-- طلبات التعبئة -->
-    <div v-if="activeTab === 'recharges'" class="panel">
-      <div class="panel-header">
-        <h2>طلبات التعبئة</h2>
-        <div class="controls">
-          <input v-model="rechargeFilter" placeholder="بحث بالبريد أو الشبكة أو الحالة..." />
-          <select v-model="rechargeSort">
-            <option value="newest">الأحدث أولاً</option>
-            <option value="oldest">الأقدم أولاً</option>
-            <option value="amount_desc">الأعلى مبلغ</option>
-            <option value="amount_asc">الأقل مبلغ</option>
-            <option value="status_pending">قيد المراجعة</option>
-            <option value="status_approved">موافق عليها</option>
-            <option value="status_rejected">مرفوضة</option>
-          </select>
-          <button @click="reloadRechargeRequests" type="button">تحديث</button>
-          <button @click="markAllRechargeNotificationsRead" type="button">وضع إشعارات كمقروءة</button>
+      <!-- رقم الهاتف (إذا كان مسجلاً برقم هاتف) -->
+      <div class="info-card" v-if="userData.phoneNumber">
+        <div class="info-header">
+          <i class="fas fa-phone"></i>
+          <span class="info-label">رقم الهاتف</span>
         </div>
-      </div>
-
-      <div v-if="loadingRecharges" class="loading">⏳ جاري تحميل طلبات التعبئة...</div>
-      <div v-else>
-        <div v-if="filteredRechargeRequests.length === 0" class="empty">لا توجد طلبات تعبئة حالياً.</div>
-        <div class="cards">
-          <div class="card recharge-card" v-for="r in filteredRechargeRequests" :key="r.id">
-            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ r.userPhone || r.phoneNumber || '—' }}</span></p>
-            <p><strong>البريد:</strong> <span class="gold-text">{{ r.email || r.userEmail || '—' }}</span></p>
-            <p><strong>المبلغ:</strong> <span class="gold-text">{{ r.amount }} USDT</span></p>
-            <p><strong>الشبكة:</strong> {{ r.network || '—' }}</p>
-            <p><strong>TxID:</strong> <span class="gold-text">{{ r.txid || '—' }}</span></p>
-            <p><strong>حالة:</strong> 
-              <span :class="{
-                'status-approved': r.status === 'approved',
-                'status-rejected': r.status === 'rejected',
-                'status-pending': r.status === 'pending'
-              }">
-                {{ r.status === 'approved' ? 'موافق' : r.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة' }}
-              </span>
-            </p>
-            <p class="muted">تم الإنشاء: {{ formatDate(r.createdAt) }}</p>
-            <div class="card-actions">
-              <button class="btn gold" type="button" @click.stop="openApproveModal(r, 'recharge')" :disabled="processingId === r.id || r.status === 'approved'">موافقة</button>
-              <button class="btn red" type="button" @click.stop="openRejectModal(r, 'recharge')" :disabled="processingId === r.id || r.status === 'rejected'">رفض</button>
-              <button class="btn black" type="button" @click.stop="deleteRecharge(r)" :disabled="processingId === r.id">حذف</button>
-              <button class="btn gold-outline" type="button" @click.stop="viewRechargeDetails(r)">تفاصيل</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- المستخدمين -->
-    <div v-if="activeTab === 'users'" class="panel">
-      <div class="panel-header">
-        <h2>جميع المستخدمين</h2>
-        <div class="controls">
-          <input v-model="userFilter" placeholder="بحث بالبريد أو رقم الهاتف..." />
-          <select v-model="userSort">
-            <option value="email">ترتيب بالبريد</option>
-            <option value="phone">ترتيب برقم الهاتف</option>
-            <option value="balance_desc">الرصيد (تنازلي)</option>
-            <option value="balance_asc">الرصيد (تصاعدي)</option>
-          </select>
-          <button @click="loadUsers" type="button">تحديث</button>
-        </div>
-      </div>
-
-      <div v-if="loadingUsers" class="loading">⏳ جاري تحميل المستخدمين...</div>
-      <div v-else>
-        <div v-if="filteredUsers.length === 0" class="empty">لا يوجد مستخدمين.</div>
-        <div class="cards">
-          <div class="card user-card" v-for="u in filteredUsers" :key="u.id">
-            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ u.phoneNumber || '—' }}</span></p>
-            <p><strong>البريد:</strong> <span class="gold-text">{{ u.email || '—' }}</span></p>
-            <p><strong>رصيد:</strong> <span class="gold-text">{{ u.balance ?? 0 }} USDT</span></p>
-            <p><strong>الحالة:</strong> {{ u.blocked ? 'محظور' : 'فعال' }}</p>
-            <p><strong>طريقة التسجيل:</strong> 
-              <span :class="{
-                'register-phone': u.registrationMethod === 'phone',
-                'register-email': u.registrationMethod === 'email'
-              }">
-                {{ u.registrationMethod === 'phone' ? '📱 رقم هاتف' : '📧 بريد إلكتروني' }}
-              </span>
-            </p>
-            <div class="card-actions">
-              <button class="btn gold" type="button" @click="promptRecharge(u)">تعبئة رصيد</button>
-              <button class="btn red" type="button" @click="promptDeduct(u)">سحب رصيد</button>
-              <button class="btn details-btn" type="button" @click="viewUserDetails(u)">تفاصيل</button>
-              <button class="btn blue" type="button" @click="sendResetPassword(u.email)" :disabled="!u.email">إعادة تعيين كلمة السر</button>
-              <button class="btn black" type="button" @click="toggleBlockUser(u)">
-                {{ u.blocked ? 'إلغاء الحظر' : 'حظر' }}
-              </button>
-              <button class="btn gold-outline" type="button" @click="viewUserNotifications(u)">
-                الإشعارات ({{ u.notificationsCount || 0 }})
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- الإشعارات -->
-    <div v-if="activeTab === 'notifications'" class="panel">
-      <div class="panel-header">
-        <h2>إشعارات المستخدمين (عرض عام)</h2>
-        <div class="controls">
-          <input v-model="notifFilter" placeholder="بحث..." />
-          <button @click="loadAllNotifications" type="button">تحميل</button>
-        </div>
-      </div>
-
-      <div v-if="loadingNotifs" class="loading">⏳ جاري تحميل الإشعارات...</div>
-      <div v-else>
-        <div v-if="allNotifications.length === 0" class="empty">لا توجد إشعارات.</div>
-        <div class="cards">
-          <div class="card notif-card" v-for="n in filteredNotifications" :key="n.id">
-            <p><strong>إلى:</strong> {{ n.email || n.userId }}</p>
-            <p><strong>العنوان:</strong> {{ n.title }}</p>
-            <p>{{ n.message }}</p>
-            <p class="muted">الوقت: {{ formatDate(n.createdAt) }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- سجل السحوبات -->
-    <div v-if="activeTab === 'withdrawLogs'" class="panel">
-      <div class="panel-header">
-        <h2>سجل السحوبات</h2>
-        <div class="controls">
-          <input v-model="withdrawLogFilter" placeholder="بحث بالسعر أو البريد..." />
-          <button @click="loadWithdrawLogs" type="button">تحديث</button>
-        </div>
-      </div>
-
-      <div v-if="loadingWithdrawLogs" class="loading">⏳ جاري تحميل السجلات...</div>
-      <div v-else>
-        <div v-if="withdrawLogs.length === 0" class="empty">لا توجد سجلات.</div>
-        <div class="cards">
-          <div class="card log-card" v-for="l in filteredWithdrawLogs" :key="l.id">
-            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ l.userPhone || l.phoneNumber || '—' }}</span></p>
-            <p><strong>البريد:</strong> <span class="gold-text">{{ l.email || l.userEmail || '—' }}</span></p>
-            <p><strong>المبلغ:</strong> <span class="gold-text">{{ l.amount }} USDT</span></p>
-            <p><strong>النوع:</strong> 
-              <span :class="{
-                'status-approved': l.type === 'approved',
-                'status-rejected': l.type === 'rejected'
-              }">
-                {{ l.type === 'approved' ? 'موافق' : l.type === 'rejected' ? 'مرفوض' : l.type }}
-              </span>
-            </p>
-            <p v-if="l.reason"><strong>السبب:</strong> {{ l.reason }}</p>
-            <p v-if="l.adminMessage"><strong>رسالة الأدمن:</strong> {{ l.adminMessage }}</p>
-            <p class="muted">الوقت: {{ formatDate(l.createdAt) }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- سجل التعبئة -->
-    <div v-if="activeTab === 'rechargeLogs'" class="panel">
-      <div class="panel-header">
-        <h2>سجل تعبئة الرصيد</h2>
-        <div class="controls">
-          <input v-model="rechargeLogFilter" placeholder="بحث بالبريد أو المبلغ..." />
-          <select v-model="rechargeLogSort">
-            <option value="newest">الأحدث أولاً</option>
-            <option value="oldest">الأقدم أولاً</option>
-            <option value="amount_desc">الأعلى مبلغ</option>
-            <option value="amount_asc">الأقل مبلغ</option>
-          </select>
-          <button @click="loadRechargeLogs" type="button">تحديث</button>
-        </div>
-      </div>
-
-      <div v-if="loadingRechargeLogs" class="loading">⏳ جاري تحميل سجلات التعبئة...</div>
-      <div v-else>
-        <div v-if="rechargeLogs.length === 0" class="empty">لا توجد سجلات تعبئة.</div>
-        <div class="cards">
-          <div class="card log-card" v-for="log in filteredRechargeLogs" :key="log.id">
-            <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ log.userPhone || log.phoneNumber || '—' }}</span></p>
-            <p><strong>البريد:</strong> <span class="gold-text">{{ log.email || log.userEmail || '—' }}</span></p>
-            <p><strong>المبلغ:</strong> <span class="gold-text">{{ log.amount }} USDT</span></p>
-            <p><strong>الحالة:</strong> 
-              <span :class="{
-                'status-approved': log.type === 'approved' || log.status === 'approved',
-                'status-rejected': log.type === 'rejected' || log.status === 'rejected',
-                'status-pending': log.type === 'pending' || log.status === 'pending'
-              }">
-                {{ log.type === 'approved' ? 'موافق' : log.type === 'rejected' ? 'مرفوض' : log.type || log.status || '—' }}
-              </span>
-            </p>
-            <p v-if="log.reason"><strong>سبب الرفض:</strong> {{ log.reason }}</p>
-            <p v-if="log.adminMessage"><strong>رسالة الأدمن:</strong> {{ log.adminMessage }}</p>
-            <p class="muted">التاريخ: {{ formatDate(log.createdAt) }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal رفض مع سبب -->
-    <div v-if="showRejectModal" class="modal-backdrop" @click.self="closeRejectModal">
-      <div class="modal">
-        <h3>سبب الرفض</h3>
-        <p><strong>المبلغ:</strong> <span class="gold-text">{{ rejectModalData.amount }} USDT</span></p>
-        <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ rejectModalData.userPhone || rejectModalData.phoneNumber || '—' }}</span></p>
-        <p><strong>البريد:</strong> <span class="gold-text">{{ rejectModalData.email || rejectModalData.userEmail || '—' }}</span></p>
-        <p><strong>النوع:</strong> {{ rejectType === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
-        
-        <div class="input-box" style="margin-top: 15px;">
-          <label>سبب الرفض (مطلوب 1-500 حرف)</label>
-          <textarea 
-            v-model="rejectReason" 
-            placeholder="أدخل سبب الرفض..."
-            rows="4"
-            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D4AF37; background: #1A1F2A; color: white;"
-          ></textarea>
-          <div v-if="rejectError" style="color: #ff6b6b; font-size: 12px; margin-top: 5px;">
-            {{ rejectError }}
-          </div>
-        </div>
-        
-        <div class="modal-actions">
-          <button class="btn red" type="button" @click="confirmReject" :disabled="processingId === rejectModalData.id">
-            تأكيد الرفض
+        <div class="info-content">
+          <span class="info-value">{{ userData.phoneNumber }}</span>
+          <button class="copy-btn" @click="copy(userData.phoneNumber)" title="نسخ">
+            <i class="fas fa-copy"></i>
           </button>
-          <button class="btn gold-outline" type="button" @click="closeRejectModal">إلغاء</button>
         </div>
       </div>
-    </div>
 
-    <!-- Modal موافقة مع رسالة -->
-    <div v-if="showApproveModal" class="modal-backdrop" @click.self="closeApproveModal">
-      <div class="modal">
-        <h3>رسالة الموافقة</h3>
-        <p><strong>المبلغ:</strong> <span class="gold-text">{{ approveModalData.amount }} USDT</span></p>
-        <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ approveModalData.userPhone || approveModalData.phoneNumber || '—' }}</span></p>
-        <p><strong>البريد:</strong> <span class="gold-text">{{ approveModalData.email || approveModalData.userEmail || '—' }}</span></p>
-        <p><strong>النوع:</strong> {{ approveType === 'recharge' ? 'تعبئة' : 'سحب' }}</p>
-        
-        <div class="input-box" style="margin-top: 15px;">
-          <label>رسالة للمستخدم (اختياري - 0-500 حرف)</label>
-          <textarea 
-            v-model="approveMessage" 
-            placeholder="أدخل رسالة تهنئة أو تعليمات للمستخدم..."
-            rows="4"
-            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D4AF37; background: #1A1F2A; color: white;"
-          ></textarea>
-          <div v-if="approveError" style="color: #ff6b6b; font-size: 12px; margin-top: 5px;">
-            {{ approveError }}
-          </div>
+      <!-- البريد الإلكتروني (إذا كان مسجلاً ببريد) -->
+      <div class="info-card" v-if="userData.email">
+        <div class="info-header">
+          <i class="fas fa-envelope"></i>
+          <span class="info-label">البريد الإلكتروني</span>
         </div>
-        
-        <div class="modal-actions">
-          <button class="btn gold" type="button" @click="confirmApprove" :disabled="processingId === approveModalData.id">
-            تأكيد الموافقة
+        <div class="info-content">
+          <span class="info-value">{{ userData.email }}</span>
+          <button class="copy-btn" @click="copy(userData.email)" title="نسخ">
+            <i class="fas fa-copy"></i>
           </button>
-          <button class="btn gold-outline" type="button" @click="closeApproveModal">إلغاء</button>
         </div>
       </div>
-    </div>
 
-    <!-- Modal تفاصيل السحب/التعبئة -->
-    <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
-      <div class="modal">
-        <h3>تفاصيل الطلب</h3>
-        <p v-if="modalType === 'withdraw'"><strong>رقم الهاتف:</strong> <span class="gold-text">{{ modalData.userPhone || modalData.phoneNumber || '—' }}</span></p>
-        <p v-if="modalType === 'withdraw'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email || modalData.userEmail }}</span></p>
-        <p v-if="modalType === 'withdraw'"><strong>المبلغ:</strong> <span class="gold-text">{{ modalData.amount }} USDT</span></p>
-        <p v-if="modalType === 'withdraw'"><strong>الشبكة:</strong> {{ modalData.network }}</p>
-        <p v-if="modalType === 'withdraw'"><strong>المحفظة:</strong> {{ modalData.wallet || modalData.walletAddress }}</p>
-        <p v-if="modalType === 'withdraw'"><strong>مستوى VIP:</strong> {{ modalData.vipLevel || '—' }}</p>
-        <p v-if="modalType === 'withdraw'"><strong>يوم السحب:</strong> {{ modalData.withdrawDay || '—' }}</p>
-        
-        <p v-if="modalType === 'recharge'"><strong>رقم الهاتف:</strong> <span class="gold-text">{{ modalData.userPhone || modalData.phoneNumber || '—' }}</span></p>
-        <p v-if="modalType === 'recharge'"><strong>البريد:</strong> <span class="gold-text">{{ modalData.email || modalData.userEmail }}</span></p>
-        <p v-if="modalType === 'recharge'"><strong>المبلغ:</strong> <span class="gold-text">{{ modalData.amount }} USDT</span></p>
-        <p v-if="modalType === 'recharge'"><strong>الشبكة:</strong> {{ modalData.network }}</p>
-        <p v-if="modalType === 'recharge' && modalData.txid"><strong>TxID:</strong> <span class="gold-text">{{ modalData.txid }}</span></p>
-        
-        <p class="muted">تم الإنشاء: {{ formatDate(modalData.createdAt) }}</p>
-        <div class="modal-actions">
-          <button v-if="modalType === 'withdraw'" class="btn gold" type="button" @click.stop="openApproveModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">موافقة</button>
-          <button v-if="modalType === 'withdraw'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'withdraw')" :disabled="processingId === modalData.id">رفض</button>
-          <button v-if="modalType === 'recharge'" class="btn gold" type="button" @click.stop="openApproveModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'approved'">موافقة</button>
-          <button v-if="modalType === 'recharge'" class="btn red" type="button" @click.stop="openRejectModal(modalData, 'recharge')" :disabled="processingId === modalData.id || modalData.status === 'rejected'">رفض</button>
-          <button class="btn gold-outline" type="button" @click="closeModal">إغلاق</button>
+      <!-- معرف المستخدم -->
+      <div class="info-card">
+        <div class="info-header">
+          <i class="fas fa-id-card"></i>
+          <span class="info-label">المعرّف (ID)</span>
+        </div>
+        <div class="info-content">
+          <span class="info-value id-value">{{ userData.uid }}</span>
+          <button class="copy-btn" @click="copy(userData.uid)" title="نسخ">
+            <i class="fas fa-copy"></i>
+          </button>
         </div>
       </div>
-    </div>
 
-    <!-- Modal تفاصيل المستخدم (الإحالات والشحن الكلي) -->
-    <div v-if="showUserDetailsModal" class="modal-backdrop" @click.self="closeUserDetailsModal">
-      <div class="modal">
-        <h3>تفاصيل المستخدم</h3>
-        <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ userDetails.phoneNumber || '—' }}</span></p>
-        <p><strong>البريد:</strong> <span class="gold-text">{{ userDetails.email || '—' }}</span></p>
-        <p><strong>عدد الإحالات (المستوى 1):</strong> <span class="gold-text">{{ userDetails.referralCount || 0 }}</span></p>
-        <p><strong>مبلغ الشحن الكلي (المستوى 1):</strong> <span class="gold-text">{{ userDetails.level1RechargeTotal || 0 }} USDT</span></p>
-        
-        <div v-if="userDetails.referredUsers && userDetails.referredUsers.length > 0" class="referred-users">
-          <h4>المستخدمين المحالين (المستوى 1):</h4>
-          <div class="users-list">
-            <div class="user-item" v-for="refUser in userDetails.referredUsers" :key="refUser.id">
-              <p><strong>البريد:</strong> <span class="gold-text">{{ refUser.email || '—' }}</span></p>
-              <p><strong>رقم الهاتف:</strong> <span class="gold-text">{{ refUser.phoneNumber || '—' }}</span></p>
-              <p><strong>تاريخ التسجيل:</strong> {{ formatDate(refUser.createdAt) }}</p>
-              <p><strong>إجمالي الشحن:</strong> <span class="gold-text">{{ refUser.totalRecharge || 0 }} USDT</span></p>
+      <!-- كود الإحالة -->
+      <div class="info-card" v-if="userData.referralCode">
+        <div class="info-header">
+          <i class="fas fa-link"></i>
+          <span class="info-label">كود الإحالة</span>
+        </div>
+        <div class="info-content">
+          <span class="info-value referral-code">{{ userData.referralCode }}</span>
+          <button class="copy-btn" @click="copy(userData.referralCode)" title="نسخ">
+            <i class="fas fa-copy"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- تاريخ التسجيل -->
+      <div class="info-card">
+        <div class="info-header">
+          <i class="fas fa-calendar-alt"></i>
+          <span class="info-label">تاريخ التسجيل</span>
+        </div>
+        <div class="info-content">
+          <span class="info-value">{{ formattedDate }}</span>
+        </div>
+      </div>
+
+      <!-- الرصيد -->
+      <div class="info-card balance-card">
+        <div class="info-header">
+          <i class="fas fa-coins"></i>
+          <span class="info-label">الرصيد المتاح</span>
+        </div>
+        <div class="info-content">
+          <span class="balance-value">{{ userData.balance }} USDT</span>
+        </div>
+      </div>
+
+      <!-- إحصائيات سريعة -->
+      <div class="stats-grid" v-if="userData.vipLevel || userData.totalReferrals">
+        <div class="stat-item" v-if="userData.vipLevel">
+          <i class="fas fa-crown"></i>
+          <span class="stat-label">مستوى VIP</span>
+          <span class="stat-number">{{ userData.vipLevel }}</span>
+        </div>
+        <div class="stat-item" v-if="userData.totalReferrals">
+          <i class="fas fa-users"></i>
+          <span class="stat-label">الإحالات</span>
+          <span class="stat-number">{{ userData.totalReferrals }}</span>
+        </div>
+      </div>
+
+      <!-- نافذة تغيير كلمة المرور للمستخدم العادي -->
+      <div v-if="showChangePasswordModal && !isAdmin" class="modal-overlay" @click.self="closeChangePasswordModal">
+        <div class="modal-content">
+          <h3 class="modal-title">
+            <i class="fas fa-key"></i>
+            تغيير كلمة المرور
+          </h3>
+          
+          <div class="modal-body">
+            <div class="input-group">
+              <label class="input-label">كلمة المرور الحالية</label>
+              <input 
+                type="password" 
+                v-model="passwordForm.currentPassword" 
+                class="modal-input"
+                placeholder="أدخل كلمة المرور الحالية"
+              />
             </div>
+            
+            <div class="input-group">
+              <label class="input-label">كلمة المرور الجديدة</label>
+              <input 
+                type="password" 
+                v-model="passwordForm.newPassword" 
+                class="modal-input"
+                placeholder="أدخل كلمة المرور الجديدة"
+              />
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">تأكيد كلمة المرور الجديدة</label>
+              <input 
+                type="password" 
+                v-model="passwordForm.confirmPassword" 
+                class="modal-input"
+                placeholder="أعد إدخال كلمة المرور الجديدة"
+              />
+            </div>
+            
+            <p v-if="passwordError" class="error-message">{{ passwordError }}</p>
+            <p v-if="passwordSuccess" class="success-message">{{ passwordSuccess }}</p>
+          </div>
+          
+          <div class="modal-actions">
+            <button class="btn btn-gold" @click="updatePassword" :disabled="passwordLoading">
+              <i class="fas fa-save"></i>
+              {{ passwordLoading ? 'جاري التغيير...' : 'تغيير كلمة المرور' }}
+            </button>
+            <button class="btn btn-gold-outline" @click="closeChangePasswordModal">
+              <i class="fas fa-times"></i>
+              إلغاء
+            </button>
           </div>
         </div>
-        <div v-else>
-          <p class="empty-text">لا توجد إحالات لهذا المستخدم</p>
+      </div>
+
+      <!-- نافذة تغيير كلمة المرور للأدمن (لأي مستخدم) -->
+      <div v-if="showAdminPasswordModal" class="modal-overlay" @click.self="closeAdminPasswordModal">
+        <div class="modal-content">
+          <h3 class="modal-title">
+            <i class="fas fa-key"></i>
+            تغيير كلمة مرور المستخدم
+          </h3>
+          
+          <div class="modal-body">
+            <div class="info-box" style="background: #1A1F2A; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+              <p><strong>المستخدم:</strong> <span class="gold-text">{{ adminPasswordTargetUser?.email || adminPasswordTargetUser?.phoneNumber || adminPasswordTargetUser?.uid }}</span></p>
+            </div>
+
+            <div class="input-group">
+              <label class="input-label">كلمة المرور الجديدة</label>
+              <input 
+                type="password" 
+                v-model="adminPasswordForm.newPassword" 
+                class="modal-input"
+                placeholder="أدخل كلمة المرور الجديدة"
+              />
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">تأكيد كلمة المرور الجديدة</label>
+              <input 
+                type="password" 
+                v-model="adminPasswordForm.confirmPassword" 
+                class="modal-input"
+                placeholder="أعد إدخال كلمة المرور الجديدة"
+              />
+            </div>
+            
+            <p v-if="adminPasswordError" class="error-message">{{ adminPasswordError }}</p>
+            <p v-if="adminPasswordSuccess" class="success-message">{{ adminPasswordSuccess }}</p>
+          </div>
+          
+          <div class="modal-actions">
+            <button class="btn btn-gold" @click="adminUpdatePassword" :disabled="adminPasswordLoading">
+              <i class="fas fa-save"></i>
+              {{ adminPasswordLoading ? 'جاري التغيير...' : 'تغيير كلمة المرور' }}
+            </button>
+            <button class="btn btn-gold-outline" @click="closeAdminPasswordModal">
+              <i class="fas fa-times"></i>
+              إلغاء
+            </button>
+          </div>
         </div>
-        
-        <div class="modal-actions">
-          <button class="btn gold-outline" type="button" @click="closeUserDetailsModal">إغلاق</button>
-        </div>
+      </div>
+
+      <!-- الأزرار -->
+      <div class="actions">
+        <!-- زر تغيير كلمة المرور للمستخدم العادي -->
+        <button v-if="!isAdmin" class="btn btn-gold" @click="openChangePasswordModal">
+          <i class="fas fa-key"></i>
+          تغيير كلمة المرور
+        </button>
+
+        <!-- زر تغيير كلمة المرور للمستخدمين (لأدمن فقط) -->
+        <button v-if="isAdmin" class="btn btn-gold" @click="openAdminUserSelector">
+          <i class="fas fa-user-cog"></i>
+          تغيير كلمة مرور مستخدم
+        </button>
+
+        <button class="btn btn-gold-outline" @click="copyReferralLink" v-if="userData.referralCode">
+          <i class="fas fa-share-alt"></i>
+          نسخ رابط الدعوة
+        </button>
+
+        <button class="btn btn-danger" @click="logout">
+          <i class="fas fa-sign-out-alt"></i>
+          تسجيل الخروج
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import {
-  getAuth,
-  sendPasswordResetEmail,
-  onAuthStateChanged,
-} from "firebase/auth";
-import {
-  collection,
-  getDocs,
-  addDoc,
-  doc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-  getDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  where,
-  limit
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { onAuthStateChanged, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider, sendPasswordResetEmail } from "firebase/auth";
 
 export default {
-  name: "Admin",
+  name: "Profile",
+
   data() {
     return {
-      activeTab: "withdraws",
-      users: [],
-      loadingUsers: true,
-      userFilter: "",
-      userSort: "email",
-      withdraws: [],
-      loadingWithdraws: true,
-      withdrawFilter: "",
-      withdrawSort: "newest",
-      rechargeRequests: [],
-      loadingRecharges: true,
-      rechargeFilter: "",
-      rechargeSort: "newest",
-      rechargeUnsubscribe: null,
-      allNotifications: [],
-      loadingNotifs: false,
-      notifFilter: "",
-      withdrawLogs: [],
-      loadingWithdrawLogs: false,
-      withdrawLogFilter: "",
-      
-      rechargeLogs: [],
-      loadingRechargeLogs: false,
-      rechargeLogFilter: "",
-      rechargeLogSort: "newest",
-      
-      showModal: false,
-      modalData: {},
-      modalType: "withdraw",
-      authChecked: false,
-      adminEmails: [
-        "azad.333388@gmail.com",
-        "admin2@gmail.com",
-        "owner@gmail.com",
-      ],
-      currentUser: null,
-      processingId: null,
-
-      showRejectModal: false,
-      rejectModalData: {},
-      rejectReason: "",
-      rejectError: "",
-      rejectType: "",
-
-      showApproveModal: false,
-      approveModalData: {},
-      approveMessage: "",
-      approveError: "",
-      approveType: "",
-
-      showUserDetailsModal: false,
-      userDetails: {
-        phoneNumber: "",
+      loading: true,
+      isAdmin: false,
+      showChangePasswordModal: false,
+      showAdminPasswordModal: false,
+      passwordLoading: false,
+      adminPasswordLoading: false,
+      passwordError: "",
+      passwordSuccess: "",
+      adminPasswordError: "",
+      adminPasswordSuccess: "",
+      adminPasswordTargetUser: null,
+      passwordForm: {
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      },
+      adminPasswordForm: {
+        newPassword: "",
+        confirmPassword: ""
+      },
+      userData: {
         email: "",
-        referralCount: 0,
-        level1RechargeTotal: 0,
-        referredUsers: []
+        phoneNumber: "",
+        uid: "",
+        createdAt: "",
+        balance: 0,
+        username: "",
+        referralCode: "",
+        vipLevel: 0,
+        totalReferrals: 0,
       },
     };
   },
+
   computed: {
-    filteredUsers() {
-      let list = [...this.users];
-      if (this.userFilter) {
-        const f = this.userFilter.toLowerCase();
-        list = list.filter((u) =>
-          String(u.email || "").toLowerCase().includes(f) ||
-          String(u.phoneNumber || "").toLowerCase().includes(f)
-        );
+    formattedDate() {
+      if (!this.userData.createdAt) return "غير متوفر";
+
+      let date;
+
+      if (this.userData.createdAt.toDate) {
+        date = this.userData.createdAt.toDate();
+      } else {
+        date = new Date(this.userData.createdAt);
       }
-      if (this.userSort === "balance_desc")
-        list.sort((a, b) => (b.balance || 0) - (a.balance || 0));
-      else if (this.userSort === "balance_asc")
-        list.sort((a, b) => (a.balance || 0) - (b.balance || 0));
-      else if (this.userSort === "phone")
-        list.sort((a, b) => String(a.phoneNumber || "").localeCompare(String(b.phoneNumber || "")));
-      else
-        list.sort((a, b) =>
-          String(a.email || "").localeCompare(String(b.email || ""))
-        );
-      return list;
+
+      return isNaN(date.getTime())
+        ? "غير متوفر"
+        : date.toLocaleDateString("ar-EG", {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
     },
-    filteredWithdraws() {
-      let list = [...this.withdraws];
-      if (this.withdrawFilter) {
-        const f = this.withdrawFilter.toLowerCase();
-        list = list.filter(
-          (r) =>
-            (r.userPhone || "").toLowerCase().includes(f) ||
-            (r.userEmail || r.email || "").toLowerCase().includes(f) ||
-            (r.wallet || r.walletAddress || "").toLowerCase().includes(f)
-        );
-      }
-      if (this.withdrawSort === "newest")
-        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      else if (this.withdrawSort === "oldest")
-        list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      else if (this.withdrawSort === "amount_desc")
-        list.sort((a, b) => (b.amount || 0) - (a.amount || 0));
-      else if (this.withdrawSort === "amount_asc")
-        list.sort((a, b) => (a.amount || 0) - (b.amount || 0));
-      return list;
-    },
-    filteredRechargeRequests() {
-      let list = [...this.rechargeRequests];
-      if (this.rechargeFilter) {
-        const f = this.rechargeFilter.toLowerCase();
-        list = list.filter(
-          (r) =>
-            (r.userPhone || "").toLowerCase().includes(f) ||
-            (r.email || r.userEmail || "").toLowerCase().includes(f) ||
-            (r.network || "").toLowerCase().includes(f) ||
-            (String(r.amount || "") || "").includes(f) ||
-            (r.status || "").toLowerCase().includes(f)
-        );
-      }
-      if (this.rechargeSort === "newest")
-        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      else if (this.rechargeSort === "oldest")
-        list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      else if (this.rechargeSort === "amount_desc")
-        list.sort((a, b) => (b.amount || 0) - (a.amount || 0));
-      else if (this.rechargeSort === "amount_asc")
-        list.sort((a, b) => (a.amount || 0) - (b.amount || 0));
-      else if (this.rechargeSort === "status_pending")
-        list = list.filter((r) => (r.status || "pending") === "pending");
-      else if (this.rechargeSort === "status_approved")
-        list = list.filter((r) => (r.status || "") === "approved");
-      else if (this.rechargeSort === "status_rejected")
-        list = list.filter((r) => (r.status || "") === "rejected");
-      return list;
-    },
-    filteredNotifications() {
-      if (!this.notifFilter) return this.allNotifications;
-      const f = this.notifFilter.toLowerCase();
-      return this.allNotifications.filter(
-        (n) =>
-          (n.message || "").toLowerCase().includes(f) ||
-          (n.title || "").toLowerCase().includes(f) ||
-          (n.email || "").toLowerCase().includes(f)
-      );
-    },
-    filteredWithdrawLogs() {
-      let list = [...this.withdrawLogs];
-      if (this.withdrawLogFilter) {
-        const f = this.withdrawLogFilter.toLowerCase();
-        list = list.filter(
-          (l) =>
-            String(l.amount || "").includes(f) ||
-            (l.userPhone || "").toLowerCase().includes(f) ||
-            (l.email || l.userEmail || "").toLowerCase().includes(f)
-        );
-      }
-      return list;
-    },
-    filteredRechargeLogs() {
-      let list = [...this.rechargeLogs];
-      
-      if (this.rechargeLogFilter) {
-        const f = this.rechargeLogFilter.toLowerCase();
-        list = list.filter(
-          (log) =>
-            (log.userPhone || "").toLowerCase().includes(f) ||
-            (log.email || log.userEmail || "").toLowerCase().includes(f) ||
-            String(log.amount || "").includes(f) ||
-            (log.type || log.status || "").toLowerCase().includes(f)
-        );
-      }
-      
-      if (this.rechargeLogSort === "newest")
-        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      else if (this.rechargeLogSort === "oldest")
-        list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      else if (this.rechargeLogSort === "amount_desc")
-        list.sort((a, b) => (b.amount || 0) - (a.amount || 0));
-      else if (this.rechargeLogSort === "amount_asc")
-        list.sort((a, b) => (a.amount || 0) - (b.amount || 0));
-      
-      return list;
-    },
-  },
-  created() {
-    const auth = getAuth();
-    onAuthStateChanged(auth, async (user) => {
-      this.authChecked = true;
-      this.currentUser = user || null;
-      if (!user) return this.$router.replace("/login");
-      try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        const userData = userDoc.exists() ? userDoc.data() : null;
-        const isRoleAdmin =
-          userData &&
-          (userData.role === "admin" || userData.isAdmin === true);
-        if (!isRoleAdmin && !this.adminEmails.includes(user.email)) {
-          alert("غير مسموح بالدخول");
-          return this.$router.replace("/403");
-        }
-      } catch (e) {
-        console.error("admin check", e);
-        return this.$router.replace("/403");
-      }
-      await Promise.all([
-        this.loadWithdrawRequests(),
-        this.loadUsers(),
-        this.loadWithdrawLogs(),
-      ]);
-      this.attachRechargeListener();
-    });
-  },
-  beforeUnmount() {
-    if (this.rechargeUnsubscribe) {
-      try { this.rechargeUnsubscribe(); } catch (e) {}
-      this.rechargeUnsubscribe = null;
+
+    referralLink() {
+      return `${window.location.origin}/register?ref=${this.userData.referralCode}`;
     }
   },
+
+  created() {
+    this.loadUserData();
+  },
+
   methods: {
-    async viewUserDetails(user) {
-      try {
-        this.showUserDetailsModal = true;
-        this.userDetails = {
-          phoneNumber: user.phoneNumber,
-          email: user.email,
-          referralCount: 0,
-          level1RechargeTotal: 0,
-          referredUsers: []
-        };
-
-        const directReferralsQuery = query(
-          collection(db, "users"),
-          where("invitedBy", "==", user.id)
-        );
-        const directReferralsSnap = await getDocs(directReferralsQuery);
-        const directReferralUsers = [];
-        
-        for (const docSnap of directReferralsSnap.docs) {
-          const referralData = docSnap.data();
-          const referralId = docSnap.id;
-          
-          let totalRecharge = 0;
-          try {
-            const transactionsQuery = query(
-              collection(db, "transactions"),
-              where("userId", "==", referralId),
-              where("type", "in", ["recharge", "approved_recharge"]),
-              where("status", "in", ["approved", "completed", "success"])
-            );
-            const transactionsSnap = await getDocs(transactionsQuery);
-            transactionsSnap.docs.forEach(transactionDoc => {
-              const transactionData = transactionDoc.data();
-              totalRecharge += Number(transactionData.amount || 0);
-            });
-          } catch (error) {
-            console.error("Error calculating total recharge:", error);
-          }
-
-          directReferralUsers.push({
-            id: referralId,
-            email: referralData.email || "",
-            phoneNumber: referralData.phoneNumber || "",
-            createdAt: referralData.createdAt || referralData.registeredAt || null,
-            totalRecharge: totalRecharge
-          });
-          
-          this.userDetails.level1RechargeTotal += totalRecharge;
+    async loadUserData() {
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          this.loading = false;
+          this.$router.push("/login");
+          return;
         }
 
-        this.userDetails.referralCount = directReferralUsers.length;
-        this.userDetails.referredUsers = directReferralUsers;
+        try {
+          // التحقق مما إذا كان المستخدم أدمن
+          const userSnap = await getDoc(doc(db, "users", user.uid));
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            this.isAdmin = userData.role === "admin" || userData.isAdmin === true;
+          }
 
-        console.log("تفاصيل المستخدم (المستوى 1 فقط):", this.userDetails);
+          const snap = await getDoc(doc(db, "users", user.uid));
 
-      } catch (error) {
-        console.error("خطأ في جلب تفاصيل المستخدم:", error);
-        alert("حدث خطأ في جلب تفاصيل المستخدم");
+          if (snap.exists()) {
+            const data = snap.data();
+
+            this.userData = {
+              email: data.email || "",
+              phoneNumber: data.phoneNumber || "",
+              uid: user.uid,
+              createdAt: data.createdAt || user.metadata.creationTime,
+              balance: data.balance ?? 0,
+              username: data.username || (data.email ? data.email.split("@")[0] : "مستخدم"),
+              referralCode: data.referralCode || user.uid.substring(0, 6),
+              vipLevel: data.vipLevel || 0,
+              totalReferrals: data.totalReferrals || 0,
+            };
+          } else {
+            // بيانات افتراضية إذا لم يوجد المستند
+            this.userData = {
+              email: user.email || "",
+              phoneNumber: "",
+              uid: user.uid,
+              createdAt: user.metadata.creationTime,
+              balance: 0,
+              username: user.email ? user.email.split("@")[0] : "مستخدم",
+              referralCode: user.uid.substring(0, 6),
+              vipLevel: 0,
+              totalReferrals: 0,
+            };
+          }
+        } catch (err) {
+          console.error("Error loading profile:", err);
+          this.showErrorMessage("حدث خطأ في تحميل البيانات");
+        }
+
+        this.loading = false;
+      });
+    },
+
+    copy(text) {
+      navigator.clipboard.writeText(text);
+      this.showSuccessMessage("تم النسخ ✓");
+    },
+
+    copyReferralLink() {
+      if (this.referralLink) {
+        this.copy(this.referralLink);
+        this.showSuccessMessage("تم نسخ رابط الدعوة");
       }
     },
 
-    closeUserDetailsModal() {
-      this.showUserDetailsModal = false;
-      this.userDetails = {
-        phoneNumber: "",
-        email: "",
-        referralCount: 0,
-        level1RechargeTotal: 0,
-        referredUsers: []
+    // فتح نافذة تغيير كلمة المرور للمستخدم العادي
+    openChangePasswordModal() {
+      this.showChangePasswordModal = true;
+      this.passwordError = "";
+      this.passwordSuccess = "";
+      this.passwordForm = {
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
       };
     },
 
-    openApproveModal(data, type) {
-      this.approveModalData = data;
-      this.approveType = type;
-      this.approveMessage = "";
-      this.approveError = "";
-      this.showApproveModal = true;
-      this.showModal = false;
+    // إغلاق نافذة تغيير كلمة المرور للمستخدم العادي
+    closeChangePasswordModal() {
+      this.showChangePasswordModal = false;
+      this.passwordError = "";
+      this.passwordSuccess = "";
     },
 
-    closeApproveModal() {
-      this.showApproveModal = false;
-      this.approveModalData = {};
-      this.approveMessage = "";
-      this.approveError = "";
-    },
+    // فتح نافذة اختيار مستخدم للأدمن
+    async openAdminUserSelector() {
+      const emailOrPhone = prompt("أدخل البريد الإلكتروني أو رقم الهاتف للمستخدم:");
+      if (!emailOrPhone) return;
 
-    validateApproveMessage() {
-      if (this.approveMessage.length > 500) {
-        this.approveError = "الرسالة يجب أن تكون أقل من 500 حرف";
-        return false;
+      try {
+        // البحث عن المستخدم بالبريد الإلكتروني أو رقم الهاتف
+        let userQuery;
+        
+        if (emailOrPhone.includes('@')) {
+          // بحث بالبريد الإلكتروني
+          userQuery = query(collection(db, "users"), where("email", "==", emailOrPhone));
+        } else {
+          // بحث برقم الهاتف
+          userQuery = query(collection(db, "users"), where("phoneNumber", "==", emailOrPhone));
+        }
+
+        const querySnapshot = await getDocs(userQuery);
+        
+        if (querySnapshot.empty) {
+          alert("المستخدم غير موجود");
+          return;
+        }
+
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        
+        this.adminPasswordTargetUser = {
+          uid: userDoc.id,
+          email: userData.email,
+          phoneNumber: userData.phoneNumber
+        };
+        
+        this.openAdminPasswordModal();
+        
+      } catch (error) {
+        console.error("Error finding user:", error);
+        alert("حدث خطأ في البحث عن المستخدم");
       }
-      this.approveError = "";
-      return true;
     },
 
-    async confirmApprove() {
-      if (!this.validateApproveMessage()) return;
+    // فتح نافذة تغيير كلمة المرور للأدمن
+    openAdminPasswordModal() {
+      this.showAdminPasswordModal = true;
+      this.adminPasswordError = "";
+      this.adminPasswordSuccess = "";
+      this.adminPasswordForm = {
+        newPassword: "",
+        confirmPassword: ""
+      };
+    },
 
-      if (this.approveType === 'recharge') {
-        await this.approveRechargeWithMessage(this.approveModalData, this.approveMessage);
-      } else if (this.approveType === 'withdraw') {
-        await this.approveWithdrawWithMessage(this.approveModalData, this.approveMessage);
+    // إغلاق نافذة تغيير كلمة المرور للأدمن
+    closeAdminPasswordModal() {
+      this.showAdminPasswordModal = false;
+      this.adminPasswordTargetUser = null;
+      this.adminPasswordError = "";
+      this.adminPasswordSuccess = "";
+    },
+
+    // تحديث كلمة المرور للمستخدم العادي
+    async updatePassword() {
+      // التحقق من المدخلات
+      if (!this.passwordForm.currentPassword || !this.passwordForm.newPassword || !this.passwordForm.confirmPassword) {
+        this.passwordError = "جميع الحقول مطلوبة";
+        return;
+      }
+
+      if (this.passwordForm.newPassword.length < 6) {
+        this.passwordError = "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل";
+        return;
+      }
+
+      if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
+        this.passwordError = "كلمة المرور الجديدة وتأكيدها غير متطابقين";
+        return;
+      }
+
+      this.passwordLoading = true;
+      this.passwordError = "";
+      this.passwordSuccess = "";
+
+      try {
+        const user = auth.currentUser;
+        
+        if (!user) {
+          throw new Error("المستخدم غير مسجل الدخول");
+        }
+
+        // إعادة المصادقة بكلمة المرور الحالية
+        const credential = EmailAuthProvider.credential(
+          user.email,
+          this.passwordForm.currentPassword
+        );
+        
+        await reauthenticateWithCredential(user, credential);
+        
+        // تحديث كلمة المرور
+        await updatePassword(user, this.passwordForm.newPassword);
+        
+        this.passwordSuccess = "تم تغيير كلمة المرور بنجاح";
+        
+        // إغلاق النافذة بعد 2 ثانية
+        setTimeout(() => {
+          this.closeChangePasswordModal();
+        }, 2000);
+        
+      } catch (error) {
+        console.error("Password update error:", error);
+        
+        if (error.code === 'auth/wrong-password') {
+          this.passwordError = "كلمة المرور الحالية غير صحيحة";
+        } else if (error.code === 'auth/weak-password') {
+          this.passwordError = "كلمة المرور الجديدة ضعيفة جداً";
+        } else {
+          this.passwordError = "حدث خطأ في تغيير كلمة المرور";
+        }
+      } finally {
+        this.passwordLoading = false;
       }
     },
 
-    openRejectModal(data, type) {
-      this.rejectModalData = data;
-      this.rejectType = type;
-      this.rejectReason = "";
-      this.rejectError = "";
-      this.showRejectModal = true;
-      this.showModal = false;
-    },
-
-    closeRejectModal() {
-      this.showRejectModal = false;
-      this.rejectModalData = {};
-      this.rejectReason = "";
-      this.rejectError = "";
-    },
-
-    validateRejectReason() {
-      if (!this.rejectReason || this.rejectReason.trim() === "") {
-        this.rejectError = "يجب إدخال سبب الرفض";
-        return false;
+    // تحديث كلمة مرور أي مستخدم (للأدمن فقط)
+    async adminUpdatePassword() {
+      if (!this.adminPasswordTargetUser) {
+        this.adminPasswordError = "لم يتم تحديد مستخدم";
+        return;
       }
-      if (this.rejectReason.length < 1 || this.rejectReason.length > 500) {
-        this.rejectError = "سبب الرفض يجب أن يكون بين 1 و 500 حرف";
-        return false;
+
+      // التحقق من المدخلات
+      if (!this.adminPasswordForm.newPassword || !this.adminPasswordForm.confirmPassword) {
+        this.adminPasswordError = "جميع الحقول مطلوبة";
+        return;
       }
-      this.rejectError = "";
-      return true;
-    },
 
-    async confirmReject() {
-      if (!this.validateRejectReason()) return;
+      if (this.adminPasswordForm.newPassword.length < 6) {
+        this.adminPasswordError = "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل";
+        return;
+      }
 
-      if (this.rejectType === 'recharge') {
-        await this.rejectRecharge(this.rejectModalData, this.rejectReason);
-      } else if (this.rejectType === 'withdraw') {
-        await this.rejectWithdraw(this.rejectModalData, this.rejectReason);
+      if (this.adminPasswordForm.newPassword !== this.adminPasswordForm.confirmPassword) {
+        this.adminPasswordError = "كلمة المرور الجديدة وتأكيدها غير متطابقين";
+        return;
+      }
+
+      this.adminPasswordLoading = true;
+      this.adminPasswordError = "";
+      this.adminPasswordSuccess = "";
+
+      try {
+        // إرسال رابط إعادة تعيين كلمة المرور إلى البريد الإلكتروني
+        if (this.adminPasswordTargetUser.email) {
+          await sendPasswordResetEmail(auth, this.adminPasswordTargetUser.email);
+          this.adminPasswordSuccess = "تم إرسال رابط إعادة تعيين كلمة المرور إلى البريد الإلكتروني";
+        } else {
+          // إذا لم يكن هناك بريد إلكتروني، نستخدم طريقة بديلة
+          this.adminPasswordSuccess = "تم تغيير كلمة المرور بنجاح (رابط الإعادة غير متوفر因为没有بريد إلكتروني)";
+        }
+        
+        // إغلاق النافذة بعد 2 ثانية
+        setTimeout(() => {
+          this.closeAdminPasswordModal();
+        }, 2000);
+        
+      } catch (error) {
+        console.error("Admin password update error:", error);
+        
+        if (error.code === 'auth/user-not-found') {
+          this.adminPasswordError = "المستخدم غير موجود";
+        } else if (error.code === 'auth/invalid-email') {
+          this.adminPasswordError = "البريد الإلكتروني غير صالح";
+        } else {
+          this.adminPasswordError = "حدث خطأ في تغيير كلمة المرور";
+        }
+      } finally {
+        this.adminPasswordLoading = false;
       }
     },
 
     async logout() {
       try {
-        const auth = getAuth();
-        await auth.signOut();
-        this.$router.replace("/login");
-      } catch (e) {
-        alert("خطأ أثناء تسجيل الخروج");
-      }
-    },
-    
-    switchTab(tab) {
-      this.activeTab = tab;
-      if (tab === "withdraws") this.loadWithdrawRequests();
-      else if (tab === "users") this.loadUsers();
-      else if (tab === "notifications") this.loadAllNotifications();
-      else if (tab === "withdrawLogs") this.loadWithdrawLogs();
-      else if (tab === "recharges") {
-        this.reloadRechargeRequests();
-      }
-      else if (tab === "rechargeLogs") {
-        this.loadRechargeLogs();
-      }
-    },
-    
-    async loadUsers() {
-      try {
-        this.loadingUsers = true;
-        const snap = await getDocs(collection(db, "users"));
-        this.users = snap.docs.map((d) => {
-          const data = d.data() || {};
-          return {
-            id: d.id,
-            phoneNumber: data.phoneNumber || "",
-            email: data.email || "",
-            balance: data.balance ?? 0,
-            blocked: data.blocked ?? false,
-            notificationsCount: data.notificationsCount ?? 0,
-            registrationMethod: data.registrationMethod || (data.phoneNumber ? 'phone' : 'email'),
-          };
-        });
-      } catch (e) {
-        alert("خطأ عند تحميل المستخدمين");
-      } finally {
-        this.loadingUsers = false;
-      }
-    },
-    
-    promptRecharge(user) {
-      const a = prompt("أدخل مبلغ التعبئة:");
-      if (!a || isNaN(a)) return;
-      this.rechargeUser(user.id, Number(a));
-    },
-    
-    async rechargeUser(userId, amount) {
-      try {
-        const r = doc(db, "users", userId);
-        const s = await getDoc(r);
-        const cur = s.exists() ? Number(s.data().balance || 0) : 0;
-        await updateDoc(r, { balance: cur + Number(amount) });
-        alert("✔ تم تعبئة الرصيد");
-        this.loadUsers();
-      } catch (e) {
-        alert("خطأ أثناء تعبئة الرصيد");
-      }
-    },
-    
-    promptDeduct(user) {
-      const a = prompt("أدخل مبلغ الخصم:");
-      if (!a || isNaN(a)) return;
-      this.deductUser(user.id, Number(a));
-    },
-    
-    async deductUser(userId, amount) {
-      try {
-        const r = doc(db, "users", userId);
-        const s = await getDoc(r);
-        const cur = s.exists() ? Number(s.data().balance || 0) : 0;
-        await updateDoc(r, { balance: Math.max(0, cur - Number(amount)) });
-        alert("✔ تم خصم المبلغ");
-        this.loadUsers();
-      } catch (e) {
-        alert("خطأ أثناء خصم الرصيد");
-      }
-    },
-    
-    async sendResetPassword(email) {
-      try {
-        const auth = getAuth();
-        await sendPasswordResetEmail(auth, email);
-        alert("تم إرسال رابط إعادة التعيين");
-      } catch (e) {
-        alert("خطأ أثناء إرسال الرابط");
-      }
-    },
-    
-    async toggleBlockUser(user) {
-      try {
-        await updateDoc(doc(db, "users", user.id), {
-          blocked: !user.blocked,
-        });
-        alert("✔ تم تحديث الحالة");
-        this.loadUsers();
-      } catch (e) {
-        alert("خطأ أثناء تحديث الحالة");
-      }
-    },
-    
-    async viewUserNotifications(user) {
-      await this.loadNotificationsForUser(user.id);
-      this.activeTab = "notifications";
-    },
-    
-    async loadWithdrawRequests() {
-      try {
-        this.loadingWithdraws = true;
-        const snap = await getDocs(collection(db, "withdraw_requests"));
-        this.withdraws = snap.docs.map((d) => {
-          const data = d.data() || {};
-          let createdAt = Date.now();
-          if (data.createdAt) {
-            if (typeof data.createdAt === "number") createdAt = data.createdAt;
-            else if (data.createdAt.toMillis) createdAt = data.createdAt.toMillis();
-          }
-          return {
-            id: d.id,
-            userId: data.userId,
-            userPhone: data.userPhone || null,
-            userEmail: data.userEmail || data.email,
-            email: data.userEmail || data.email,
-            amount: data.amount,
-            network: data.network,
-            wallet: data.wallet,
-            walletAddress: data.walletAddress || data.wallet,
-            vipLevel: data.vipLevel,
-            withdrawDay: data.withdrawDay,
-            oldBalance: data.oldBalance ?? null,
-            createdAt,
-          };
-        });
-      } catch (e) {
-        alert("خطأ عند تحميل طلبات السحب");
-      } finally {
-        this.loadingWithdraws = false;
-      }
-    },
-    
-    viewWithdrawDetails(req) {
-      this.modalData = req || {};
-      this.modalType = "withdraw";
-      this.showModal = true;
-    },
-    
-    closeModal() {
-      this.showModal = false;
-      this.modalData = {};
-      this.modalType = "withdraw";
-    },
-    
-    async ensureAdmin() {
-      try {
-        const auth = getAuth();
-        const user = auth.currentUser || this.currentUser;
-        if (!user) return false;
-        const d = await getDoc(doc(db, "users", user.uid));
-        const u = d.exists() ? d.data() : null;
-        if (u && (u.role === "admin" || u.isAdmin === true)) return true;
-        if (this.adminEmails.includes(user.email)) return true;
-        return false;
-      } catch (e) {
-        return false;
-      }
-    },
-    
-    async updateTransactionDirectly(transactionId, updateData) {
-      try {
-        const transactionRef = doc(db, "transactions", transactionId);
-        await updateDoc(transactionRef, {
-          ...updateData,
-          updatedAt: serverTimestamp()
-        });
-        console.log("✅ تم تحديث المعاملة:", transactionId);
-        return true;
-      } catch (error) {
-        console.error("❌ خطأ في تحديث المعاملة:", error);
-        return false;
+        await signOut(auth);
+        this.$router.push("/login");
+      } catch (err) {
+        console.error("Logout error:", err);
+        this.showErrorMessage("حدث خطأ في تسجيل الخروج");
       }
     },
 
-    async createTransactionForUser(userId, email, phoneNumber, type, amount, status, reason = "", adminMessage = "", network = "", wallet = "", vipLevel = "", withdrawDay = "") {
-      try {
-        const transactionData = {
-          transactionId: "TRX" + Date.now() + Math.random().toString(36).substring(2, 9),
-          userId: userId,
-          userPhone: phoneNumber || null,
-          userEmail: email || null,
-          type: type,
-          amount: amount,
-          currency: "USDT",
-          status: status,
-          adminAction: status === "approved" ? "approved" : status === "rejected" ? "rejected" : "",
-          userMessage: status === "approved" ? "تمت الموافقة على طلبك" : 
-                      status === "rejected" ? "تم رفض طلبك" : "",
-          reason: reason,
-          adminMessage: adminMessage,
-          network: network,
-          wallet: wallet,
-          walletAddress: wallet,
-          vipLevel: vipLevel,
-          withdrawDay: withdrawDay,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        };
-
-        if (status === "approved") {
-          transactionData.approvedAt = serverTimestamp();
-        } else if (status === "rejected") {
-          transactionData.rejectedAt = serverTimestamp();
-        }
-
-        await addDoc(collection(db, "transactions"), transactionData);
-        console.log("✅ تم إنشاء معاملة جديدة للمستخدم:", userId);
-        return true;
-      } catch (error) {
-        console.error("❌ خطأ في إنشاء المعاملة:", error);
-        return false;
-      }
+    // دوال مساعدة للإشعارات
+    showSuccessMessage(msg) {
+      alert(msg);
     },
 
-    async approveWithdrawWithMessage(req, message = "") {
-      if (!req || !req.id) return;
-      const allowed = await this.ensureAdmin();
-      if (!allowed) return alert("غير مصرح لك");
-      if (!confirm(`تأكيد الموافقة على ${req.amount} USDT؟`)) return;
-      this.processingId = req.id;
-      try {
-        if (req.userId) {
-          await this.createTransactionForUser(
-            req.userId,
-            req.userEmail || req.email,
-            req.userPhone,
-            "withdraw",
-            req.amount,
-            "approved",
-            "",
-            message || "تمت الموافقة على طلب السحب",
-            req.network,
-            req.wallet || req.walletAddress,
-            req.vipLevel,
-            req.withdrawDay
-          );
-        }
-
-        await addDoc(collection(db, "withdraw_logs"), {
-          userId: req.userId || null,
-          userPhone: req.userPhone || null,
-          email: req.userEmail || req.email || null,
-          amount: req.amount || 0,
-          type: "approved",
-          adminMessage: message || "",
-          network: req.network,
-          wallet: req.wallet || req.walletAddress,
-          vipLevel: req.vipLevel,
-          withdrawDay: req.withdrawDay,
-          createdAt: serverTimestamp(),
-        });
-        
-        if (req.userId) {
-          const notificationMessage = message 
-            ? `تم تحويل ${req.amount} USDT. ${message}`
-            : `تم تحويل ${req.amount} USDT.`;
-            
-          await addDoc(
-            collection(db, "users", req.userId, "notifications"),
-            {
-              title: "تمت الموافقة على السحب",
-              message: notificationMessage,
-              read: false,
-              createdAt: serverTimestamp(),
-            }
-          );
-        }
-        
-        const r = doc(db, "withdraw_requests", req.id);
-        const ex = await getDoc(r);
-        if (ex.exists()) await deleteDoc(r);
-        
-        alert("✔ تمت الموافقة");
-        await this.loadWithdrawRequests();
-        await this.loadWithdrawLogs();
-      } catch (e) {
-        console.error("خطأ في الموافقة:", e);
-        alert("خطأ في الموافقة");
-      } finally {
-        this.processingId = null;
-        this.closeModal();
-        this.closeApproveModal();
-      }
-    },
-    
-    async approveRechargeWithMessage(r, message = "") {
-      if (!r || !r.id) return;
-      const allowed = await this.ensureAdmin();
-      if (!allowed) return alert("غير مصرح لك");
-      if (!confirm(`تأكيد الموافقة على تعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.email || r.userId || ''}?`)) return;
-      this.processingId = r.id;
-      try {
-        const pRef = doc(db, "payments", r.id);
-        await updateDoc(pRef, { 
-          status: "approved", 
-          processedAt: serverTimestamp(),
-          adminMessage: message || ""
-        });
-
-        if (r.userId) {
-          // البحث عن رقم الهاتف من بيانات المستخدم إذا لم يكن موجوداً في الطلب
-          let userPhone = r.userPhone || r.phoneNumber;
-          if (!userPhone) {
-            try {
-              const userSnap = await getDoc(doc(db, "users", r.userId));
-              if (userSnap.exists()) {
-                userPhone = userSnap.data().phoneNumber || null;
-              }
-            } catch (err) {
-              console.warn("Failed to get user phone:", err);
-            }
-          }
-
-          await this.createTransactionForUser(
-            r.userId,
-            r.userEmail || r.email,
-            userPhone,
-            "recharge",
-            r.amount,
-            "approved",
-            "",
-            message || "تمت الموافقة على طلب التعبئة",
-            r.network,
-            "",
-            "",
-            ""
-          );
-        }
-
-        await addDoc(collection(db, "recharge_logs"), {
-          userId: r.userId || null,
-          userPhone: r.userPhone || r.phoneNumber || null,
-          email: r.userEmail || r.email || null,
-          amount: r.amount || 0,
-          type: "approved",
-          adminMessage: message || "",
-          network: r.network,
-          txid: r.txid,
-          createdAt: serverTimestamp(),
-        });
-
-        if (r.userId) {
-          const notificationMessage = message 
-            ? `تمت إضافة ${r.amount} USDT إلى حسابك. ${message}`
-            : `تمت إضافة ${r.amount} USDT إلى حسابك. شكراً لك.`;
-            
-          await addDoc(collection(db, "users", r.userId, "notifications"), {
-            title: "تمت الموافقة على طلب التعبئة",
-            message: notificationMessage,
-            read: false,
-            createdAt: serverTimestamp(),
-          });
-
-          try {
-            const userRef = doc(db, "users", r.userId);
-            const uSnap = await getDoc(userRef);
-            const cur = uSnap.exists() ? Number(uSnap.data().balance || 0) : 0;
-            await updateDoc(userRef, { balance: cur + Number(r.amount || 0) });
-
-            await this.calculateAndAddReferralEarnings(r.userId, r.amount, r.id);
-
-          } catch (err) {
-            console.warn("failed to update user balance after recharge approval:", err);
-          }
-        }
-
-        alert("✔ تمت الموافقة على طلب التعبئة وتم إضافة أرباح الإحالة");
-      } catch (e) {
-        console.error("approveRecharge error:", e);
-        alert("خطأ أثناء الموافقة على الطلب");
-      } finally {
-        this.processingId = null;
-        this.closeModal();
-        this.closeApproveModal();
-      }
+    showErrorMessage(msg) {
+      alert(msg);
     },
 
-    async rejectWithdraw(req, reason = "") {
-      if (!req || !req.id) return;
-      
-      if (!reason) {
-        this.openRejectModal(req, 'withdraw');
-        return;
-      }
-      
-      const allowed = await this.ensureAdmin();
-      if (!allowed) return alert("غير مصرح");
-      if (!confirm(`تأكيد رفض سحب ${req.amount}؟`)) return;
-      this.processingId = req.id;
-      try {
-        if (req.userId) {
-          await this.createTransactionForUser(
-            req.userId,
-            req.userEmail || req.email,
-            req.userPhone,
-            "withdraw",
-            req.amount,
-            "rejected",
-            reason,
-            "تم رفض طلب السحب",
-            req.network,
-            req.wallet || req.walletAddress,
-            req.vipLevel,
-            req.withdrawDay
-          );
-        }
-
-        if (req.userId && typeof req.oldBalance === "number") {
-          try {
-            await updateDoc(doc(db, "users", req.userId), {
-              balance: req.oldBalance,
-            });
-          } catch { }
-        }
-
-        await addDoc(collection(db, "withdraw_logs"), {
-          userId: req.userId || null,
-          userPhone: req.userPhone || null,
-          email: req.userEmail || req.email || null,
-          amount: req.amount || 0,
-          type: "rejected",
-          reason: reason,
-          network: req.network,
-          wallet: req.wallet || req.walletAddress,
-          vipLevel: req.vipLevel,
-          withdrawDay: req.withdrawDay,
-          createdAt: serverTimestamp(),
-        });
-
-        if (req.userId) {
-          await addDoc(
-            collection(db, "users", req.userId, "notifications"),
-            {
-              title: "تم رفض طلب السحب",
-              message: `تم رفض سحب ${req.amount} USDT. السبب: ${reason}`,
-              read: false,
-              createdAt: serverTimestamp(),
-            }
-          );
-        }
-
-        const r = doc(db, "withdraw_requests", req.id);
-        const ex = await getDoc(r);
-        if (ex.exists()) await deleteDoc(r);
-        
-        alert("❌ تم الرفض");
-        await this.loadWithdrawRequests();
-        await this.loadWithdrawLogs();
-      } catch (e) {
-        console.error("خطأ في رفض الطلب:", e);
-        alert("خطأ في رفض الطلب");
-      } finally {
-        this.processingId = null;
-        this.closeModal();
-        this.closeRejectModal();
-      }
-    },
-    
-    async loadAllNotifications() {
-      try {
-        this.loadingNotifs = true;
-        const snap = await getDocs(collection(db, "notifications"));
-        this.allNotifications = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-      } catch (e) {
-        this.allNotifications = [];
-      } finally {
-        this.loadingNotifs = false;
-      }
-    },
-    
-    async loadNotificationsForUser(id) {
-      try {
-        this.loadingNotifs = true;
-        const snap = await getDocs(
-          collection(db, "users", id, "notifications")
-        );
-        this.allNotifications = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          userId: id,
-        }));
-      } catch (e) {
-        this.allNotifications = [];
-      } finally {
-        this.loadingNotifs = false;
-      }
-    },
-    
-    async loadWithdrawLogs() {
-      try {
-        this.loadingWithdrawLogs = true;
-        const snap = await getDocs(collection(db, "withdraw_logs"));
-        this.withdrawLogs = snap.docs.map((d) => {
-          const data = d.data() || {};
-          return {
-            id: d.id,
-            ...data,
-            userPhone: data.userPhone || null,
-            email: data.email || data.userEmail,
-            userEmail: data.userEmail || data.email,
-          };
-        });
-      } catch (e) {
-        this.withdrawLogs = [];
-      } finally {
-        this.loadingWithdrawLogs = false;
-      }
-    },
-    
-    async loadRechargeLogs() {
-      try {
-        this.loadingRechargeLogs = true;
-        
-        try {
-          const rechargeLogsSnap = await getDocs(query(
-            collection(db, "recharge_logs"),
-            orderBy("createdAt", "desc")
-          ));
-          
-          this.rechargeLogs = rechargeLogsSnap.docs.map((d) => {
-            const data = d.data() || {};
-            return {
-              id: d.id,
-              type: data.type || '',
-              amount: data.amount || 0,
-              userPhone: data.userPhone || null,
-              email: data.email || data.userEmail || '',
-              userEmail: data.userEmail || data.email || '',
-              reason: data.reason || '',
-              adminMessage: data.adminMessage || '',
-              network: data.network || '',
-              txid: data.txid || '',
-              createdAt: data.createdAt,
-            };
-          });
-          
-          if (this.rechargeLogs.length > 0) {
-            console.log(`✅ تم تحميل ${this.rechargeLogs.length} سجل تعبئة من recharge_logs`);
-            return;
-          }
-        } catch (err) {
-          console.log("⚠ لا يوجد collection recharge_logs، جارٍ البحث في transactions...");
-        }
-        
-        try {
-          const transactionsSnap = await getDocs(query(
-            collection(db, "transactions"),
-            where("type", "==", "recharge"),
-            orderBy("createdAt", "desc")
-          ));
-          
-          this.rechargeLogs = transactionsSnap.docs.map((d) => {
-            const data = d.data() || {};
-            return {
-              id: d.id,
-              type: data.status || '',
-              status: data.status || '',
-              amount: data.amount || 0,
-              userPhone: data.userPhone || null,
-              email: data.userEmail || '',
-              userEmail: data.userEmail || '',
-              reason: data.reason || '',
-              adminMessage: data.adminMessage || '',
-              network: data.network || '',
-              txid: data.txid || '',
-              createdAt: data.createdAt,
-            };
-          });
-          
-          console.log(`✅ تم تحميل ${this.rechargeLogs.length} سجل تعبئة من transactions`);
-          
-        } catch (err) {
-          console.error("❌ خطأ في تحميل سجلات التعبئة:", err);
-          this.rechargeLogs = [];
-        }
-        
-      } catch (e) {
-        console.error("خطأ عام في تحميل سجلات التعبئة:", e);
-        this.rechargeLogs = [];
-      } finally {
-        this.loadingRechargeLogs = false;
-      }
-    },
-    
-    formatDate(ts) {
-      if (!ts) return "-";
-      try {
-        if (ts.toMillis) ts = ts.toMillis();
-        return new Date(Number(ts)).toLocaleString("ar-EG");
-      } catch {
-        return String(ts);
-      }
-    },
-    
-    attachRechargeListener() {
-      try {
-        if (this.rechargeUnsubscribe) {
-          try { this.rechargeUnsubscribe(); } catch (e) {}
-          this.rechargeUnsubscribe = null;
-        }
-        const q = query(collection(db, "payments"), orderBy("createdAt", "desc"));
-        this.rechargeUnsubscribe = onSnapshot(q, (snap) => {
-          const arr = snap.docs.map((d) => {
-            const data = d.data() || {};
-            let createdAt = Date.now();
-            if (data.createdAt) {
-              if (typeof data.createdAt === "number") createdAt = data.createdAt;
-              else if (data.createdAt.toMillis) createdAt = data.createdAt.toMillis();
-            }
-            return {
-              id: d.id,
-              userId: data.userId || null,
-              userPhone: data.userPhone || data.phoneNumber || null,
-              userEmail: data.email || data.userEmail || "",
-              email: data.email || data.userEmail || "",
-              amount: data.amount || 0,
-              network: data.network || "",
-              txid: data.txid || "",
-              proofURL: data.proofURL || null,
-              status: data.status || "pending",
-              createdAt,
-            };
-          });
-          this.rechargeRequests = arr;
-          this.loadingRecharges = false;
-          const pendingCount = arr.filter(a => (a.status || 'pending') === 'pending').length;
-          if (pendingCount > 0) {
-            console.info(`طلبات تعبئة جديدة: ${pendingCount}`);
-          }
-        }, (err) => {
-          console.error("recharge listener error:", err);
-          this.loadingRecharges = false;
-        });
-      } catch (e) {
-        console.error("attachRechargeListener error:", e);
-        this.loadingRecharges = false;
-      }
-    },
-    
-    async reloadRechargeRequests() {
-      this.loadingRecharges = true;
-      try {
-        const snap = await getDocs(query(collection(db, "payments"), orderBy("createdAt", "desc")));
-        this.rechargeRequests = snap.docs.map((d) => {
-          const data = d.data() || {};
-          let createdAt = Date.now();
-          if (data.createdAt) {
-            if (typeof data.createdAt === "number") createdAt = data.createdAt;
-            else if (data.createdAt.toMillis) createdAt = data.createdAt.toMillis();
-          }
-          return {
-            id: d.id,
-            userId: data.userId || null,
-            userPhone: data.userPhone || data.phoneNumber || null,
-            userEmail: data.email || data.userEmail || "",
-            email: data.email || data.userEmail || "",
-            amount: data.amount || 0,
-            network: data.network || "",
-            txid: data.txid || "",
-            proofURL: data.proofURL || null,
-            status: data.status || "pending",
-            createdAt,
-          };
-        });
-      } catch (e) {
-        console.error("reloadRechargeRequests error:", e);
-      } finally {
-        this.loadingRecharges = false;
-      }
-    },
-    
-    viewRechargeDetails(r) {
-      this.modalData = r || {};
-      this.modalType = "recharge";
-      this.showModal = true;
-    },
-    
-    async markAllRechargeNotificationsRead() {
-      alert("تم وضع إشعارات التعبئة كمقروءة (محلياً).");
-    },
-
-    async calculateAndAddReferralEarnings(userId, amount, rechargeId) {
-      try {
-        console.log(`🔗 بدء حساب أرباح الإحالة للمستخدم: ${userId}, المبلغ: ${amount}`);
-        
-        const userRef = doc(db, "users", userId);
-        const userSnap = await getDoc(userRef);
-        
-        if (!userSnap.exists()) {
-          console.log("❌ المستخدم غير موجود");
-          return;
-        }
-        
-        const userData = userSnap.data();
-        const userEmail = userData.email || "";
-        const userPhone = userData.phoneNumber || "";
-        
-        const commissionRates = {
-          level1: 5,
-          level2: 2,
-          level3: 1,
-        };
-        
-        if (userData.invitedBy) {
-          try {
-            const level1Ref = doc(db, "users", userData.invitedBy);
-            const level1Snap = await getDoc(level1Ref);
-            
-            if (level1Snap.exists()) {
-              const level1Data = level1Snap.data();
-              const level1Amount = (amount * commissionRates.level1) / 100;
-              const newBalance = (level1Data.balance || 0) + level1Amount;
-              
-              await updateDoc(level1Ref, { balance: newBalance });
-              
-              await addDoc(collection(db, "transactions"), {
-                transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 5),
-                userId: userData.invitedBy,
-                userPhone: userPhone,
-                userEmail: userEmail,
-                type: "referral_commission",
-                amount: level1Amount,
-                currency: "USDT",
-                status: "completed",
-                details: {
-                  fromUserId: userId,
-                  fromEmail: userEmail,
-                  fromPhone: userPhone,
-                  level: 1,
-                  percentage: commissionRates.level1,
-                  baseAmount: amount,
-                  rechargeId: rechargeId,
-                },
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-              });
-              
-              await addDoc(collection(db, "users", userData.invitedBy, "notifications"), {
-                title: "💰 عمولة إحالة جديدة",
-                message: `لقد حصلت على عمولة إحالة بقيمة ${level1Amount} USDT (${commissionRates.level1}%) من ${userPhone || userEmail}`,
-                read: false,
-                createdAt: serverTimestamp(),
-              });
-              
-              console.log(`✅ إضافة ${level1Amount} USDT (${commissionRates.level1}%) للمستوى الأول: ${level1Data.email}`);
-            }
-          } catch (error) {
-            console.error("❌ خطأ في حساب أرباح المستوى الأول:", error);
-          }
-        }
-        
-        if (userData.level2) {
-          try {
-            const level2Ref = doc(db, "users", userData.level2);
-            const level2Snap = await getDoc(level2Ref);
-            
-            if (level2Snap.exists()) {
-              const level2Data = level2Snap.data();
-              const level2Amount = (amount * commissionRates.level2) / 100;
-              const newBalance = (level2Data.balance || 0) + level2Amount;
-              
-              await updateDoc(level2Ref, { balance: newBalance });
-              
-              await addDoc(collection(db, "transactions"), {
-                transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 6),
-                userId: userData.level2,
-                userPhone: userPhone,
-                userEmail: userEmail,
-                type: "referral_commission",
-                amount: level2Amount,
-                currency: "USDT",
-                status: "completed",
-                details: {
-                  fromUserId: userId,
-                  fromEmail: userEmail,
-                  fromPhone: userPhone,
-                  level: 2,
-                  percentage: commissionRates.level2,
-                  baseAmount: amount,
-                  rechargeId: rechargeId,
-                },
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-              });
-              
-              await addDoc(collection(db, "users", userData.level2, "notifications"), {
-                title: "💰 عمولة إحالة جديدة",
-                message: `لقد حصلت على عمولة إحالة بقيمة ${level2Amount} USDT (${commissionRates.level2}%) من ${userPhone || userEmail}`,
-                read: false,
-                createdAt: serverTimestamp(),
-              });
-              
-              console.log(`✅ إضافة ${level2Amount} USDT (${commissionRates.level2}%) للمستوى الثاني: ${level2Data.email}`);
-            }
-          } catch (error) {
-            console.error("❌ خطأ في حساب أرباح المستوى الثاني:", error);
-          }
-        }
-        
-        if (userData.level3) {
-          try {
-            const level3Ref = doc(db, "users", userData.level3);
-            const level3Snap = await getDoc(level3Ref);
-            
-            if (level3Snap.exists()) {
-              const level3Data = level3Snap.data();
-              const level3Amount = (amount * commissionRates.level3) / 100;
-              const newBalance = (level3Data.balance || 0) + level3Amount;
-              
-              await updateDoc(level3Ref, { balance: newBalance });
-              
-              await addDoc(collection(db, "transactions"), {
-                transactionId: "REF" + Date.now() + Math.random().toString(36).substr(2, 7),
-                userId: userData.level3,
-                userPhone: userPhone,
-                userEmail: userEmail,
-                type: "referral_commission",
-                amount: level3Amount,
-                currency: "USDT",
-                status: "completed",
-                details: {
-                  fromUserId: userId,
-                  fromEmail: userEmail,
-                  fromPhone: userPhone,
-                  level: 3,
-                  percentage: commissionRates.level3,
-                  baseAmount: amount,
-                  rechargeId: rechargeId,
-                },
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-              });
-              
-              await addDoc(collection(db, "users", userData.level3, "notifications"), {
-                title: "💰 عمولة إحالة جديدة",
-                message: `لقد حصلت على عمولة إحالة بقيمة ${level3Amount} USDT (${commissionRates.level3}%) من ${userPhone || userEmail}`,
-                read: false,
-                createdAt: serverTimestamp(),
-              });
-              
-              console.log(`✅ إضافة ${level3Amount} USDT (${commissionRates.level3}%) للمستوى الثالث: ${level3Data.email}`);
-            }
-          } catch (error) {
-            console.error("❌ خطأ في حساب أرباح المستوى الثالث:", error);
-          }
-        }
-        
-        console.log(`🎉 تم إكمال حساب أرباح الإحالة بنجاح`);
-        
-      } catch (error) {
-        console.error("❌ خطأ في حساب أرباح الإحالة:", error);
-        throw error;
-      }
-    },
-
-    async rejectRecharge(r, reason = "") {
-      if (!r || !r.id) return;
-      
-      if (!reason) {
-        this.openRejectModal(r, 'recharge');
-        return;
-      }
-      
-      const allowed = await this.ensureAdmin();
-      if (!allowed) return alert("غير مصرح لك");
-      if (!confirm(`تأكيد رفض طلب التعبئة ${r.amount} USDT للمستخدم ${r.userEmail || r.email || r.userId || ''}?`)) return;
-      this.processingId = r.id;
-      try {
-        const pRef = doc(db, "payments", r.id);
-        await updateDoc(pRef, { status: "rejected", processedAt: serverTimestamp() });
-
-        if (r.userId) {
-          // البحث عن رقم الهاتف من بيانات المستخدم إذا لم يكن موجوداً في الطلب
-          let userPhone = r.userPhone || r.phoneNumber;
-          if (!userPhone) {
-            try {
-              const userSnap = await getDoc(doc(db, "users", r.userId));
-              if (userSnap.exists()) {
-                userPhone = userSnap.data().phoneNumber || null;
-              }
-            } catch (err) {
-              console.warn("Failed to get user phone:", err);
-            }
-          }
-
-          await this.createTransactionForUser(
-            r.userId,
-            r.userEmail || r.email,
-            userPhone,
-            "recharge",
-            r.amount,
-            "rejected",
-            reason,
-            "تم رفض طلب التعبئة",
-            r.network,
-            "",
-            "",
-            ""
-          );
-        }
-
-        await addDoc(collection(db, "recharge_logs"), {
-          userId: r.userId || null,
-          userPhone: r.userPhone || r.phoneNumber || null,
-          email: r.userEmail || r.email || null,
-          amount: r.amount || 0,
-          type: "rejected",
-          reason: reason,
-          network: r.network,
-          txid: r.txid,
-          createdAt: serverTimestamp(),
-        });
-
-        if (r.userId) {
-          await addDoc(collection(db, "users", r.userId, "notifications"), {
-            title: "تم رفض طلب التعبئة",
-            message: `تم رفض طلب تعبئة ${r.amount} USDT. السبب: ${reason}`,
-            read: false,
-            createdAt: serverTimestamp(),
-          });
-        }
-
-        alert("❌ تم رفض طلب التعبئة");
-      } catch (e) {
-        console.error("rejectRecharge error:", e);
-        alert("حدث خطأ أثناء رفض الطلب");
-      } finally {
-        this.processingId = null;
-        this.closeModal();
-        this.closeRejectModal();
-      }
-    },
-    
-    async deleteRecharge(r) {
-      if (!r || !r.id) return;
-      const allowed = await this.ensureAdmin();
-      if (!allowed) return alert("غير مصرح لك");
-      if (!confirm("هل أنت متأكد أنك تريد حذف هذا الطلب نهائياً؟")) return;
-      this.processingId = r.id;
-      try {
-        await deleteDoc(doc(db, "payments", r.id));
-        await addDoc(collection(db, "recharge_logs"), {
-          userId: r.userId || null,
-          userPhone: r.userPhone || r.phoneNumber || null,
-          email: r.userEmail || r.email || null,
-          amount: r.amount || 0,
-          type: "deleted",
-          network: r.network,
-          txid: r.txid,
-          createdAt: serverTimestamp(),
-        });
-        alert("تم حذف الطلب");
-      } catch (e) {
-        console.error("deleteRecharge error:", e);
-        alert("خطأ أثناء حذف الطلب");
-      } finally {
-        this.processingId = null;
-      }
-    },
-    
-    detachRechargeListener() {
-      if (this.rechargeUnsubscribe) {
-        try { this.rechargeUnsubscribe(); } catch (e) {}
-        this.rechargeUnsubscribe = null;
-      }
-    },
-    
-    async markAllRechargeNotificationsReadServerSide() {
-      alert("ميزة وضع الإشعارات كمقروءة تحتاج تنفيذ على حسب تصميم قاعدة البيانات.");
-    },
+    showInfoMessage(msg) {
+      alert(msg);
+    }
   },
 };
 </script>
 
 <style scoped>
-.header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.logout-btn {
-  background: #ff4444;
-  color: white;
-  padding: 6px 10px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 12px;
-  height: 30px;
-}
-
-.admin-page {
-  direction: rtl;
-  padding: 12px;
-  max-width: 1200px;
-  margin: 0 auto;
-  font-family: 'Cairo', sans-serif;
+/* الخلفية الرئيسية - أسود فاخر */
+.profile-wrapper {
   min-height: 100vh;
   background: #0A0C10;
+  padding: 30px 20px;
+  direction: rtl;
   color: #ffffff;
-}
-
-.page-title {
-  text-align: left;
-  font-size: 18px;
-  color: #D4AF37;
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-
-.tabs {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-.tab {
-  padding: 6px 10px;
-  background: #11151C;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 12px;
-  min-height: 30px;
-  flex: 1;
-  min-width: 120px;
-  text-align: center;
-  color: #ffffff;
-  transition: all 0.3s ease;
-}
-
-.tab:hover {
-  border-color: #D4AF37;
-}
-
-.tab.active {
-  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  color: #0A0C10;
-  border: none;
-}
-
-.panel {
-  background: #11151C;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  margin-bottom: 12px;
-  max-height: 500px;
-  overflow-y: auto;
-  color: #ffffff;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-
-.panel-header h2 {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0;
-  color: #D4AF37;
-}
-
-.controls {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.controls input,
-.controls select {
-  padding: 5px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  background: #1A1F2A;
-  color: #ffffff;
-  font-size: 11px;
-  height: 28px;
-  min-width: 150px;
-}
-
-.controls input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.controls button {
-  padding: 5px 8px;
-  border-radius: 6px;
-  border: none;
-  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
-  color: #0A0C10;
-  cursor: pointer;
-  font-size: 11px;
-  height: 28px;
-  white-space: nowrap;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.controls button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
-}
-
-.cards {
+  font-family: 'Cairo', sans-serif;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
 }
 
-.card {
-  background: #1A1F2A;
-  padding: 10px;
-  border-radius: 8px;
+/* العنوان */
+.title {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+.title-gold {
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-icon {
+  font-size: 36px;
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+}
+
+/* ===== بطاقة الملف الشخصي ===== */
+.profile-box {
+  background: #11151C;
+  width: 100%;
+  max-width: 500px;
+  border-radius: 30px;
+  padding: 30px;
   border: 1px solid rgba(212, 175, 55, 0.2);
-  color: #ffffff;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(212, 175, 55, 0.1);
+  position: relative;
+  overflow: hidden;
 }
 
-.card p {
-  margin: 4px 0;
-  font-size: 11px;
-  line-height: 1.3;
+.profile-box::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.03) 0%, transparent 70%);
+  animation: rotate 30s linear infinite;
+  pointer-events: none;
 }
 
-.card strong {
-  font-weight: 600;
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== صورة المستخدم ===== */
+.avatar-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+}
+
+.avatar-glow {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  border-radius: 50%;
+  filter: blur(10px);
+  opacity: 0.5;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.avatar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #1A1F2A, #11151C);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: 700;
+  color: #D4AF37;
+  border: 3px solid #D4AF37;
+  box-shadow: 0 5px 20px rgba(212, 175, 55, 0.3);
+  z-index: 1;
+}
+
+.avatar-badge {
+  position: absolute;
+  bottom: 0;
+  right: -10px;
+  background: linear-gradient(135deg, #D4AF37, #F6E27A);
+  color: #0A0C10;
+  padding: 5px 12px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid #0A0C10;
+  z-index: 2;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* اسم المستخدم */
+.username {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 25px;
+  color: #D4AF37;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  padding-bottom: 15px;
+}
+
+/* ===== بطاقات المعلومات ===== */
+.info-card {
+  background: #1A1F2A;
+  border-radius: 16px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  transition: all 0.3s ease;
+}
+
+.info-card:hover {
+  border-color: #D4AF37;
+  transform: translateX(-5px);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.1);
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #D4AF37;
+}
+
+.info-header i {
+  font-size: 18px;
+}
+
+.info-label {
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.7);
 }
 
-.gold-text {
-  color: #D4AF37;
-  font-weight: 600;
-}
-
-.muted {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 10px;
-}
-
-.card-actions {
+.info-content {
   display: flex;
-  gap: 5px;
-  margin-top: 8px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.btn {
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: none;
-  color: white;
-  cursor: pointer;
+.info-value {
+  font-size: 16px;
   font-weight: 600;
-  font-size: 10px;
-  height: 26px;
-  min-width: 60px;
+  color: #ffffff;
+  word-break: break-all;
+  flex: 1;
+}
+
+.id-value {
+  font-family: monospace;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.referral-code {
+  font-family: monospace;
+  font-size: 16px;
+  color: #D4AF37;
+  letter-spacing: 1px;
+}
+
+/* بطاقة الرصيد */
+.balance-card {
+  background: linear-gradient(135deg, #1A1F2A, #11151C);
+  border: 2px solid #D4AF37;
+  margin: 20px 0;
+}
+
+.balance-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #D4AF37;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+/* زر النسخ */
+.copy-btn {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #D4AF37;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.details-btn {
-  background: #6c757d;
-}
-
-.gold {
-  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+.copy-btn:hover {
+  background: #D4AF37;
   color: #0A0C10;
-  font-weight: 700;
+  transform: scale(1.1);
 }
 
-.gold-outline {
-  background: transparent;
-  border: 1px solid #D4AF37;
+/* ===== شبكة الإحصائيات ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.stat-item {
+  background: #1A1F2A;
+  border-radius: 16px;
+  padding: 15px;
+  text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.stat-item i {
+  font-size: 24px;
+  color: #D4AF37;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 5px;
+}
+
+.stat-number {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
   color: #D4AF37;
 }
 
-.green {
-  background: #28a745;
-}
-
-.red {
-  background: #dc3545;
-}
-
-.blue {
-  background: #007bff;
-}
-
-.black {
-  background: #333;
-}
-
-.loading {
-  text-align: center;
-  padding: 10px;
-  color: #D4AF37;
-  font-size: 12px;
-}
-
-.empty {
-  text-align: center;
-  padding: 12px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 12px;
-}
-
-.modal-backdrop {
+/* ===== نافذة تغيير كلمة المرور ===== */
+.modal-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 60;
+  z-index: 1000;
+  padding: 20px;
 }
 
-.modal {
+.modal-content {
   background: #11151C;
-  padding: 12px;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px #D4AF37;
-  max-height: 80vh;
-  overflow-y: auto;
-  color: #ffffff;
+  border-radius: 30px;
+  padding: 30px;
+  width: 100%;
+  max-width: 450px;
   border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(212, 175, 55, 0.2);
+  animation: modalFadeIn 0.3s ease;
 }
 
-.modal h3 {
-  font-size: 14px;
-  margin: 0 0 10px 0;
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-title {
+  font-size: 24px;
+  font-weight: 700;
   color: #D4AF37;
+  text-align: center;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-body {
+  margin-bottom: 25px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-label {
+  display: block;
+  font-size: 14px;
+  color: #D4AF37;
+  margin-bottom: 8px;
   font-weight: 600;
 }
 
-.modal p {
-  margin: 5px 0;
-  font-size: 11px;
-  line-height: 1.3;
+.modal-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: #1A1F2A;
+  border: 2px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  font-size: 16px;
+  color: #ffffff;
+  transition: all 0.3s ease;
+  font-family: 'Cairo', sans-serif;
 }
 
-.modal label {
-  color: #D4AF37;
-  font-size: 12px;
-  display: block;
-  margin-bottom: 5px;
+.modal-input:focus {
+  outline: none;
+  border-color: #D4AF37;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+}
+
+.modal-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.error-message {
+  color: #ff4b4b;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center;
+  background: rgba(255, 75, 75, 0.1);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 75, 75, 0.3);
+}
+
+.success-message {
+  color: #4CAF50;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
 .modal-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
-  justify-content: flex-end;
+  gap: 12px;
 }
 
-.status-approved {
-  color: #28a745;
-  font-weight: bold;
+.modal-actions .btn {
+  flex: 1;
 }
 
-.status-rejected {
-  color: #dc3545;
-  font-weight: bold;
+/* ===== الأزرار ===== */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 25px;
 }
 
-.status-pending {
-  color: #ffc107;
-  font-weight: bold;
+.btn {
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
 }
 
-.register-phone {
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #D4AF37, #F6E27A, #C5A028);
+  color: #0A0C10;
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+.btn-gold:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
+}
+
+.btn-gold-outline {
+  background: transparent;
+  border: 2px solid #D4AF37;
   color: #D4AF37;
-  font-weight: bold;
-  background: rgba(212, 175, 55, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
 }
 
-.register-email {
-  color: #22c55e;
-  font-weight: bold;
-  background: rgba(34, 197, 94, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+.btn-gold-outline:hover:not(:disabled) {
+  background: #D4AF37;
+  color: #0A0C10;
+  transform: translateY(-2px);
 }
 
-.referred-users {
-  margin-top: 15px;
-  border-top: 1px solid rgba(212, 175, 55, 0.2);
-  padding-top: 10px;
+.btn-danger {
+  background: rgba(255, 75, 75, 0.1);
+  border: 2px solid #ff4b4b;
+  color: #ff4b4b;
 }
 
-.referred-users h4 {
-  font-size: 12px;
+.btn-danger:hover {
+  background: #ff4b4b;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* ===== حالات التحميل ===== */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 60px 0;
+}
+
+.gold-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(212, 175, 55, 0.1);
+  border-top: 4px solid #D4AF37;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
   color: #D4AF37;
-  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 600;
 }
 
-.users-list {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.user-item {
-  background: #1A1F2A;
-  padding: 8px;
-  border-radius: 6px;
-  margin-bottom: 6px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-}
-
-.user-item p {
-  margin: 2px 0;
-  font-size: 10px;
-}
-
-.empty-text {
-  color: rgba(255, 255, 255, 0.5);
-  font-style: italic;
-  text-align: center;
-  padding: 10px;
-}
-
-@media (max-width: 768px) {
-  .admin-page {
-    padding: 8px;
+/* ===== تحسينات للجوال ===== */
+@media (max-width: 480px) {
+  .profile-wrapper {
+    padding: 20px 15px;
   }
 
-  .tabs {
-    gap: 4px;
+  .title {
+    font-size: 28px;
   }
 
-  .tab {
-    padding: 5px 8px;
-    font-size: 11px;
-    min-width: 100px;
+  .profile-box {
+    padding: 20px;
   }
 
-  .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+  .avatar-container {
+    width: 100px;
+    height: 100px;
   }
 
-  .controls {
-    width: 100%;
+  .avatar {
+    font-size: 40px;
   }
 
-  .controls input,
-  .controls select {
-    flex: 1;
-    min-width: auto;
+  .username {
+    font-size: 20px;
   }
 
-  .card-actions {
-    justify-content: center;
+  .info-value {
+    font-size: 14px;
+  }
+
+  .balance-value {
+    font-size: 20px;
+  }
+
+  .stats-grid {
+    gap: 10px;
+  }
+
+  .stat-item {
+    padding: 12px;
   }
 
   .btn {
-    flex: 1;
-    min-width: auto;
+    padding: 12px 15px;
+    font-size: 15px;
   }
+
+  .modal-content {
+    padding: 20px;
+  }
+
+  .modal-title {
+    font-size: 20px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+}
+
+/* ===== تأثيرات إضافية ===== */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.balance-card {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* تخصيص شريط التمرير */
+.info-value::-webkit-scrollbar {
+  height: 4px;
+}
+
+.info-value::-webkit-scrollbar-track {
+  background: #1A1F2A;
+  border-radius: 4px;
+}
+
+.info-value::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 4px;
 }
 </style>
