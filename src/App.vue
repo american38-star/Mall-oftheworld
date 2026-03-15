@@ -296,7 +296,7 @@ export default {
 
       showAd: false,
       showOfferMessage: false,
-      hasNewOffer: true, // متغير للإشعار الأحمر
+      hasNewOffer: true,
 
       vipPlans: [
         { level: 'VIP 1', recharge: '0', daily: '0.3', monthly: '9', yearly: '109.5', tasks: '1', status: 'مفعل الآن' },
@@ -332,7 +332,6 @@ export default {
         { name: "العربي", code: "AR" }
       ],
 
-      // متغيرات السحب
       dragging: false,
       currentButton: null,
       startX: 0,
@@ -359,12 +358,10 @@ export default {
       }
     });
 
-    // تحميل المواقع المحفوظة للأزرار
     this.loadButtonPositions();
   },
 
   mounted() {
-    // إضافة مستمعي الأحداث للسحب
     document.addEventListener('mousemove', this.onDrag);
     document.addEventListener('mouseup', this.stopDrag);
     document.addEventListener('touchmove', this.onDrag, { passive: false });
@@ -373,7 +370,6 @@ export default {
   },
 
   beforeDestroy() {
-    // إزالة مستمعي الأحداث
     document.removeEventListener('mousemove', this.onDrag);
     document.removeEventListener('mouseup', this.stopDrag);
     document.removeEventListener('touchmove', this.onDrag);
@@ -421,7 +417,7 @@ export default {
     toggleOfferMessage() {
       this.showOfferMessage = !this.showOfferMessage;
       if (this.showOfferMessage) {
-        this.hasNewOffer = false; // إخفاء الإشعار عند فتح الرسالة
+        this.hasNewOffer = false;
       }
     },
 
@@ -429,7 +425,6 @@ export default {
       this.showOfferMessage = false;
     },
 
-    // دالة التنقل بين الصفحات
     navigateTo(path) {
       console.log("Navigating to:", path);
       if (this.$route.path !== path) {
@@ -437,22 +432,17 @@ export default {
       }
     },
 
-    // التحقق من الصفحة النشطة
     isActive(path) {
       return this.$route.path === path;
     },
 
-    // دوال السحب
     startDrag(event) {
-      // منع السلوك الافتراضي للنقر على الروابط
       event.preventDefault();
       
-      // تحديد الزر الذي يتم سحبه
       const button = event.currentTarget;
       this.currentButton = button;
       this.dragging = true;
       
-      // الحصول على إحداثيات البداية
       if (event.type === 'mousedown') {
         this.startX = event.clientX;
         this.startY = event.clientY;
@@ -461,12 +451,10 @@ export default {
         this.startY = event.touches[0].clientY;
       }
       
-      // الحصول على الموقع الحالي للزر
       const computedStyle = window.getComputedStyle(button);
-      this.initialLeft = parseInt(computedStyle.right) || 15; // نستخدم right لأن الزر في اليمين
+      this.initialLeft = parseInt(computedStyle.right) || 15;
       this.initialBottom = parseInt(computedStyle.bottom) || 100;
       
-      // إضافة كلاس للسحب
       button.classList.add('dragging');
     },
 
@@ -475,7 +463,6 @@ export default {
       
       event.preventDefault();
       
-      // حساب المسافة التي تم سحبها
       let currentX, currentY;
       if (event.type === 'mousemove') {
         currentX = event.clientX;
@@ -490,21 +477,16 @@ export default {
       const deltaX = currentX - this.startX;
       const deltaY = currentY - this.startY;
       
-      // حساب الموقع الجديد - نستخدم right بدلاً من left للتوافق مع RTL
       const newRight = Math.max(5, Math.min(window.innerWidth - 50, this.initialLeft - deltaX));
       const newBottom = Math.max(10, Math.min(window.innerHeight - 150, this.initialBottom - deltaY));
       
-      // تطبيق الموقع الجديد
       this.currentButton.style.right = newRight + 'px';
       this.currentButton.style.bottom = newBottom + 'px';
     },
 
     stopDrag() {
       if (this.dragging && this.currentButton) {
-        // حفظ الموقع الجديد
         this.saveButtonPosition(this.currentButton);
-        
-        // إزالة كلاس السحب
         this.currentButton.classList.remove('dragging');
       }
       
@@ -512,7 +494,6 @@ export default {
       this.currentButton = null;
     },
 
-    // حفظ موقع الزر
     saveButtonPosition(button) {
       const className = button.className.split(' ').find(cls => cls.includes('-btn'));
       if (!className) return;
@@ -527,7 +508,6 @@ export default {
       }
     },
 
-    // تحميل مواقع الأزرار المحفوظة
     loadButtonPositions() {
       this.$nextTick(() => {
         const positions = JSON.parse(localStorage.getItem('buttonPositions') || '{}');
@@ -570,7 +550,6 @@ body {
   position: relative;
 }
 
-/* حاوية الصفحات */
 .page-container {
   width: 100%;
   max-width: 100%;
@@ -578,15 +557,13 @@ body {
   position: relative;
   z-index: 1;
   min-height: 100vh;
-  padding-bottom: 80px; /* مساحة للشريط السفلي */
+  padding-bottom: 80px;
 }
 
-/* اتجاه الصفحة */
 #app.rtl {
   direction: rtl;
 }
 
-/* ===== الأزرار العائمة القابلة للسحب ===== */
 .circle-btn {
   position: fixed;
   width: 45px;
@@ -607,6 +584,7 @@ body {
   text-decoration: none;
   user-select: none;
   touch-action: none;
+  pointer-events: auto;
 }
 
 .circle-btn.dragging {
@@ -643,7 +621,6 @@ body {
   color: #D4AF37;
 }
 
-/* إشعار أحمر للأزرار */
 .notification-badge {
   position: absolute;
   top: -5px;
@@ -662,6 +639,7 @@ body {
   border: 2px solid #0A0C10;
   box-shadow: 0 2px 5px rgba(255, 59, 48, 0.5);
   animation: pulse-red 2s infinite;
+  z-index: 10000;
 }
 
 @keyframes pulse-red {
@@ -670,7 +648,6 @@ body {
   100% { transform: scale(1); }
 }
 
-/* مواقع الأزرار الافتراضية - يمكن تغييرها بالسحب */
 .lang-btn {
   right: 15px;
   bottom: 100px;
@@ -710,7 +687,6 @@ body {
   color: #D4AF37;
 }
 
-/* ===== نافذة العرض الخاص ===== */
 .bubble-chat-overlay {
   position: fixed;
   top: 0;
@@ -877,7 +853,6 @@ body {
   box-shadow: 0 10px 25px rgba(212, 175, 55, 0.4);
 }
 
-/* ===== قائمة اللغات ===== */
 .lang-menu {
   position: fixed;
   bottom: 160px;
@@ -943,7 +918,6 @@ body {
   color: #D4AF37;
 }
 
-/* ===== شريط التنقل السفلي ===== */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -1002,7 +976,6 @@ body {
   text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
 }
 
-/* ===== إعلان Popup فاخر ===== */
 .ad-overlay {
   position: fixed;
   top: 0;
@@ -1270,7 +1243,6 @@ body {
   box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
 }
 
-/* حركات */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.3s ease;
 }
@@ -1279,7 +1251,6 @@ body {
   opacity: 0;
 }
 
-/* تكييفات للهواتف */
 @media (max-width: 768px) {
   .circle-btn {
     width: 40px;
