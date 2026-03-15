@@ -9,14 +9,18 @@
     <!-- زر الدعم - تم تحديث الرابط -->
     <a class="circle-btn support-btn"
        href="https://t.me/Palm_Treasure"
-       target="_blank">
+       target="_blank"
+       @mousedown="startDrag"
+       @touchstart="startDrag">
       <i class="fas fa-headset"></i>
     </a>
 
     <!-- زر انستغرام - تم تحديث الرابط -->
     <a class="circle-btn instagram-btn"
        href="https://www.instagram.com/palm__treasure?igsh=OXR1emp3N2k2d2Yz"
-       target="_blank">
+       target="_blank"
+       @mousedown="startDrag"
+       @touchstart="startDrag">
       <i class="fab fa-instagram"></i>
     </a>
 
@@ -433,7 +437,7 @@ export default {
     },
 
     startDrag(event) {
-      // فقط للأزرار وليس للروابط
+      // فقط للأزرار التي ليست روابط
       if (event.target.closest('a')) {
         return;
       }
@@ -605,6 +609,17 @@ body {
 
 .circle-btn:active {
   cursor: grabbing;
+}
+
+.circle-btn a {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .lang-code {
