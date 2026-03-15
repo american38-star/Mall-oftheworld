@@ -28,7 +28,7 @@
 
     <!-- شريط الإعلان -->
     <div class="notice-bar">
-      <span class="notice-icon">🔊</span>
+      <span class="notice-icon">🌴</span>
       شراكة عالمية مع Amazon, eBay, TikTok, Aliexpress, Alibaba, Shopee
     </div>
 
@@ -212,31 +212,31 @@
             <div class="withdraw-schedule">
               <div class="schedule-day">
                 <div class="day-header">🔹 يوم السبت من كل أسبوع:</div>
-                <div class="vip-levels">VIP1  VIP2 </div>
+                <div class="vip-levels">VIP1 💸 VIP2 </div>
               </div>
               <div class="schedule-day">
                 <div class="day-header">🔹 يوم الأحد من كل أسبوع:</div>
-                <div class="vip-levels">VIP3  VIP4 </div>
+                <div class="vip-levels">VIP3 💸 VIP4 </div>
               </div>
               <div class="schedule-day">
                 <div class="day-header">🔹 يوم الاثنين من كل أسبوع:</div>
-                <div class="vip-levels">VIP5  VIP6 </div>
+                <div class="vip-levels">VIP5 💸 VIP6 </div>
               </div>
               <div class="schedule-day">
                 <div class="day-header">🔹 يوم الثلاثاء من كل أسبوع:</div>
-                <div class="vip-levels">VIP7  VIP8 </div>
+                <div class="vip-levels">VIP7 💸 VIP8 </div>
               </div>
               <div class="schedule-day">
                 <div class="day-header">🔹 يوم الأربعاء من كل أسبوع:</div>
-                <div class="vip-levels">VIP9  VIP10 </div>
+                <div class="vip-levels">VIP9 💸 VIP10 </div>
               </div>
               <div class="schedule-day">
                 <div class="day-header">🔹 يوم الخميس من كل أسبوع:</div>
-                <div class="vip-levels">VIP11  VIP12 </div>
+                <div class="vip-levels">VIP11 💸 VIP12 </div>
               </div>
               <div class="schedule-day">
                 <div class="day-header">🔹 يوم الجمعة من كل أسبوع:</div>
-                <div class="vip-levels">VIP13  VIP14 </div>
+                <div class="vip-levels">VIP13 💸 VIP14 </div>
               </div>
             </div>
             
