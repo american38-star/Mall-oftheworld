@@ -53,9 +53,17 @@
         </div>
         <p>الشركة</p>
       </div>
+
+      <!-- زر الشروط والأحكام الجديد -->
+      <div class="item terms-item" @click="showTermsAd">
+        <div class="icon-box gold-glow">
+          <i class="fas fa-scroll"></i>
+        </div>
+        <p>📜 الشروط والأحكام</p>
+      </div>
     </div>
 
-    <!-- إعلان Popup فاخر -->
+    <!-- إعلان Popup فاخر للشركة -->
     <div id="companyAd" class="ad-overlay" v-if="showAd" @click.self="closeAd">
       <div class="ad-box">
         <div class="ad-header">
@@ -144,6 +152,109 @@
       </div>
     </div>
 
+    <!-- إعلان Popup جديد للشروط والأحكام -->
+    <div id="termsAd" class="ad-overlay" v-if="showTerms" @click.self="closeTerms">
+      <div class="ad-box">
+        <div class="ad-header">
+          <h2>📜 الشروط والأحكام</h2>
+          <button class="close-btn" @click="closeTerms">×</button>
+        </div>
+
+        <div class="ad-content">
+          <div class="terms-message">
+            <h3>📊 عقود رجال الأعمال</h3>
+            <p>
+              في عالم الأعمال الحديث، لا يُقاس النجاح فقط بما يحققه الشخص لنفسه، بل بقدرته على بناء فريق قوي وفعّال يقوده نحو التقدم والازدهار. ومن هذا المنطلق، تعتمد الشركة نظاماً مميزاً لتقدير القادة وتحفيزهم على تطوير فرقهم وتحقيق نتائج أفضل.<br><br>
+              عندما تتمكن من بناء فريق قوي وزيادة عدد الأعضاء النشطين، فإن الشركة تقوم بتقدير جهودك ومنحك مزايا إضافية تعكس مكانتك القيادية داخل الفريق.
+            </p>
+            
+            <h4>📌 عقود رجال الأعمال</h4>
+            <p>
+              عند وصول عدد أعضاء فريقك إلى 70 عضواً نشطاً أو أكثر، تقوم الشركة بإبرام عقد رسمي معك، وذلك لضمان حقوقك وتقديراً لجهودك في بناء فريق ناجح وإدارته بكفاءة. ويعد هذا العقد دليلاً على ثقة الشركة بك كقائد قادر على تحقيق النجاح والتطوير المستمر.
+            </p>
+            
+            <p>💼 إضافة إلى التقدير المعنوي، تمنحك الشركة راتباً شهرياً ثابتاً يتناسب مع حجم فريقك ونشاطه، وفق سلم الترقيات القيادية التالي:</p>
+            
+            <div class="promotion-table">
+              <div class="promotion-row">
+                <div class="promotion-cell">🔹 70 عضواً نشطاً</div>
+                <div class="promotion-cell">رتبة مساعد فريق</div>
+                <div class="promotion-cell highlight">💰 راتب شهري: 200 دولار</div>
+              </div>
+              <div class="promotion-row">
+                <div class="promotion-cell">🔹 140 عضواً نشطاً</div>
+                <div class="promotion-cell">رتبة مشرف فريق</div>
+                <div class="promotion-cell highlight">💰 راتب شهري: 350 دولاراً</div>
+              </div>
+              <div class="promotion-row">
+                <div class="promotion-cell">🔹 300 عضو نشط</div>
+                <div class="promotion-cell">رتبة مدير فريق</div>
+                <div class="promotion-cell highlight">💰 راتب شهري: 500 دولار</div>
+              </div>
+            </div>
+            
+            <p>
+              ⭐ يعكس هذا النظام التحفيزي رؤية الشركة في تشجيع روح القيادة والعمل الجماعي، حيث يتم مكافأة كل من يعمل بجد على توسيع فريقه وتطويره.
+            </p>
+            
+            <p>
+              🚀 إن بناء فريق قوي ليس مجرد مهمة عادية، بل هو طريق حقيقي نحو النجاح في عالم ريادة الأعمال، حيث يتحول العمل الجاد والطموح إلى إنجازات حقيقية تعود بالنفع على القائد وفريقه والشركة معاً.
+            </p>
+            
+            <h4>📢 مواعيد سحب الرواتب الخاصة بحسابات VIP</h4>
+            <p>
+              حرصًا منا على تنظيم عملية السحب وضمان سلاسة الإجراءات لجميع الأعضاء، تم اعتماد جدول أسبوعي ثابت لمواعيد سحب الرواتب الخاصة بحسابات VIP.<br><br>
+              يرجى من جميع الأعضاء الالتزام باليوم المخصص لكل مستوى، حيث يتم تنفيذ عمليات السحب فقط في اليوم المحدد لكل فئة.
+            </p>
+            
+            <h4>📅 جدول السحب الأسبوعي:</h4>
+            
+            <div class="withdraw-schedule">
+              <div class="schedule-day">
+                <div class="day-header">🔹 يوم السبت من كل أسبوع:</div>
+                <div class="vip-levels">VIP1 👈 VIP2 👈</div>
+              </div>
+              <div class="schedule-day">
+                <div class="day-header">🔹 يوم الأحد من كل أسبوع:</div>
+                <div class="vip-levels">VIP3 👈 VIP4 👈</div>
+              </div>
+              <div class="schedule-day">
+                <div class="day-header">🔹 يوم الاثنين من كل أسبوع:</div>
+                <div class="vip-levels">VIP5 👈 VIP6 👈</div>
+              </div>
+              <div class="schedule-day">
+                <div class="day-header">🔹 يوم الثلاثاء من كل أسبوع:</div>
+                <div class="vip-levels">VIP7 👈 VIP8 👈</div>
+              </div>
+              <div class="schedule-day">
+                <div class="day-header">🔹 يوم الأربعاء من كل أسبوع:</div>
+                <div class="vip-levels">VIP9 👈 VIP10 👈</div>
+              </div>
+              <div class="schedule-day">
+                <div class="day-header">🔹 يوم الخميس من كل أسبوع:</div>
+                <div class="vip-levels">VIP11 👈 VIP12 👈</div>
+              </div>
+              <div class="schedule-day">
+                <div class="day-header">🔹 يوم الجمعة من كل أسبوع:</div>
+                <div class="vip-levels">VIP13 👈 VIP14 👈</div>
+              </div>
+            </div>
+            
+            <div class="important-note">
+              <p>⚠️ ملاحظة مهمة:<br>
+              يرجى من جميع أعضاء VIP الالتزام باليوم المحدد لمستواهم لضمان تنفيذ عمليات السحب بسرعة وتنظيم، وتجنب أي تأخير في معالجة الطلبات.</p>
+            </div>
+            
+            <div class="cta-message">
+              <p>✨ نتمنى لكم تجربة مالية ناجحة ومليئة بالأرباح ونتمنى لكم دوام النجاح معنا.</p>
+            </div>
+          </div>
+        </div>
+
+        <button class="ad-btn" @click="closeTerms">موافق</button>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -160,6 +271,7 @@ export default {
       username: "جاري التحميل...",
       balance: 0,
       showAd: false,
+      showTerms: false,
       
       vipPlans: [
         { level: 'VIP 1', recharge: '0', daily: '0.3', monthly: '9', yearly: '109.5', tasks: '1', status: 'مفعل الآن' },
@@ -254,6 +366,16 @@ export default {
 
     closeAd() {
       this.showAd = false;
+      document.body.style.overflow = 'auto';
+    },
+
+    showTermsAd() {
+      this.showTerms = true;
+      document.body.style.overflow = 'hidden';
+    },
+
+    closeTerms() {
+      this.showTerms = false;
       document.body.style.overflow = 'auto';
     }
   },
@@ -433,6 +555,12 @@ export default {
   animation: goldPulse 2s infinite;
 }
 
+.terms-item {
+  background: linear-gradient(135deg, #11151C, #1A1F2A);
+  border: 1px solid #D4AF37;
+  animation: goldPulse 2s infinite;
+}
+
 /* ===== إعلان فاخر ===== */
 .ad-overlay {
   position: fixed;
@@ -552,6 +680,103 @@ export default {
   color: #ffffff;
   font-size: 14px;
   line-height: 1.8;
+}
+
+.terms-message {
+  background: #1A1F2A;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.terms-message h3 {
+  color: #D4AF37;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 22px;
+}
+
+.terms-message h4 {
+  color: #F6E27A;
+  margin: 20px 0 10px 0;
+  font-size: 18px;
+}
+
+.terms-message p {
+  margin: 0 0 15px 0;
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.promotion-table {
+  background: #11151C;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 20px 0;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.promotion-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.promotion-row:last-child {
+  border-bottom: none;
+}
+
+.promotion-cell {
+  color: #ffffff;
+}
+
+.promotion-cell.highlight {
+  color: #F6E27A;
+  font-weight: 700;
+}
+
+.withdraw-schedule {
+  background: #11151C;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 20px 0;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.schedule-day {
+  padding: 10px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.schedule-day:last-child {
+  border-bottom: none;
+}
+
+.day-header {
+  color: #F6E27A;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.vip-levels {
+  color: #D4AF37;
+  padding-right: 20px;
+}
+
+.important-note {
+  background: rgba(212, 175, 55, 0.1);
+  border-right: 3px solid #D4AF37;
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 8px;
+}
+
+.important-note p {
+  margin: 0;
+  color: #F6E27A;
 }
 
 .vip-section {
@@ -751,6 +976,11 @@ export default {
   
   .ad-content {
     padding: 15px;
+  }
+  
+  .promotion-row {
+    flex-direction: column;
+    gap: 5px;
   }
 }
 
