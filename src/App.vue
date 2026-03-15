@@ -1,7 +1,7 @@
 <template>
   <div id="app" :class="{ 'rtl': currentLang === 'AR' }">
     <!-- زر تغيير اللغة -->
-    <div class="circle-btn lang-btn" @click="toggleLanguageMenu">
+    <div class="circle-btn lang-btn" @click="toggleLanguageMenu" @mousedown="startDrag" @touchstart="startDrag">
       <i class="fas fa-globe"></i>
       <span class="lang-code">{{ currentLang }}</span>
     </div>
@@ -9,20 +9,25 @@
     <!-- زر الدعم - تم تحديث الرابط -->
     <a class="circle-btn support-btn"
        href="https://t.me/Palm_Treasure"
-       target="_blank">
+       target="_blank"
+       @mousedown="startDrag"
+       @touchstart="startDrag">
       <i class="fas fa-headset"></i>
     </a>
 
     <!-- زر انستغرام - تم تحديث الرابط -->
     <a class="circle-btn instagram-btn"
        href="https://www.instagram.com/palm__treasure?igsh=OXR1emp3N2k2d2Yz"
-       target="_blank">
+       target="_blank"
+       @mousedown="startDrag"
+       @touchstart="startDrag">
       <i class="fab fa-instagram"></i>
     </a>
 
-    <!-- زر عرض خاص جديد -->
-    <div class="circle-btn offer-btn" @click="toggleOfferMessage">
+    <!-- زر عرض خاص جديد مع إشعار أحمر -->
+    <div class="circle-btn offer-btn" @click="toggleOfferMessage" @mousedown="startDrag" @touchstart="startDrag">
       <i class="fas fa-gift"></i>
+      <div class="notification-badge" v-if="hasNewOffer">3</div>
     </div>
 
     <!-- نافذة العرض الخاص -->
@@ -291,6 +296,7 @@ export default {
 
       showAd: false,
       showOfferMessage: false,
+      hasNewOffer: true, // متغير للإشعار الأحمر
 
       vipPlans: [
         { level: 'VIP 1', recharge: '0', daily: '0.3', monthly: '9', yearly: '109.5', tasks: '1', status: 'مفعل الآن' },
@@ -324,7 +330,15 @@ export default {
         { name: "Español", code: "ES" },
         { name: "فارسی", code: "FA" },
         { name: "العربي", code: "AR" }
-      ]
+      ],
+
+      // متغيرات السحب
+      dragging: false,
+      currentButton: null,
+      startX: 0,
+      startY: 0,
+      initialLeft: 0,
+      initialBottom: 0,
     };
   },
 
@@ -344,6 +358,27 @@ export default {
         }, 1000);
       }
     });
+
+    // تحميل المواقع المحفوظة للأزرار
+    this.loadButtonPositions();
+  },
+
+  mounted() {
+    // إضافة مستمعي الأحداث للسحب
+    document.addEventListener('mousemove', this.onDrag);
+    document.addEventListener('mouseup', this.stopDrag);
+    document.addEventListener('touchmove', this.onDrag, { passive: false });
+    document.addEventListener('touchend', this.stopDrag);
+    document.addEventListener('touchcancel', this.stopDrag);
+  },
+
+  beforeDestroy() {
+    // إزالة مستمعي الأحداث
+    document.removeEventListener('mousemove', this.onDrag);
+    document.removeEventListener('mouseup', this.stopDrag);
+    document.removeEventListener('touchmove', this.onDrag);
+    document.removeEventListener('touchend', this.stopDrag);
+    document.removeEventListener('touchcancel', this.stopDrag);
   },
 
   computed: {
@@ -385,6 +420,9 @@ export default {
 
     toggleOfferMessage() {
       this.showOfferMessage = !this.showOfferMessage;
+      if (this.showOfferMessage) {
+        this.hasNewOffer = false; // إخفاء الإشعار عند فتح الرسالة
+      }
     },
 
     closeOfferMessage() {
@@ -402,6 +440,108 @@ export default {
     // التحقق من الصفحة النشطة
     isActive(path) {
       return this.$route.path === path;
+    },
+
+    // دوال السحب
+    startDrag(event) {
+      // منع السلوك الافتراضي للنقر على الروابط
+      event.preventDefault();
+      
+      // تحديد الزر الذي يتم سحبه
+      const button = event.currentTarget;
+      this.currentButton = button;
+      this.dragging = true;
+      
+      // الحصول على إحداثيات البداية
+      if (event.type === 'mousedown') {
+        this.startX = event.clientX;
+        this.startY = event.clientY;
+      } else if (event.type === 'touchstart') {
+        this.startX = event.touches[0].clientX;
+        this.startY = event.touches[0].clientY;
+      }
+      
+      // الحصول على الموقع الحالي للزر
+      const computedStyle = window.getComputedStyle(button);
+      this.initialLeft = parseInt(computedStyle.right) || 15; // نستخدم right لأن الزر في اليمين
+      this.initialBottom = parseInt(computedStyle.bottom) || 100;
+      
+      // إضافة كلاس للسحب
+      button.classList.add('dragging');
+    },
+
+    onDrag(event) {
+      if (!this.dragging || !this.currentButton) return;
+      
+      event.preventDefault();
+      
+      // حساب المسافة التي تم سحبها
+      let currentX, currentY;
+      if (event.type === 'mousemove') {
+        currentX = event.clientX;
+        currentY = event.clientY;
+      } else if (event.type === 'touchmove') {
+        currentX = event.touches[0].clientX;
+        currentY = event.touches[0].clientY;
+      } else {
+        return;
+      }
+      
+      const deltaX = currentX - this.startX;
+      const deltaY = currentY - this.startY;
+      
+      // حساب الموقع الجديد - نستخدم right بدلاً من left للتوافق مع RTL
+      const newRight = Math.max(5, Math.min(window.innerWidth - 50, this.initialLeft - deltaX));
+      const newBottom = Math.max(10, Math.min(window.innerHeight - 150, this.initialBottom - deltaY));
+      
+      // تطبيق الموقع الجديد
+      this.currentButton.style.right = newRight + 'px';
+      this.currentButton.style.bottom = newBottom + 'px';
+    },
+
+    stopDrag() {
+      if (this.dragging && this.currentButton) {
+        // حفظ الموقع الجديد
+        this.saveButtonPosition(this.currentButton);
+        
+        // إزالة كلاس السحب
+        this.currentButton.classList.remove('dragging');
+      }
+      
+      this.dragging = false;
+      this.currentButton = null;
+    },
+
+    // حفظ موقع الزر
+    saveButtonPosition(button) {
+      const className = button.className.split(' ').find(cls => cls.includes('-btn'));
+      if (!className) return;
+      
+      const right = button.style.right;
+      const bottom = button.style.bottom;
+      
+      if (right && bottom) {
+        const positions = JSON.parse(localStorage.getItem('buttonPositions') || '{}');
+        positions[className] = { right, bottom };
+        localStorage.setItem('buttonPositions', JSON.stringify(positions));
+      }
+    },
+
+    // تحميل مواقع الأزرار المحفوظة
+    loadButtonPositions() {
+      this.$nextTick(() => {
+        const positions = JSON.parse(localStorage.getItem('buttonPositions') || '{}');
+        
+        setTimeout(() => {
+          document.querySelectorAll('.circle-btn').forEach(btn => {
+            const className = btn.className.split(' ').find(cls => cls.includes('-btn'));
+            if (className && positions[className]) {
+              btn.style.right = positions[className].right;
+              btn.style.bottom = positions[className].bottom;
+            }
+          });
+        }, 100);
+      });
     }
   }
 };
@@ -460,13 +600,21 @@ body {
   align-items: center;
   color: #D4AF37;
   font-size: 20px;
-  cursor: move; /* تغيير المؤشر إلى move للإشارة إلى إمكانية السحب */
+  cursor: grab;
   z-index: 9999;
   box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
   transition: all 0.3s ease;
   text-decoration: none;
-  user-select: none; /* منع تحديد النص أثناء السحب */
-  touch-action: none; /* منع التمرير أثناء السحب على الأجهزة اللمسية */
+  user-select: none;
+  touch-action: none;
+}
+
+.circle-btn.dragging {
+  cursor: grabbing;
+  opacity: 0.9;
+  transform: scale(1.05);
+  transition: none;
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.6);
 }
 
 .circle-btn:hover {
@@ -477,8 +625,7 @@ body {
 }
 
 .circle-btn:active {
-  cursor: grabbing; /* تغيير المؤشر عند السحب */
-  transform: scale(1.05);
+  cursor: grabbing;
 }
 
 .lang-code {
@@ -494,6 +641,33 @@ body {
 .lang-btn:hover .lang-code {
   background: #0A0C10;
   color: #D4AF37;
+}
+
+/* إشعار أحمر للأزرار */
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ff3b30;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #0A0C10;
+  box-shadow: 0 2px 5px rgba(255, 59, 48, 0.5);
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 
 /* مواقع الأزرار الافتراضية - يمكن تغييرها بالسحب */
